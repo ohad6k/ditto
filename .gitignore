@@ -1,0 +1,13 @@
+# ditto never commits your mined data
+ditto-out/
+you-corpus.txt
+chunks/
+*.you.md
+
+# your actual profile — keep it local unless you WANT to share it
+you.md
+
+__pycache__/
+*.pyc
+.DS_Store
+.venv/
