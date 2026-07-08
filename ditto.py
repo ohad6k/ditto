@@ -2,18 +2,19 @@
 """
 ditto — turn your own AI coding sessions into a model of how you think.
 
-It reads your local session logs (Codex / Claude Code / Cursor jsonl), keeps
-ONLY the words you typed, redacts secrets + personal info, and writes one
+It reads your local session logs (Codex / Claude Code / Copilot CLI jsonl),
+keeps ONLY the words you typed, redacts secrets + personal info, and writes one
 clean corpus + chunks. You then point a coding agent at the chunks with
 MINING_PROMPT.md to produce your `you.md`.
 
 100% local. Your logs never leave your machine. No network calls. Stdlib only.
 
 Usage:
-    python ditto.py                     # auto-detect Codex + Claude logs
+    python ditto.py                     # auto-detect Codex + Claude + Copilot logs
     python ditto.py --dry-run           # preview counts without writing files
     python ditto.py --install you.md --target codex
     python ditto.py --source codex      # only ~/.codex/sessions
+    python ditto.py --source copilot    # only ~/.copilot/session-state
     python ditto.py --path ./logs       # a folder of jsonl you point at
     python ditto.py --chunks 20         # how many chunks to split into
     python ditto.py --no-redact         # DANGER: skip redaction (not recommended)
@@ -22,8 +23,9 @@ import argparse, glob, json, os, re, sys
 
 HOME = os.path.expanduser("~")
 SOURCES = {
-    "codex":  [os.path.join(HOME, ".codex", "sessions")],
-    "claude": [os.path.join(HOME, ".claude", "projects")],
+    "codex":   [os.path.join(HOME, ".codex", "sessions")],
+    "claude":  [os.path.join(HOME, ".claude", "projects")],
+    "copilot": [os.path.join(HOME, ".copilot", "session-state")],
 }
 DITTO_START = "<!-- ditto profile:start -->"
 DITTO_END = "<!-- ditto profile:end -->"
@@ -64,26 +66,33 @@ def user_messages(path):
     try:
         with open(path, "r", encoding="utf-8", errors="replace") as fh:
             for line in fh:
-                if '"role"' not in line and '"user"' not in line:
+                if '"role"' not in line and '"user"' not in line and "user.message" not in line:
                     continue
                 try:
                     o = json.loads(line)
                 except Exception:
                     continue
-                # Codex: {payload:{type:'message',role:'user',content:[{text}]}}
-                # Claude: {type:'user',message:{role:'user',content:'...'|[...]}}
-                p = o.get("payload", o)
-                msg = p.get("message", p)
-                if not ((p.get("type") == "message" or o.get("type") == "user") and
-                        (p.get("role") == "user" or msg.get("role") == "user")):
-                    continue
-                content = msg.get("content", p.get("content", ""))
-                if isinstance(content, str):
-                    texts = [content]
-                elif isinstance(content, list):
-                    texts = [c.get("text", "") for c in content if isinstance(c, dict)]
+                # Copilot CLI: {type:'user.message', data:{content, source}, timestamp}
+                if o.get("type") == "user.message":
+                    data = o.get("data", {})
+                    if data.get("source") == "system":   # steering/system injections
+                        continue
+                    texts = [data.get("content", "")]
                 else:
-                    texts = []
+                    # Codex: {payload:{type:'message',role:'user',content:[{text}]}}
+                    # Claude: {type:'user',message:{role:'user',content:'...'|[...]}}
+                    p = o.get("payload", o)
+                    msg = p.get("message", p)
+                    if not ((p.get("type") == "message" or o.get("type") == "user") and
+                            (p.get("role") == "user" or msg.get("role") == "user")):
+                        continue
+                    content = msg.get("content", p.get("content", ""))
+                    if isinstance(content, str):
+                        texts = [content]
+                    elif isinstance(content, list):
+                        texts = [c.get("text", "") for c in content if isinstance(c, dict)]
+                    else:
+                        texts = []
                 for t in texts:
                     t = (t or "").strip()
                     if not t or t.startswith("<"):        # skip env/system injections
@@ -259,7 +268,7 @@ def install_profile(profile_path, target, repo_dir, home_dir, yes=False, dry_run
 
 def main():
     ap = argparse.ArgumentParser(description="mine your AI sessions into a model of you")
-    ap.add_argument("--source", choices=["auto", "codex", "claude"], default="auto")
+    ap.add_argument("--source", choices=["auto", "codex", "claude", "copilot"], default="auto")
     ap.add_argument("--path", help="a folder of .jsonl session logs to read instead")
     ap.add_argument("--out", default="ditto-out")
     ap.add_argument("--chunks", type=int, default=20)
@@ -283,7 +292,7 @@ def main():
     if args.path:
         roots = [args.path]
     elif args.source == "auto":
-        roots = SOURCES["codex"] + SOURCES["claude"]
+        roots = SOURCES["codex"] + SOURCES["claude"] + SOURCES["copilot"]
     else:
         roots = SOURCES[args.source]
 
