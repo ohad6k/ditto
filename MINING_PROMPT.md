@@ -63,7 +63,15 @@ Rank every trait by how many of the N reports independently surfaced it. A trait
 found in many reports is the real them; a trait in one report is noise — cut it or
 mark it low-confidence.
 
-Output a tight `you.md` an AI agent can read before any task, with sections:
+Output a tight `you.md` an AI agent reads before any task. Start the file with
+this EXACT frontmatter so it installs as a skill unchanged (do not skip it):
+
+---
+name: you
+description: <one line: this person's working profile — laws, taste, voice — so the agent acts like them, not a stranger>
+---
+
+Then the body, with sections:
 - Who they are (one paragraph)
 - Their laws (rules they state, ranked by frequency)
 - How to talk to them

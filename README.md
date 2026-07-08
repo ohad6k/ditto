@@ -26,7 +26,7 @@ i asked an agent to help me launch this repo. one line: **"help me post ditto on
 
 <table><tr><td>
 
-**🡒 cold agent**
+**🡒 agent**
 
 Here's how I'd play it.
 
@@ -130,7 +130,7 @@ your `you.md` is just a context file. drop it where your agent already looks and
 | gemini cli | `GEMINI.md` |
 | windsurf / other | its rules or context file |
 
-that's it. no plugin, no config.
+ditto writes the `you.md` with the right frontmatter already, so on claude code and cursor it **registers as a skill the moment you drop it in** — nothing to wire. that's it, no plugin, no config.
 
 **using a coding agent?** point it at this repo and say *"run ditto and install my you.md"* — the skill in [`skill/`](skill/SKILL.md) walks it through the whole flow (extract, mine, write, place the file) on its own. works in claude code, cursor, codex, and gemini.
 

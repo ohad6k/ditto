@@ -20,7 +20,12 @@ Turn the user's own AI session logs into a `you.md` they can drop into `.claude/
 
 3. **Reduce.** Merge all the chunk reports with the reducer prompt in `MINING_PROMPT.md`. Rank every trait by how many chunks independently surfaced it — high-frequency traits are the real person, one-offs are noise. Output a lean `you.md` (deep quotes go in a separate `you-appendix.md`, not in `you.md`).
 
-4. **Install + prove.** Offer to place `you.md` where their agent will read it (`.claude/skills/you/SKILL.md`, `AGENTS.md`, or `.cursor/rules`). Then show a quick receipt: answer one real task once cold and once with `you.md` loaded, so they see it behaves more like them.
+4. **Install + prove.** The `you.md` already starts with `name:` / `description:` frontmatter, so it's skill-ready. Place it where the user's agent actually reads it, per their tool, then verify it registered:
+   - **Claude Code** → save as `.claude/skills/you/SKILL.md`. Confirm it shows in the skill list (invoke `/you`). For it to load in every project, put it in the user-level `~/.claude/skills/you/SKILL.md`.
+   - **Codex** → append the body (everything below the frontmatter) to `AGENTS.md` at the repo root. Codex reads it automatically, no frontmatter needed.
+   - **Cursor** → save as `.cursor/rules/you.mdc`, with frontmatter `description: act like me` and `alwaysApply: true`, then the body.
+   - **Gemini CLI** → append the body to `GEMINI.md`.
+   Then prove it: run one real task once without the file and once with it loaded, so the user sees the agent act more like them. Do not claim it's installed until you've confirmed the agent actually picks it up.
 
 ## Rules
 - **Local only.** No network calls. The user's logs never leave their machine. Say so.
