@@ -15,6 +15,12 @@ You can point it at another folder with:
 python ditto.py --path ./some-jsonl-folder
 ```
 
+Preview what ditto would do without writing output files:
+
+```bash
+python ditto.py --dry-run
+```
+
 ## what it writes
 
 ditto writes only to the output folder you choose. The default is:

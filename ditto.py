@@ -11,6 +11,7 @@ MINING_PROMPT.md to produce your `you.md`.
 
 Usage:
     python ditto.py                     # auto-detect Codex + Claude logs
+    python ditto.py --dry-run           # preview counts without writing files
     python ditto.py --source codex      # only ~/.codex/sessions
     python ditto.py --path ./logs       # a folder of jsonl you point at
     python ditto.py --chunks 20         # how many chunks to split into
@@ -90,36 +91,13 @@ def user_messages(path):
         pass
     return out
 
-def main():
-    ap = argparse.ArgumentParser(description="mine your AI sessions into a model of you")
-    ap.add_argument("--source", choices=["auto", "codex", "claude"], default="auto")
-    ap.add_argument("--path", help="a folder of .jsonl session logs to read instead")
-    ap.add_argument("--out", default="ditto-out")
-    ap.add_argument("--chunks", type=int, default=20)
-    ap.add_argument("--no-redact", action="store_true", help="skip redaction (NOT recommended)")
-    args = ap.parse_args()
-
-    roots = []
-    if args.path:
-        roots = [args.path]
-    elif args.source == "auto":
-        roots = SOURCES["codex"] + SOURCES["claude"]
-    else:
-        roots = SOURCES[args.source]
-
+def discover_files(roots):
     files = []
     for r in roots:
         files += glob.glob(os.path.join(r, "**", "*.jsonl"), recursive=True)
-    files = sorted(set(files))
-    if not files:
-        print("no session logs found. try --path <folder> or --source codex/claude.")
-        print("looked in:", ", ".join(roots))
-        sys.exit(1)
+    return sorted(set(files))
 
-    os.makedirs(args.out, exist_ok=True)
-    chunks_dir = os.path.join(args.out, "chunks")
-    os.makedirs(chunks_dir, exist_ok=True)
-
+def mine_files(files, no_redact=False):
     sessions = msgs = chars = redactions = 0
     blocks = []
     for f in files:
@@ -129,7 +107,7 @@ def main():
         sessions += 1
         buf = [f"\n===== {os.path.basename(f)} ====="]
         for ts, t in ums:
-            if not args.no_redact:
+            if not no_redact:
                 before = t
                 t = redact(t)
                 if t != before:
@@ -138,13 +116,28 @@ def main():
             msgs += 1
             chars += len(t)
         blocks.append("\n".join(buf))
+    return {
+        "sessions": sessions,
+        "messages": msgs,
+        "chars": chars,
+        "redactions": redactions,
+        "blocks": blocks,
+    }
+
+def write_outputs(blocks, out_dir, chunks):
+    os.makedirs(out_dir, exist_ok=True)
+    chunks_dir = os.path.join(out_dir, "chunks")
+    os.makedirs(chunks_dir, exist_ok=True)
 
     corpus = "\n".join(blocks)
-    with open(os.path.join(args.out, "you-corpus.txt"), "w", encoding="utf-8") as w:
+    with open(os.path.join(out_dir, "you-corpus.txt"), "w", encoding="utf-8") as w:
         w.write(corpus)
 
+    if not blocks:
+        return 0
+
     # split on session boundaries into ~N chunks
-    n = max(1, args.chunks)
+    n = max(1, chunks)
     target = max(1, len(corpus) // n)
     cur, size, idx = [], 0, 1
     for b in blocks:
@@ -156,12 +149,53 @@ def main():
     if cur:
         with open(os.path.join(chunks_dir, f"chunk-{idx:02d}.txt"), "w", encoding="utf-8") as w:
             w.write("\n".join(cur))
+        idx += 1
+    return idx - 1
 
-    print(f"sessions: {sessions}")
-    print(f"your messages: {msgs}")
-    print(f"tokens (approx): {chars // 4:,}")
-    print(f"secrets/PII redacted: {redactions}" + ("  (redaction OFF)" if args.no_redact else ""))
-    print(f"wrote: {args.out}/you-corpus.txt  +  {idx} chunks in {args.out}/chunks/")
+def print_counts(result, no_redact=False):
+    print(f"sessions: {result['sessions']}")
+    print(f"your messages: {result['messages']}")
+    print(f"tokens (approx): {result['chars'] // 4:,}")
+    print(f"secrets/PII redacted: {result['redactions']}" + ("  (redaction OFF)" if no_redact else ""))
+
+def main():
+    ap = argparse.ArgumentParser(description="mine your AI sessions into a model of you")
+    ap.add_argument("--source", choices=["auto", "codex", "claude"], default="auto")
+    ap.add_argument("--path", help="a folder of .jsonl session logs to read instead")
+    ap.add_argument("--out", default="ditto-out")
+    ap.add_argument("--chunks", type=int, default=20)
+    ap.add_argument("--dry-run", action="store_true", help="show counts and output paths without writing files")
+    ap.add_argument("--no-redact", action="store_true", help="skip redaction (NOT recommended)")
+    args = ap.parse_args()
+
+    roots = []
+    if args.path:
+        roots = [args.path]
+    elif args.source == "auto":
+        roots = SOURCES["codex"] + SOURCES["claude"]
+    else:
+        roots = SOURCES[args.source]
+
+    files = discover_files(roots)
+    if not files:
+        print("no session logs found. try --path <folder> or --source codex/claude.")
+        print("looked in:", ", ".join(roots))
+        sys.exit(1)
+
+    result = mine_files(files, args.no_redact)
+
+    if args.dry_run:
+        print("dry run: no files written")
+        print("looked in:", ", ".join(roots))
+        print(f"jsonl files: {len(files)}")
+        print_counts(result, args.no_redact)
+        print(f"would write: {args.out}/you-corpus.txt  +  chunks in {args.out}/chunks/")
+        return
+
+    chunk_count = write_outputs(result["blocks"], args.out, args.chunks)
+
+    print_counts(result, args.no_redact)
+    print(f"wrote: {args.out}/you-corpus.txt  +  {chunk_count} chunks in {args.out}/chunks/")
     print(f"\nnext: open your coding agent, paste MINING_PROMPT.md, point it at {args.out}/chunks/, merge into you.md")
 
 if __name__ == "__main__":

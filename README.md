@@ -111,6 +111,7 @@ that `you.md` is a skill/context file. drop it in `.claude/skills/`, `.codex/ski
 ```bash
 git clone https://github.com/ohad6k/ditto
 cd ditto
+python ditto.py --dry-run  # preview counts + output paths without writing files.
 python ditto.py            # auto-detects Codex + Claude logs. no deps, stdlib only.
 ```
 

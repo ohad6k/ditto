@@ -6,12 +6,6 @@ The roadmap is about making that loop safer, easier to install, and portable acr
 
 ## next
 
-### dry-run preview
-
-Show counts and redaction samples before writing the full corpus.
-
-Goal: make it easier to audit what will be mined.
-
 ### one-command installer
 
 Turn the current agent-guided flow into a direct command that can place the generated profile into:
