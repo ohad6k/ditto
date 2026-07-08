@@ -12,37 +12,23 @@ ditto mines it into a <code>you.md</code> your agents read before every task.
 
 ---
 
-## the receipt
+## what it finds
 
-real run. same prompt, same model. one agent cold, one with a `you.md` loaded. i didn't edit their replies.
+the kind of profile ditto builds, ranked by how many of the 20 agents independently pulled each trait. what 15+ of them agree on is the real you. your agent reads this before every task.
 
-**prompt:** *"my app works locally but the vercel deploy just shows a white screen. fix it"*
-
-<table>
-<tr><th>cold agent</th><th>agent + ditto</th></tr>
-<tr valign="top"><td>
-
-> Okay, I've dug into your repo. First, a clarification that matters: your app is a Vite + React SPA, not Next.js, so the env vars are `VITE_*`...
+> **done means it runs live.** never trust "done" off a code edit. show it working first.
 >
-> *(five paragraphs: rules out the supabase init, explains lazy-loading and error boundaries, lists two causes with file references)*
+> **fix the one thing.** rewriting or "cleaning up" code that isn't the problem gets rejected every time.
 >
-> ...regardless of what it is, I'd recommend I **add an error boundary** around your routes so a failing chunk shows a real error. Want me to do that now while you pull the console output?
-
-</td><td>
-
-> the two things that white-screen a next+supabase app on vercel but not locally:
+> **builds faster than they understand what they built** — then asks the agent to explain their own system back.
 >
-> 1. missing env vars in vercel. your local `.env` isn't uploaded...
-> 2. a client-side crash on first render.
+> **voice:** lowercase, short, "you get me", no walls of text, no hype.
 >
-> fastest path, do these and tell me what you see: deployed url → F12 → console → paste the red error. vercel → settings → env vars → which names exist.
->
-> don't change any code yet. 9 times out of 10 this is the env vars, and rewriting code won't fix a missing key.
+> **gets frustrated by repeating the same ask** until it lands, not by escalating.
 
-</td></tr>
-</table>
+nobody wrote those rules down. 20 agents pulled them out of one person's own history and agreed on them.
 
-same model both times. ditto didn't make it smarter. it made it act like **you**: check the provider before the code, keep it short, don't add stuff you didn't ask for (the cold one offered to write a new error boundary into a working app), talk like a builder not a support desk. run ditto on your own logs and it copies *your* rules, not these.
+> this is an example. yours is mined from your logs and will read nothing like it.
 
 ---
 
@@ -73,6 +59,22 @@ wrote: ditto-out/you-corpus.txt  +  20 chunks in ditto-out/chunks/
 ```
 
 then open your coding agent (Claude Code / Codex / Cursor), paste [`MINING_PROMPT.md`](MINING_PROMPT.md), point it at `ditto-out/chunks/`, and let it build your `you.md`. example output: [`examples/you.md`](examples/you.md).
+
+## install your you.md (any agent)
+
+your `you.md` is just a context file. drop it where your agent already looks and it reads it before every task:
+
+| tool | where it goes |
+|---|---|
+| claude code | `.claude/skills/you/SKILL.md` (or append to `CLAUDE.md`) |
+| cursor | `.cursor/rules/you.mdc` |
+| codex | `AGENTS.md` |
+| gemini cli | `GEMINI.md` |
+| windsurf / other | its rules or context file |
+
+that's it. no plugin, no config.
+
+**using a coding agent?** point it at this repo and say *"run ditto and install my you.md"* — the skill in [`skill/`](skill/SKILL.md) walks it through the whole flow (extract, mine, write, place the file) on its own. works in claude code, cursor, codex, and gemini.
 
 ## privacy (read this)
 
