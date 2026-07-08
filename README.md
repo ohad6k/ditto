@@ -1,8 +1,8 @@
 <p align="center"><img src="assets/ditto.png" width="360" alt="ditto"></p>
 
-<h1 align="center">ditto</h1>
+<h1 align="center">Ditto</h1>
 
-<p align="center"><b>your AI agents act like they just met you. ditto fixes that.</b></p>
+<p align="center"><b>Your AI agents act like they just met you. Ditto fixes that.</b></p>
 
 <p align="center">
 <img src="https://img.shields.io/github/stars/ohad6k/ditto?style=for-the-badge&color=3a3a3a&labelColor=141414&logo=github&logoColor=white" alt="stars">
@@ -14,24 +14,24 @@
 </p>
 
 <p align="center">
-you have months of chat logs with claude / codex / cursor sitting on your disk.<br>
-it's the most honest record of how you actually think, and you're deleting it.<br>
-ditto mines it into a <code>you.md</code> your agents read before every task.
+You have months of chat logs with Claude / Codex / Cursor sitting on your disk.<br>
+It is the most honest record of how you actually think, and you are deleting it.<br>
+Ditto mines it into a <code>you.md</code> your agents read before every task.
 </p>
 
 ---
 
-## not memory
+## Not Memory
 
-memory is what you explicitly told the model.
+Memory is what you explicitly told the model.
 
-ditto mines what your work already proved about you: what you reject, what "done" means, when you ask for proof, how you talk when you're actually working, and the agent behaviors that make you stop the task.
+Ditto mines what your work already proved about you: what you reject, what "done" means, when you ask for proof, how you talk when you're actually working, and the agent behaviors that make you stop the task.
 
-that's why it reads raw session logs, not your `CLAUDE.md` or rules file.
+That's why it reads raw session logs, not your `CLAUDE.md` or rules file.
 
-## a real run
+## A Real Run
 
-i asked an agent to help me launch this repo. one line: **"help me post ditto on reddit."** same model, once cold, once with my ditto profile loaded.
+I asked an agent to help me launch this repo. One line: **"help me post ditto on reddit."** Same model, once cold, once with my Ditto profile loaded.
 
 <table><tr><td>
 
@@ -79,9 +79,9 @@ then the move: post it, drop the repo as your own first comment within a minute,
 
 </td></tr></table>
 
-## what it finds
+## What It Finds
 
-the kind of profile ditto builds, ranked by how many of the 20 agents independently pulled each trait. what 15+ of them agree on is the real you. your agent reads this before every task.
+The kind of profile Ditto builds, ranked by how many of the 20 agents independently pulled each trait. What 15+ of them agree on is the real you. Your agent reads this before every task.
 
 > **done means it runs live.** never trust "done" off a code edit. show it working first.
 >
@@ -93,21 +93,21 @@ the kind of profile ditto builds, ranked by how many of the 20 agents independen
 >
 > **gets frustrated by repeating the same ask** until it lands, not by escalating.
 
-nobody wrote those rules down. 20 agents pulled them out of one person's own history and agreed on them.
+Nobody wrote those rules down. 20 agents pulled them out of one person's own history and agreed on them.
 
-> this is an example. yours is mined from your logs and will read nothing like it.
+> This is an example. Yours is mined from your logs and will read nothing like it.
 
 ---
 
-## what it does
+## What It Does
 
-1. reads your local session logs and keeps **only the words you typed** (strips all the tool output, file dumps, and pasted errors).
-2. **redacts secrets + personal info** by default, before anything is written or seen by an agent.
-3. splits it into chunks and hands you a prompt to fan a coding agent across them, then merge into one `you.md`.
+1. Reads your local session logs and keeps **only the words you typed** (strips all the tool output, file dumps, and pasted errors).
+2. **Redacts secrets + personal info** by default, before anything is written or seen by an agent.
+3. Splits it into chunks and hands you a prompt to fan a coding agent across them, then merge into one `you.md`.
 
-that `you.md` is a skill/context file. drop it in `.claude/skills/`, `.codex/skills/`, your `AGENTS.md`, or cursor rules, and every agent starts already knowing how you work.
+That `you.md` is a skill/context file. Drop it in `.claude/skills/`, `.codex/skills/`, your `AGENTS.md`, or Cursor rules, and every agent starts already knowing how you work.
 
-## quickstart
+## Quickstart
 
 ```bash
 git clone https://github.com/ohad6k/ditto
@@ -116,14 +116,14 @@ python ditto.py --dry-run  # preview counts + output paths without writing files
 python ditto.py            # auto-detects Codex + Claude logs. no deps, stdlib only.
 ```
 
-what you can audit before running it:
+What you can audit before running it:
 
 - [`ditto.py`](ditto.py) is the extractor. stdlib only, no network calls.
-- redaction happens before text is written to `ditto-out/`.
-- the mining prompt is plain markdown: [`MINING_PROMPT.md`](MINING_PROMPT.md).
-- the full security model is here: [`SECURITY.md`](SECURITY.md).
+- Redaction happens before text is written to `ditto-out/`.
+- The mining prompt is plain markdown: [`MINING_PROMPT.md`](MINING_PROMPT.md).
+- The full security model is here: [`SECURITY.md`](SECURITY.md).
 
-you get:
+You get:
 
 ```
 sessions: 1,656
@@ -133,32 +133,32 @@ secrets/PII redacted: 41
 wrote: ditto-out/you-corpus.txt  +  20 chunks in ditto-out/chunks/
 ```
 
-then open your coding agent (Claude Code / Codex / Cursor), paste [`MINING_PROMPT.md`](MINING_PROMPT.md), point it at `ditto-out/chunks/`, and let it build your `you.md`. example output: [`examples/you.md`](examples/you.md).
+Then open your coding agent (Claude Code / Codex / Cursor), paste [`MINING_PROMPT.md`](MINING_PROMPT.md), point it at `ditto-out/chunks/`, and let it build your `you.md`. Example output: [`examples/you.md`](examples/you.md).
 
-## install your you.md (any agent)
+## Install Your you.md (Any Agent)
 
-your `you.md` is just a context file. drop it where your agent already looks and it reads it before every task:
+Your `you.md` is just a context file. Drop it where your agent already looks and it reads it before every task:
 
-| tool | where it goes |
+| Tool | Where it goes |
 |---|---|
-| claude code | `.claude/skills/you/SKILL.md` (or append to `CLAUDE.md`) |
-| codex skill | `~/.codex/skills/you/SKILL.md` |
-| cursor | `.cursor/rules/you.mdc` |
-| codex repo context | `AGENTS.md` |
-| gemini cli | `GEMINI.md` |
-| windsurf / other | its rules or context file |
+| Claude Code | `.claude/skills/you/SKILL.md` (or append to `CLAUDE.md`) |
+| Codex skill | `~/.codex/skills/you/SKILL.md` |
+| Cursor | `.cursor/rules/you.mdc` |
+| Codex repo context | `AGENTS.md` |
+| Gemini CLI | `GEMINI.md` |
+| Windsurf / other | its rules or context file |
 
-ditto writes the `you.md` with the right frontmatter already, so on claude code, codex, and cursor it **registers as a skill the moment you drop it in** - nothing to wire. for codex, use the native skill path above if you want it everywhere; use `AGENTS.md` if you only want it in one repo. that's it, no plugin, no config.
+Ditto writes the `you.md` with the right frontmatter already, so on Claude Code, Codex, and Cursor it **registers as a skill the moment you drop it in** - nothing to wire. For Codex, use the native skill path above if you want it everywhere; use `AGENTS.md` if you only want it in one repo. That's it, no plugin, no config.
 
-**using a coding agent?** point it at this repo and say *"run ditto and install my you.md"* — the skill in [`skill/`](skill/SKILL.md) walks it through the whole flow (extract, mine, write, place the file) on its own. works in claude code, cursor, codex, and gemini.
+**Using a coding agent?** Point it at this repo and say *"run ditto and install my you.md"* - the skill in [`skill/`](skill/SKILL.md) walks it through the whole flow (extract, mine, write, place the file) on its own. Works in Claude Code, Cursor, Codex, and Gemini.
 
-copy/paste version:
+Copy/paste version:
 
 ```text
 run ditto on my local Claude/Codex logs, mine a you.md from the chunks, install it for my current agent, and show me the session/message/token/redaction counts before claiming it worked.
 ```
 
-manual install:
+Manual install:
 
 ```bash
 python ditto.py --install you.md --target codex
@@ -168,41 +168,41 @@ python ditto.py --install you.md --target agents --repo .
 python ditto.py --install you.md --target gemini --repo .
 ```
 
-## privacy (read this)
+## Privacy (Read This)
 
-- **100% local.** ditto makes zero network calls. your logs never leave your machine. it's plain python, read the file.
-- **redaction is on by default.** API keys, tokens, JWTs, emails, phone numbers, IPs get stripped before your text hits disk or an agent. (`--no-redact` exists; don't use it.)
-- the mining step runs in *your* coding agent, on *your* machine. nothing gets uploaded unless you choose to.
+- **100% local.** Ditto makes zero network calls. Your logs never leave your machine. It's plain Python; read the file.
+- **Redaction is on by default.** API keys, tokens, JWTs, emails, phone numbers, IPs get stripped before your text hits disk or an agent. (`--no-redact` exists; don't use it.)
+- The mining step runs in *your* coding agent, on *your* machine. Nothing gets uploaded unless you choose to.
 
-## how it works
+## How It Works
 
-your logs are ~95% noise (tool output, file contents, diffs). the signal is the small slice of words you actually typed. ditto isolates that, then uses an agent fan-out so no single context has to hold all of it: each agent reads a chunk and pulls how you decide, what you reject, how you talk, where you get stuck. traits that show up across many chunks are the real you. one-offs are noise. that ranking is the whole trick.
+Your logs are ~95% noise (tool output, file contents, diffs). The signal is the small slice of words you actually typed. Ditto isolates that, then uses an agent fan-out so no single context has to hold all of it: each agent reads a chunk and pulls how you decide, what you reject, how you talk, where you get stuck. Traits that show up across many chunks are the real you. One-offs are noise. That ranking is the whole trick.
 
-**it mines your raw sessions, not your `CLAUDE.md` or rules file.** that's the entire point — anything can summarize the rules you already wrote (that's what `/init` does). ditto surfaces the stuff you *never* wrote down, straight from how you actually worked. if a run builds a profile without reading your real `.jsonl` logs, it isn't ditto — it's just your rules file reflected back.
+**It mines your raw sessions, not your `CLAUDE.md` or rules file.** That's the entire point - anything can summarize the rules you already wrote (that's what `/init` does). Ditto surfaces the stuff you *never* wrote down, straight from how you actually worked. If a run builds a profile without reading your real `.jsonl` logs, it isn't Ditto - it's just your rules file reflected back.
 
-## limits (being honest)
+## Limits (Being Honest)
 
-- it models how you *work and talk*, not your knowledge. it won't make an agent smarter, it makes it act more like you.
-- garbage in, garbage out: if your logs are 3 sessions long, the profile is thin. it shines around months of history.
-- it reads Codex (`~/.codex/sessions`) and Claude Code (`~/.claude/projects`) jsonl out of the box. other tools: point `--path` at a folder of jsonl.
+- It models how you *work and talk*, not your knowledge. It won't make an agent smarter, it makes it act more like you.
+- Garbage in, garbage out: if your logs are 3 sessions long, the profile is thin. It shines around months of history.
+- It reads Codex (`~/.codex/sessions`) and Claude Code (`~/.claude/projects`) jsonl out of the box. Other tools: point `--path` at a folder of jsonl.
 
-## roadmap
+## Roadmap
 
-next up: one-command installer, more log sources, and counterweight profiles that use your `you.md` to challenge you instead of mimic you.
+Next up: one-command installer, more log sources, and counterweight profiles that use your `you.md` to challenge you instead of mimic you.
 
-see [`ROADMAP.md`](ROADMAP.md).
+See [`ROADMAP.md`](ROADMAP.md).
 
-## community
+## Community
 
-building this in the open.
+Building this in the open.
 
-if you run it, don't post your full `you.md`. post the weirdest thing it found about how you work:
+If you run it, don't post your full `you.md`. Post the weirdest thing it found about how you work:
 
-- [share what ditto found in your logs](https://github.com/ohad6k/ditto/issues/1)
+- [Share what Ditto found in your logs](https://github.com/ohad6k/ditto/issues/1)
 - [discord.gg/VNnMq2U5r](https://discord.gg/VNnMq2U5r)
 
-## license
+## License
 
-MIT. it's yours. if you build something on it, i'd love to see it.
+MIT. It's yours. If you build something on it, I'd love to see it.
 
-<p align="center"><i>made by <a href="https://github.com/ohad6k">@ohad6k</a> while building in public.</i></p>
+<p align="center"><i>Made by <a href="https://github.com/ohad6k">@ohad6k</a> while building in public.</i></p>
