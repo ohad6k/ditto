@@ -6,6 +6,8 @@ chunks/
 
 # your actual profile — keep it local unless you WANT to share it
 you.md
+!examples/
+!examples/you.md
 
 __pycache__/
 *.pyc

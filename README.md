@@ -119,6 +119,7 @@ what you can audit before running it:
 - [`ditto.py`](ditto.py) is the extractor. stdlib only, no network calls.
 - redaction happens before text is written to `ditto-out/`.
 - the mining prompt is plain markdown: [`MINING_PROMPT.md`](MINING_PROMPT.md).
+- the full security model is here: [`SECURITY.md`](SECURITY.md).
 
 you get:
 
@@ -149,6 +150,12 @@ ditto writes the `you.md` with the right frontmatter already, so on claude code,
 
 **using a coding agent?** point it at this repo and say *"run ditto and install my you.md"* — the skill in [`skill/`](skill/SKILL.md) walks it through the whole flow (extract, mine, write, place the file) on its own. works in claude code, cursor, codex, and gemini.
 
+copy/paste version:
+
+```text
+run ditto on my local Claude/Codex logs, mine a you.md from the chunks, install it for my current agent, and show me the session/message/token/redaction counts before claiming it worked.
+```
+
 ## privacy (read this)
 
 - **100% local.** ditto makes zero network calls. your logs never leave your machine. it's plain python, read the file.
@@ -167,9 +174,20 @@ your logs are ~95% noise (tool output, file contents, diffs). the signal is the 
 - garbage in, garbage out: if your logs are 3 sessions long, the profile is thin. it shines around months of history.
 - it reads Codex (`~/.codex/sessions`) and Claude Code (`~/.claude/projects`) jsonl out of the box. other tools: point `--path` at a folder of jsonl.
 
+## roadmap
+
+next up: dry-run preview, one-command installer, more log sources, and counterweight profiles that use your `you.md` to challenge you instead of mimic you.
+
+see [`ROADMAP.md`](ROADMAP.md).
+
 ## community
 
-building this in the open. join the discord to share your `you.md`, compare what the mining pulled out of you, and tell me what the prompt missed: **[discord.gg/VNnMq2U5r](https://discord.gg/VNnMq2U5r)**
+building this in the open.
+
+if you run it, don't post your full `you.md`. post the weirdest thing it found about how you work:
+
+- [share what ditto found in your logs](https://github.com/ohad6k/ditto/issues/1)
+- [discord.gg/VNnMq2U5r](https://discord.gg/VNnMq2U5r)
 
 ## license
 
