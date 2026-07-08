@@ -5,7 +5,7 @@ description: Mine your own AI coding-session history into a "you.md" — a model
 
 # ditto
 
-Turn the user's own AI session logs into a `you.md` they can drop into `.claude/skills/`, `AGENTS.md`, or cursor rules. Runs locally, redacts secrets by default. This skill orchestrates the whole flow so the user never touches python or a manual step.
+Turn the user's own AI session logs into a `you.md` they can drop into `.claude/skills/`, `.codex/skills/`, `AGENTS.md`, or cursor rules. Runs locally, redacts secrets by default. This skill orchestrates the whole flow so the user never touches python or a manual step.
 
 ## The one rule that makes this ditto (read first)
 
@@ -28,7 +28,8 @@ So: **run `ditto.py` on the real logs first.** If it finds no logs, **STOP and a
 
 4. **Install + prove.** The `you.md` already starts with `name:` / `description:` frontmatter, so it's skill-ready. Place it where the user's agent actually reads it, per their tool, then verify it registered:
    - **Claude Code** → save as `.claude/skills/you/SKILL.md`. Confirm it shows in the skill list (invoke `/you`). For it to load in every project, put it in the user-level `~/.claude/skills/you/SKILL.md`.
-   - **Codex** → append the body (everything below the frontmatter) to `AGENTS.md` at the repo root. Codex reads it automatically, no frontmatter needed.
+   - **Codex native skill** - save as `~/.codex/skills/you/SKILL.md`. Confirm it appears in Codex's available skills, or open a new Codex session and verify `you` is loaded before relying on it.
+   - **Codex repo context** - append the body (everything below the frontmatter) to `AGENTS.md` at the repo root. Codex reads it automatically, no frontmatter needed. Use this when the profile should apply only to one repo.
    - **Cursor** → save as `.cursor/rules/you.mdc`, with frontmatter `description: act like me` and `alwaysApply: true`, then the body.
    - **Gemini CLI** → append the body to `GEMINI.md`.
    Then prove it: run one real task once without the file and once with it loaded, so the user sees the agent act more like them. Do not claim it's installed until you've confirmed the agent actually picks it up.

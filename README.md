@@ -96,7 +96,7 @@ nobody wrote those rules down. 20 agents pulled them out of one person's own his
 2. **redacts secrets + personal info** by default, before anything is written or seen by an agent.
 3. splits it into chunks and hands you a prompt to fan a coding agent across them, then merge into one `you.md`.
 
-that `you.md` is a skill/context file. drop it in `.claude/skills/`, your `AGENTS.md`, or cursor rules, and every agent starts already knowing how you work.
+that `you.md` is a skill/context file. drop it in `.claude/skills/`, `.codex/skills/`, your `AGENTS.md`, or cursor rules, and every agent starts already knowing how you work.
 
 ## quickstart
 
@@ -125,12 +125,13 @@ your `you.md` is just a context file. drop it where your agent already looks and
 | tool | where it goes |
 |---|---|
 | claude code | `.claude/skills/you/SKILL.md` (or append to `CLAUDE.md`) |
+| codex skill | `~/.codex/skills/you/SKILL.md` |
 | cursor | `.cursor/rules/you.mdc` |
-| codex | `AGENTS.md` |
+| codex repo context | `AGENTS.md` |
 | gemini cli | `GEMINI.md` |
 | windsurf / other | its rules or context file |
 
-ditto writes the `you.md` with the right frontmatter already, so on claude code and cursor it **registers as a skill the moment you drop it in** — nothing to wire. that's it, no plugin, no config.
+ditto writes the `you.md` with the right frontmatter already, so on claude code, codex, and cursor it **registers as a skill the moment you drop it in** - nothing to wire. for codex, use the native skill path above if you want it everywhere; use `AGENTS.md` if you only want it in one repo. that's it, no plugin, no config.
 
 **using a coding agent?** point it at this repo and say *"run ditto and install my you.md"* — the skill in [`skill/`](skill/SKILL.md) walks it through the whole flow (extract, mine, write, place the file) on its own. works in claude code, cursor, codex, and gemini.
 
