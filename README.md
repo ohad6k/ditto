@@ -6,6 +6,7 @@
 
 <p align="center">
 <img src="https://img.shields.io/github/stars/ohad6k/ditto?style=for-the-badge&color=3a3a3a&labelColor=141414&logo=github&logoColor=white" alt="stars">
+<a href="https://discord.gg/VNnMq2U5r"><img src="https://img.shields.io/badge/discord-join-3a3a3a?style=for-the-badge&labelColor=141414&logo=discord&logoColor=white" alt="discord"></a>
 <img src="https://img.shields.io/badge/license-MIT-3a3a3a?style=for-the-badge&labelColor=141414" alt="MIT">
 <img src="https://img.shields.io/badge/python-zero_deps-3a3a3a?style=for-the-badge&labelColor=141414&logo=python&logoColor=white" alt="python, zero deps">
 <img src="https://img.shields.io/badge/works_with-claude_·_cursor_·_codex_·_gemini-141414?style=for-the-badge&labelColor=3a3a3a" alt="works with claude, cursor, codex, gemini">
@@ -133,6 +134,10 @@ your logs are ~95% noise (tool output, file contents, diffs). the signal is the 
 - it models how you *work and talk*, not your knowledge. it won't make an agent smarter, it makes it act more like you.
 - garbage in, garbage out: if your logs are 3 sessions long, the profile is thin. it shines around months of history.
 - it reads Codex (`~/.codex/sessions`) and Claude Code (`~/.claude/projects`) jsonl out of the box. other tools: point `--path` at a folder of jsonl.
+
+## community
+
+building this in the open. join the discord to share your `you.md`, compare what the mining pulled out of you, and tell me what the prompt missed: **[discord.gg/VNnMq2U5r](https://discord.gg/VNnMq2U5r)**
 
 ## license
 
