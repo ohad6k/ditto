@@ -74,22 +74,24 @@ def user_messages(path):
                 # Claude: {type:'user',message:{role:'user',content:'...'|[...]}}
                 p = o.get("payload", o)
                 msg = p.get("message", p)
-                if (p.get("type") == "message" or o.get("type") == "user") and \
-                   (p.get("role") == "user" or msg.get("role") == "user"):
-                    content = msg.get("content", p.get("content", ""))
+                if not ((p.get("type") == "message" or o.get("type") == "user") and
+                        (p.get("role") == "user" or msg.get("role") == "user")):
+                    continue
+                content = msg.get("content", p.get("content", ""))
+                if isinstance(content, str):
+                    texts = [content]
+                elif isinstance(content, list):
+                    texts = [c.get("text", "") for c in content if isinstance(c, dict)]
+                else:
                     texts = []
-                    if isinstance(content, str):
-                        texts = [content]
-                    elif isinstance(content, list):
-                        texts = [c.get("text", "") for c in content if isinstance(c, dict)]
-                    for t in texts:
-                        t = (t or "").strip()
-                        if not t or t.startswith("<"):        # skip env/system injections
-                            continue
-                        if is_pasted_log(t):
-                            continue
-                        ts = (o.get("timestamp", "") or "")[:10]
-                        out.append((ts, t))
+                for t in texts:
+                    t = (t or "").strip()
+                    if not t or t.startswith("<"):        # skip env/system injections
+                        continue
+                    if is_pasted_log(t):
+                        continue
+                    ts = (o.get("timestamp", "") or "")[:10]
+                    out.append((ts, t))
     except Exception:
         pass
     return out
