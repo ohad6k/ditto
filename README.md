@@ -6,6 +6,7 @@
 
 <p align="center">
 <img src="https://img.shields.io/github/stars/ohad6k/ditto?style=for-the-badge&color=3a3a3a&labelColor=141414&logo=github&logoColor=white" alt="stars">
+<a href="https://github.com/ohad6k/ditto/actions/workflows/tests.yml"><img src="https://img.shields.io/github/actions/workflow/status/ohad6k/ditto/tests.yml?branch=main&style=for-the-badge&label=tests&labelColor=141414&color=3a3a3a" alt="tests"></a>
 <a href="https://discord.gg/VNnMq2U5r"><img src="https://img.shields.io/badge/discord-join-3a3a3a?style=for-the-badge&labelColor=141414&logo=discord&logoColor=white" alt="discord"></a>
 <img src="https://img.shields.io/badge/license-MIT-3a3a3a?style=for-the-badge&labelColor=141414" alt="MIT">
 <img src="https://img.shields.io/badge/python-zero_deps-3a3a3a?style=for-the-badge&labelColor=141414&logo=python&logoColor=white" alt="python, zero deps">
@@ -177,7 +178,7 @@ your logs are ~95% noise (tool output, file contents, diffs). the signal is the 
 
 ## roadmap
 
-next up: dry-run preview, one-command installer, more log sources, and counterweight profiles that use your `you.md` to challenge you instead of mimic you.
+next up: one-command installer, more log sources, and counterweight profiles that use your `you.md` to challenge you instead of mimic you.
 
 see [`ROADMAP.md`](ROADMAP.md).
 
