@@ -6,6 +6,18 @@ The roadmap is about making that loop safer, easier to install, and portable acr
 
 ## next
 
+### workflow mining
+
+Your logs don't just hold who you are — they hold what you repeatedly do. The same UI-polish sequence you've run 30 times. Your debug ritual. Your release routine. You invented these workflows and never wrote them down.
+
+Ditto will mine recurring workflows out of your sessions and write each one as its own installable skill, with the same receipts: "this sequence appeared in 23 sessions."
+
+Goal: `you.md` is the profile; your workflows become a personal skill library, mined not written.
+
+### `--diff` — watch yourself change
+
+Re-mine this month against your last profile and show what changed: laws that got stronger, habits you dropped, new failure modes.
+
 ### more log sources
 
 Add adapters for other AI coding tools when their local logs are accessible.

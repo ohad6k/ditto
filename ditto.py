@@ -247,49 +247,69 @@ CARD_HTML = """<!doctype html>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ditto card</title>
 <style>
-  :root {{ color-scheme: dark; }}
   * {{ margin: 0; box-sizing: border-box; }}
   body {{
-    background: #191a1c; min-height: 100vh; display: grid; place-items: center;
-    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-    padding: 48px 16px;
+    background: #d9d4c7; min-height: 100vh; display: grid; place-items: center;
+    font-family: Georgia, 'Times New Roman', serif; padding: 48px 16px; color: #1c1b17;
   }}
-  .card {{
-    width: 680px; max-width: 100%; background: #0b0b0c;
-    border: 1px solid #2a2a2c; border-radius: 16px; padding: 44px 48px;
-    color: #ededee;
+  .slab {{
+    width: 700px; max-width: 100%; background: #f6f3ea;
+    border: 1px solid #1c1b17; box-shadow: 0 0 0 4px #f6f3ea, 0 0 0 5px #1c1b17, 0 18px 40px rgba(28,27,23,.25);
+    padding: 10px;
   }}
-  .top {{ display: flex; justify-content: space-between; align-items: baseline; }}
-  .wordmark {{ font-weight: 700; font-size: 15px; letter-spacing: .04em; color: #8a8a8e; }}
-  .range {{ font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: 12px; color: #58585c; }}
-  .archetype {{ font-size: 40px; font-weight: 800; letter-spacing: -.02em; line-height: 1.05; margin: 34px 0 6px; }}
-  .sub {{ color: #7c7c80; font-size: 14px; margin-bottom: 30px; }}
-  .stats {{ display: flex; gap: 40px; padding: 22px 0; border-top: 1px solid #232325; border-bottom: 1px solid #232325; }}
-  .stat b {{ display: block; font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; }}
-  .stat span {{ font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: #6b6b6f; }}
-  .laws {{ margin: 26px 0 0; }}
-  .law {{ display: flex; justify-content: space-between; align-items: baseline; gap: 18px; padding: 11px 0; }}
-  .law + .law {{ border-top: 1px solid #1c1c1e; }}
-  .law p {{ font-size: 16px; font-weight: 550; }}
+  .frame {{ border: 3px double #1c1b17; padding: 34px 40px 28px; }}
+  .label {{
+    display: flex; justify-content: space-between; align-items: stretch;
+    border: 1px solid #1c1b17; margin-bottom: 30px;
+  }}
+  .label-left {{ padding: 12px 16px; flex: 1; }}
+  .label-left .set {{ font-size: 11px; letter-spacing: .22em; text-transform: uppercase; }}
+  .label-left .name {{ font-size: 21px; font-weight: 700; letter-spacing: .01em; margin-top: 3px; }}
+  .grade {{
+    border-left: 1px solid #1c1b17; padding: 10px 18px; text-align: center;
+    display: flex; flex-direction: column; justify-content: center;
+    background: repeating-linear-gradient(45deg, transparent 0 3px, rgba(28,27,23,.05) 3px 4px);
+  }}
+  .grade b {{ font-size: 26px; font-variant-numeric: tabular-nums; }}
+  .grade span {{ font-size: 9px; letter-spacing: .2em; text-transform: uppercase; }}
+  .archetype {{ text-align: center; font-size: 38px; font-weight: 700; letter-spacing: .01em; line-height: 1.1; }}
+  .range {{ text-align: center; font-size: 12px; letter-spacing: .3em; text-transform: uppercase; margin: 10px 0 26px; }}
+  .rule {{ border: 0; border-top: 1px solid #1c1b17; position: relative; margin: 0; }}
+  .rule + .rule {{ margin-top: 3px; }}
+  .stats {{ display: flex; justify-content: space-around; padding: 20px 0; }}
+  .stat {{ text-align: center; }}
+  .stat b {{ display: block; font-size: 26px; font-variant-numeric: tabular-nums; }}
+  .stat span {{ font-size: 10px; letter-spacing: .24em; text-transform: uppercase; }}
+  .laws {{ padding: 24px 6px 4px; }}
+  .law {{ display: flex; align-items: baseline; gap: 14px; padding: 9px 0; }}
+  .law i {{ font-style: normal; width: 26px; font-size: 14px; }}
+  .law p {{ flex: 1; font-size: 17px; }}
   .law code {{
-    font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: 12px;
-    color: #a3a3a7; border: 1px solid #2e2e30; border-radius: 6px; padding: 3px 8px; white-space: nowrap;
+    font-family: Georgia, serif; font-size: 12px; letter-spacing: .06em;
+    border: 1px solid #1c1b17; padding: 2px 9px; white-space: nowrap;
   }}
-  .truth {{ margin-top: 30px; padding: 20px 22px; background: #111113; border-radius: 10px; }}
-  .truth span {{ display: block; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: #6b6b6f; margin-bottom: 8px; }}
-  .truth p {{ font-size: 16px; font-style: italic; color: #d6d6d8; line-height: 1.45; }}
-  .foot {{ margin-top: 30px; display: flex; justify-content: space-between; font-size: 12px; color: #58585c; }}
-  .foot b {{ color: #8a8a8e; font-weight: 600; }}
+  .truth {{ margin: 22px 0 26px; border: 1px solid #1c1b17; padding: 18px 22px; text-align: center;
+    background: repeating-linear-gradient(0deg, transparent 0 5px, rgba(28,27,23,.03) 5px 6px); }}
+  .truth span {{ display: block; font-size: 10px; letter-spacing: .26em; text-transform: uppercase; margin-bottom: 9px; }}
+  .truth p {{ font-size: 17px; font-style: italic; line-height: 1.5; }}
+  .foot {{ display: flex; justify-content: space-between; font-size: 11px; letter-spacing: .14em;
+    text-transform: uppercase; padding-top: 16px; }}
 </style>
-<div class="card">
-  <div class="top"><div class="wordmark">ditto</div><div class="range">{range}</div></div>
+<div class="slab"><div class="frame">
+  <div class="label">
+    <div class="label-left"><div class="set">ditto &middot; mined from my own sessions</div><div class="name">certified working profile</div></div>
+    <div class="grade"><b>{grade}</b><span>consensus</span></div>
+  </div>
   <div class="archetype">{archetype}</div>
-  <div class="sub">mined from my own sessions. every line has receipts.</div>
+  <div class="range">{range}</div>
+  <hr class="rule"><hr class="rule">
   <div class="stats">{stats}</div>
+  <hr class="rule"><hr class="rule">
   <div class="laws">{laws}</div>
   {truth}
-  <div class="foot"><div><b>github.com/ohad6k/ditto</b></div><div>run it on your own logs</div></div>
-</div>
+  <hr class="rule"><hr class="rule">
+  <div class="foot"><div>github.com/ohad6k/ditto</div><div>run it on your own logs</div></div>
+</div></div>
 """
 
 def esc(s):
@@ -309,15 +329,19 @@ def render_card_html(card):
     if months:
         stat_cells.append(f"<div class=stat><b>{months}</b><span>months</span></div>")
     laws = []
-    for law in card.get("laws", [])[:3]:
+    numerals = ["I.", "II.", "III."]
+    for i, law in enumerate(card.get("laws", [])[:3]):
         count = f"<code>{esc(law['count'])}</code>" if law.get("count") else ""
-        laws.append(f"<div class=law><p>{esc(law.get('text', ''))}</p>{count}</div>")
+        laws.append(f"<div class=law><i>{numerals[i]}</i><p>{esc(law.get('text', ''))}</p>{count}</div>")
     truth = ""
     if card.get("truth"):
         truth = (f'<div class="truth"><span>the uncomfortable one</span>'
                  f"<p>&ldquo;{esc(card['truth'])}&rdquo;</p></div>")
+    top_laws = card.get("laws", [])
+    grade = esc(top_laws[0]["count"]) if top_laws and top_laws[0].get("count") else "&mdash;"
     return CARD_HTML.format(
         range=rng,
+        grade=grade,
         archetype=esc(card.get("archetype", "you")),
         stats="".join(stat_cells),
         laws="".join(laws),
