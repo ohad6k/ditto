@@ -67,6 +67,7 @@ Current redaction patterns cover:
 - phone numbers
 - IP addresses
 - common `api_key`, `secret`, `token`, `password`, `passwd` assignments
+- bare and `is`-form credentials (`password is hunter2`, `psk hunter2`)
 
 The patterns live in `REDACTIONS` inside [`ditto.py`](ditto.py).
 
@@ -76,7 +77,13 @@ Redaction is best-effort. You should still inspect generated files before sharin
 
 Do not use `--no-redact` unless you know exactly what is in your logs.
 
-Do not commit `ditto-out/`, `you-corpus.txt`, chunks, or your real `you.md`. The `.gitignore` blocks those by default.
+Do not commit `ditto-out/`, `you-corpus.txt`, chunks, your real `you.md`, the
+`you-appendix.md` the skill writes alongside it, or the `you-thinking.md` /
+`you-designer.md` lenses. The `.gitignore` blocks all of those by default.
+
+The appendix is the most sensitive file ditto produces: it exists to hold the
+verbatim quotes backing every trait. ditto is normally run from inside a clone
+of this repo, whose `origin` is a public remote.
 
 ## safe sharing
 
