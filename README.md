@@ -207,7 +207,7 @@ Your logs are ~95% noise (tool output, file contents, diffs). The signal is the 
 
 - It models how you *work and talk*, not your knowledge. It won't make an agent smarter, it makes it act more like you.
 - Garbage in, garbage out: if your logs are 3 sessions long, the profile is thin. It shines around months of history.
-- It reads Codex (`~/.codex/sessions`) and Claude Code (`~/.claude/projects`) jsonl out of the box. Other tools: point `--path` at a folder of jsonl.
+- It reads Codex (`~/.codex/sessions`), Claude Code (`~/.claude/projects`), and Copilot CLI (`~/.copilot/session-state`) jsonl out of the box. Other tools: point `--path` at a folder of jsonl.
 
 ## Roadmap
 
