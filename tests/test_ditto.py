@@ -106,6 +106,56 @@ class DittoCliTest(unittest.TestCase):
             self.assertNotIn("assistant output should not appear", corpus)
             self.assertEqual(corpus, chunk)
 
+    def test_mines_only_turns_a_human_actually_typed(self):
+        """Claude Code writes agent transcripts, tool results, meta records and
+        SDK prompts into the same tree with role=user. None of them are you."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            logs = root / "logs"
+            out = root / "ditto-out"
+
+            def claude_user(text, **extra):
+                row = {"timestamp": "2026-07-08T10:00:00Z", "type": "user",
+                       "message": {"role": "user", "content": text}}
+                row.update(extra)
+                return row
+
+            write_jsonl(logs / "proj" / "session.jsonl", [
+                claude_user("the one thing I actually typed", promptSource="typed"),
+                claude_user("tool output pasted back", toolUseResult={"ok": True}),
+                claude_user("harness meta record", isMeta=True),
+                claude_user("prompt sent by a script", promptSource="sdk"),
+                claude_user("Stop hook feedback:\nyou forgot something"),
+                claude_user("[Request interrupted by user]"),
+            ])
+            # an agent transcript, in the place Claude Code actually puts them
+            write_jsonl(logs / "proj" / "abc" / "subagents" / "workflows" / "wf_1" / "agent-1.jsonl", [
+                claude_user("a subagent prompt written by the orchestrator", promptSource="typed"),
+            ])
+
+            result = subprocess.run(
+                [sys.executable, str(DITTO), "--path", str(logs), "--out", str(out), "--chunks", "1"],
+                check=True, capture_output=True, text=True,
+            )
+            corpus = (out / "you-corpus.txt").read_text(encoding="utf-8")
+
+            self.assertIn("your messages: 1", result.stdout)
+            self.assertIn("the one thing I actually typed", corpus)
+            for noise in ("tool output pasted back", "harness meta record",
+                          "prompt sent by a script", "Stop hook feedback",
+                          "Request interrupted", "a subagent prompt"):
+                self.assertNotIn(noise, corpus)
+
+    def test_is_agent_transcript_matches_only_a_subagents_path_component(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("ditto", DITTO)
+        ditto = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(ditto)
+        self.assertTrue(ditto.is_agent_transcript("/a/b/subagents/c.jsonl"))
+        self.assertTrue(ditto.is_agent_transcript("/a/subagents/workflows/wf_1/agent-2.jsonl"))
+        self.assertFalse(ditto.is_agent_transcript("/a/b/session.jsonl"))
+        self.assertFalse(ditto.is_agent_transcript("/a/my-subagents-notes/x.jsonl"))
+
     def test_install_codex_writes_skill_and_refuses_overwrite(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

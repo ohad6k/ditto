@@ -62,6 +62,29 @@ def is_pasted_log(t):
                or re.match(r'\s*File "', l))
     return hits / max(len(lines), 1) > 0.25
 
+# Messages the harness injects into the user turn but the human never typed.
+SYNTHETIC_PREFIXES = (
+    "Stop hook feedback",
+    "[Request interrupted",
+    "Caveat: The messages below",
+)
+# promptSource values that mean "a program sent this", not "a human typed it".
+MACHINE_PROMPT_SOURCES = {"sdk", "system"}
+
+def is_human_turn(o):
+    """True only if a person actually typed this record.
+
+    Claude Code writes tool results, agent sidechains, meta records and
+    programmatic (SDK) prompts into the same jsonl with role=user.
+    """
+    if o.get("isMeta") or o.get("isSidechain"):
+        return False
+    if "toolUseResult" in o:                       # tool output, not typing
+        return False
+    if o.get("promptSource") in MACHINE_PROMPT_SOURCES:
+        return False
+    return True
+
 def user_messages(path):
     out = []
     try:
@@ -72,6 +95,8 @@ def user_messages(path):
                 try:
                     o = json.loads(line)
                 except Exception:
+                    continue
+                if not is_human_turn(o):
                     continue
                 # Copilot CLI: {type:'user.message', data:{content, source}, timestamp}
                 if o.get("type") == "user.message":
@@ -98,6 +123,8 @@ def user_messages(path):
                     t = (t or "").strip()
                     if not t or t.startswith("<"):        # skip env/system injections
                         continue
+                    if t.startswith(SYNTHETIC_PREFIXES):  # hook feedback, interrupts
+                        continue
                     if is_pasted_log(t):
                         continue
                     ts = (o.get("timestamp", "") or "")[:10]
@@ -106,11 +133,20 @@ def user_messages(path):
         pass
     return out
 
+# Claude Code stores subagent and workflow transcripts under a `subagents/`
+# component of the session tree. Those are agents prompting agents -- mining
+# them profiles your tooling, not you.
+AGENT_TRANSCRIPT_DIRS = ("subagents",)
+
+def is_agent_transcript(path):
+    parts = os.path.normpath(path).split(os.sep)
+    return any(d in parts for d in AGENT_TRANSCRIPT_DIRS)
+
 def discover_files(roots):
     files = []
     for r in roots:
         files += glob.glob(os.path.join(r, "**", "*.jsonl"), recursive=True)
-    return sorted(set(files))
+    return sorted(f for f in set(files) if not is_agent_transcript(f))
 
 def session_label(path):
     """Label a session block by parent dir + filename.
