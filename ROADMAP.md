@@ -16,7 +16,11 @@ Goal: `you.md` is the profile; your workflows become a personal skill library, m
 
 ### `--diff` — watch yourself change
 
-Re-mine this month against your last profile and show what changed: laws that got stronger, habits you dropped, new failure modes.
+Re-mine this month against your last profile and show what changed: laws that got stronger, habits you dropped, new failure modes. This is versioning for the profile — your `you.md` becomes something you can track over time, not a one-shot snapshot.
+
+### the elicitation pass — spill the beans
+
+Your logs show how you work, but not everything about why. An optional interactive pass asks you the handful of questions your sessions can't answer — the calls you make in your head, the constraints you never typed — and folds the answers into your `you.md`. Passive mining plus a short active pass, so the profile catches what the logs alone can't. (Community-suggested.)
 
 ### more log sources
 
