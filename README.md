@@ -19,6 +19,8 @@ It is the most honest record of how you actually think, and you are deleting it.
 Ditto mines it into a <code>you.md</code> your agents read before every task.
 </p>
 
+<p align="center"><img src="assets/card.png" width="480" alt="a ditto profile card: archetype, laws with consensus counts, session stats, and the one uncomfortable truth"></p>
+
 ---
 
 ## Not Memory
@@ -186,8 +188,6 @@ After mining, get your profile as a card:
 ```bash
 python ditto.py --card
 ```
-
-<p align="center"><img src="assets/card.png" width="480" alt="a ditto profile card: archetype, laws with consensus counts, session stats, and the one uncomfortable truth"></p>
 
 Your archetype, your laws with their receipt counts (how many of the 20 agents independently found each one), your session stats, and the one uncomfortable truth. Rendered in the terminal + as `ditto-out/card.html`. Screenshot the card, not the profile - the `you.md` is for your agent; the card is for everyone else.
 
