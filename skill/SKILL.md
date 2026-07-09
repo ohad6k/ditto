@@ -31,7 +31,7 @@ So: **run `ditto.py` on the real logs first.** If it finds no logs, **STOP and a
 2. **Mine (fan-out).** Spawn one sub-agent per file in `ditto-out/chunks/`, each running the per-chunk prompt from `MINING_PROMPT.md` on its chunk (if not next to `ditto.py`, fetch it from `https://raw.githubusercontent.com/ohad6k/ditto/main/MINING_PROMPT.md`). Run them in parallel. Each returns a structured profile of one slice.
    - If the environment can't fan out sub-agents, process chunks sequentially instead — same prompt, one at a time.
 
-3. **Reduce.** Merge all the chunk reports with the reducer prompt in `MINING_PROMPT.md`. Rank every trait by how many chunks independently surfaced it — high-frequency traits are the real person, one-offs are noise. Output a lean `you.md` (deep quotes go in a separate `you-appendix.md`, not in `you.md`).
+3. **Reduce.** Merge all the chunk reports with the reducer prompt in `MINING_PROMPT.md`. Rank every trait by how many chunks independently surfaced it — high-frequency traits are the real person, one-offs are noise. Every kept trait carries its count inline (`(18/20)`) — that's the receipt. Output a lean `you.md` (deep quotes go in a separate `you-appendix.md`, not in `you.md`), plus `ditto-out/card.json` per the reducer spec.
 
 4. **Install + prove.** The `you.md` already starts with `name:` / `description:` frontmatter, so it's skill-ready. Place it where the user's agent actually reads it, per their tool, then verify it registered:
    - **Claude Code** → save as `.claude/skills/you/SKILL.md`. Confirm it shows in the skill list (invoke `/you`). For it to load in every project, put it in the user-level `~/.claude/skills/you/SKILL.md`.
@@ -40,6 +40,8 @@ So: **run `ditto.py` on the real logs first.** If it finds no logs, **STOP and a
    - **Cursor** → save as `.cursor/rules/you.mdc`, with frontmatter `description: act like me` and `alwaysApply: true`, then the body.
    - **Gemini CLI** → append the body to `GEMINI.md`.
    Then prove it: run one real task once without the file and once with it loaded, so the user sees the agent act more like them. Do not claim it's installed until you've confirmed the agent actually picks it up.
+
+5. **Show the card.** Run `python ditto.py --card` — it renders their profile card in the terminal and writes `ditto-out/card.html` (a screenshot-ready card: archetype, top laws with receipt counts, session stats, the one uncomfortable truth). Tell the user this is the shareable piece — the card, never the full `you.md`.
 
 ## Rules
 - **Local only.** No network calls. The user's logs never leave their machine. Say so.

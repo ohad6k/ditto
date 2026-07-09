@@ -63,6 +63,10 @@ Rank every trait by how many of the N reports independently surfaced it. A trait
 found in many reports is the real them; a trait in one report is noise — cut it or
 mark it low-confidence.
 
+Every trait you keep gets a receipt: mark how many of the N reports found it,
+inline, like `**done means it runs live** (18/20)`. A trait without a strong
+count doesn't belong in the profile.
+
 Output a tight `you.md` an AI agent reads before any task. Start the file with
 this EXACT frontmatter so it installs as a skill unchanged (do not skip it):
 
@@ -83,4 +87,19 @@ Then the body, with sections:
 
 Keep it lean — it loads on every task. Put deep evidence/quotes in a separate
 appendix file, not in you.md.
+
+ALSO write `ditto-out/card.json` — the shareable card. Exact shape:
+
+{
+  "archetype": "<2-4 word label for how this person operates, specific not generic — e.g. 'Ship-First Skeptic', 'Proof-or-It-Didn't-Happen'>",
+  "laws": [
+    {"text": "<their #1 law, their words>", "count": "18/20"},
+    {"text": "<law 2>", "count": "15/20"},
+    {"text": "<law 3>", "count": "14/20"}
+  ],
+  "truth": "<the ONE uncomfortable/surprising thing the reports agree on that they never wrote down anywhere>"
+}
+
+Counts are real report counts, never invented. Then tell the user to run
+`python ditto.py --card` to see their card.
 ```

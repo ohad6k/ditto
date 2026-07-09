@@ -219,6 +219,85 @@ class DittoCliTest(unittest.TestCase):
             self.assertIn("- keep answers short", rule)
             self.assertNotIn("name: you", rule)
 
+    def test_run_writes_stats_json(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            logs = root / "logs"
+            out = root / "ditto-out"
+            write_jsonl(logs / "codex.jsonl", [
+                {
+                    "timestamp": "2025-11-02T10:00:00Z",
+                    "payload": {"type": "message", "role": "user", "content": [{"text": "first message"}]},
+                },
+                {
+                    "timestamp": "2026-07-08T10:00:00Z",
+                    "payload": {"type": "message", "role": "user", "content": [{"text": "last message"}]},
+                },
+            ])
+
+            subprocess.run(
+                [sys.executable, str(DITTO), "--path", str(logs), "--out", str(out), "--chunks", "1"],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+
+            stats = json.loads((out / "stats.json").read_text(encoding="utf-8"))
+            self.assertEqual(stats["sessions"], 1)
+            self.assertEqual(stats["messages"], 2)
+            self.assertEqual(stats["first_date"], "2025-11-02")
+            self.assertEqual(stats["last_date"], "2026-07-08")
+
+    def test_card_renders_terminal_and_html(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / "ditto-out"
+            out.mkdir()
+            (out / "card.json").write_text(json.dumps({
+                "archetype": "Proof-First Builder",
+                "laws": [
+                    {"text": "done means it runs live", "count": "18/20"},
+                    {"text": "fix the one thing", "count": "15/20"},
+                ],
+                "truth": "asks the agent to explain his own system back",
+            }), encoding="utf-8")
+            (out / "stats.json").write_text(json.dumps({
+                "sessions": 1656,
+                "messages": 7678,
+                "tokens": 2950000,
+                "first_date": "2025-11-02",
+                "last_date": "2026-07-08",
+            }), encoding="utf-8")
+
+            result = subprocess.run(
+                [sys.executable, str(DITTO), "--card", "--out", str(out), "--no-open"],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+
+            self.assertIn("PROOF-FIRST BUILDER", result.stdout)
+            self.assertIn("[18/20]", result.stdout)
+            self.assertIn("1,656 sessions", result.stdout)
+            self.assertIn("9 months", result.stdout)
+            html = (out / "card.html").read_text(encoding="utf-8")
+            self.assertIn("Proof-First Builder", html)
+            self.assertIn("18/20", html)
+            self.assertIn("3.0M", html)
+            self.assertIn("&rarr;", html)
+            self.assertNotIn("�", html)
+
+    def test_card_without_card_json_fails_with_hint(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / "ditto-out"
+            out.mkdir()
+            result = subprocess.run(
+                [sys.executable, str(DITTO), "--card", "--out", str(out), "--no-open"],
+                capture_output=True,
+                text=True,
+            )
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("no card found", result.stdout)
+
 
 if __name__ == "__main__":
     unittest.main()

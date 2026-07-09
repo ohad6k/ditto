@@ -12,6 +12,7 @@ MINING_PROMPT.md to produce your `you.md`.
 Usage:
     python ditto.py                     # auto-detect Codex + Claude logs
     python ditto.py --dry-run           # preview counts without writing files
+    python ditto.py --card              # render your profile card (after mining)
     python ditto.py --install you.md --target codex
     python ditto.py --source codex      # only ~/.codex/sessions
     python ditto.py --path ./logs       # a folder of jsonl you point at
@@ -103,6 +104,7 @@ def discover_files(roots):
 def mine_files(files, no_redact=False):
     sessions = msgs = chars = redactions = 0
     blocks = []
+    first_date = last_date = ""
     for f in files:
         ums = user_messages(f)
         if not ums:
@@ -110,6 +112,11 @@ def mine_files(files, no_redact=False):
         sessions += 1
         buf = [f"\n===== {os.path.basename(f)} ====="]
         for ts, t in ums:
+            if ts:
+                if not first_date or ts < first_date:
+                    first_date = ts
+                if ts > last_date:
+                    last_date = ts
             if not no_redact:
                 before = t
                 t = redact(t)
@@ -125,6 +132,8 @@ def mine_files(files, no_redact=False):
         "chars": chars,
         "redactions": redactions,
         "blocks": blocks,
+        "first_date": first_date,
+        "last_date": last_date,
     }
 
 def write_outputs(blocks, out_dir, chunks):
@@ -154,6 +163,180 @@ def write_outputs(blocks, out_dir, chunks):
             w.write("\n".join(cur))
         idx += 1
     return idx - 1
+
+def write_stats(result, out_dir):
+    stats = {
+        "sessions": result["sessions"],
+        "messages": result["messages"],
+        "tokens": result["chars"] // 4,
+        "redactions": result["redactions"],
+        "first_date": result.get("first_date", ""),
+        "last_date": result.get("last_date", ""),
+    }
+    with open(os.path.join(out_dir, "stats.json"), "w", encoding="utf-8") as w:
+        json.dump(stats, w, indent=2)
+    return stats
+
+def months_between(first_date, last_date):
+    try:
+        y1, m1 = int(first_date[:4]), int(first_date[5:7])
+        y2, m2 = int(last_date[:4]), int(last_date[5:7])
+        return max(1, (y2 - y1) * 12 + (m2 - m1) + 1)
+    except (ValueError, IndexError):
+        return 0
+
+def fmt_tokens(n):
+    if n >= 1_000_000:
+        return f"{n / 1_000_000:.1f}M"
+    if n >= 1_000:
+        return f"{n // 1000}K"
+    return str(n)
+
+def load_card(out_dir, card_path=None):
+    path = card_path or os.path.join(out_dir, "card.json")
+    if not os.path.exists(path):
+        print(f"no card found at {path}")
+        print("the card is written by the mining step: run ditto.py, then paste")
+        print("MINING_PROMPT.md into your agent — the reducer emits card.json.")
+        sys.exit(1)
+    with open(path, "r", encoding="utf-8", errors="replace") as fh:
+        card = json.load(fh)
+    stats_path = os.path.join(out_dir, "stats.json")
+    if os.path.exists(stats_path):
+        with open(stats_path, "r", encoding="utf-8", errors="replace") as fh:
+            card.setdefault("stats", {}).update(json.load(fh))
+    return card
+
+def print_card(card):
+    stats = card.get("stats", {})
+    months = months_between(stats.get("first_date", ""), stats.get("last_date", ""))
+    width = 62
+    line = "+" + "-" * width + "+"
+    def row(text=""):
+        import textwrap
+        for part in textwrap.wrap(text, width - 2) or [""]:
+            print("| " + part.ljust(width - 2) + " |")
+    print(line)
+    row("ditto")
+    row()
+    row(card.get("archetype", "").upper())
+    row()
+    bits = []
+    if stats.get("sessions"):
+        bits.append(f"{stats['sessions']:,} sessions")
+    if stats.get("tokens"):
+        bits.append(f"{fmt_tokens(stats['tokens'])} tokens")
+    if months:
+        bits.append(f"{months} months")
+    if bits:
+        row(" | ".join(bits))
+        row()
+    for law in card.get("laws", [])[:3]:
+        count = law.get("count", "")
+        text = law.get("text", "")
+        row(f"{text}  [{count}]" if count else text)
+    truth = card.get("truth", "")
+    if truth:
+        row()
+        row("the uncomfortable one:")
+        row(f'"{truth}"')
+    print(line)
+
+CARD_HTML = """<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ditto card</title>
+<style>
+  :root {{ color-scheme: dark; }}
+  * {{ margin: 0; box-sizing: border-box; }}
+  body {{
+    background: #191a1c; min-height: 100vh; display: grid; place-items: center;
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    padding: 48px 16px;
+  }}
+  .card {{
+    width: 680px; max-width: 100%; background: #0b0b0c;
+    border: 1px solid #2a2a2c; border-radius: 16px; padding: 44px 48px;
+    color: #ededee;
+  }}
+  .top {{ display: flex; justify-content: space-between; align-items: baseline; }}
+  .wordmark {{ font-weight: 700; font-size: 15px; letter-spacing: .04em; color: #8a8a8e; }}
+  .range {{ font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: 12px; color: #58585c; }}
+  .archetype {{ font-size: 40px; font-weight: 800; letter-spacing: -.02em; line-height: 1.05; margin: 34px 0 6px; }}
+  .sub {{ color: #7c7c80; font-size: 14px; margin-bottom: 30px; }}
+  .stats {{ display: flex; gap: 40px; padding: 22px 0; border-top: 1px solid #232325; border-bottom: 1px solid #232325; }}
+  .stat b {{ display: block; font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; }}
+  .stat span {{ font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: #6b6b6f; }}
+  .laws {{ margin: 26px 0 0; }}
+  .law {{ display: flex; justify-content: space-between; align-items: baseline; gap: 18px; padding: 11px 0; }}
+  .law + .law {{ border-top: 1px solid #1c1c1e; }}
+  .law p {{ font-size: 16px; font-weight: 550; }}
+  .law code {{
+    font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: 12px;
+    color: #a3a3a7; border: 1px solid #2e2e30; border-radius: 6px; padding: 3px 8px; white-space: nowrap;
+  }}
+  .truth {{ margin-top: 30px; padding: 20px 22px; background: #111113; border-radius: 10px; }}
+  .truth span {{ display: block; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: #6b6b6f; margin-bottom: 8px; }}
+  .truth p {{ font-size: 16px; font-style: italic; color: #d6d6d8; line-height: 1.45; }}
+  .foot {{ margin-top: 30px; display: flex; justify-content: space-between; font-size: 12px; color: #58585c; }}
+  .foot b {{ color: #8a8a8e; font-weight: 600; }}
+</style>
+<div class="card">
+  <div class="top"><div class="wordmark">ditto</div><div class="range">{range}</div></div>
+  <div class="archetype">{archetype}</div>
+  <div class="sub">mined from my own sessions. every line has receipts.</div>
+  <div class="stats">{stats}</div>
+  <div class="laws">{laws}</div>
+  {truth}
+  <div class="foot"><div><b>github.com/ohad6k/ditto</b></div><div>run it on your own logs</div></div>
+</div>
+"""
+
+def esc(s):
+    return str(s).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+def render_card_html(card):
+    stats = card.get("stats", {})
+    months = months_between(stats.get("first_date", ""), stats.get("last_date", ""))
+    rng = ""
+    if stats.get("first_date") and stats.get("last_date"):
+        rng = f"{esc(stats['first_date'][:7])} &rarr; {esc(stats['last_date'][:7])}"
+    stat_cells = []
+    if stats.get("sessions"):
+        stat_cells.append(f"<div class=stat><b>{stats['sessions']:,}</b><span>sessions</span></div>")
+    if stats.get("tokens"):
+        stat_cells.append(f"<div class=stat><b>{fmt_tokens(stats['tokens'])}</b><span>tokens of me</span></div>")
+    if months:
+        stat_cells.append(f"<div class=stat><b>{months}</b><span>months</span></div>")
+    laws = []
+    for law in card.get("laws", [])[:3]:
+        count = f"<code>{esc(law['count'])}</code>" if law.get("count") else ""
+        laws.append(f"<div class=law><p>{esc(law.get('text', ''))}</p>{count}</div>")
+    truth = ""
+    if card.get("truth"):
+        truth = (f'<div class="truth"><span>the uncomfortable one</span>'
+                 f"<p>&ldquo;{esc(card['truth'])}&rdquo;</p></div>")
+    return CARD_HTML.format(
+        range=rng,
+        archetype=esc(card.get("archetype", "you")),
+        stats="".join(stat_cells),
+        laws="".join(laws),
+        truth=truth,
+    )
+
+def show_card(out_dir, card_path=None, no_open=False):
+    card = load_card(out_dir, card_path)
+    print_card(card)
+    html_path = os.path.join(out_dir, "card.html")
+    with open(html_path, "w", encoding="utf-8") as w:
+        w.write(render_card_html(card))
+    print(f"\nwrote: {html_path}  (open it, screenshot it, post it)")
+    if not no_open:
+        try:
+            import webbrowser
+            webbrowser.open("file://" + os.path.abspath(html_path))
+        except Exception:
+            pass
 
 def print_counts(result, no_redact=False):
     print(f"sessions: {result['sessions']}")
@@ -263,6 +446,9 @@ def main():
     ap.add_argument("--chunks", type=int, default=20)
     ap.add_argument("--dry-run", action="store_true", help="show counts and output paths without writing files")
     ap.add_argument("--no-redact", action="store_true", help="skip redaction (NOT recommended)")
+    ap.add_argument("--card", nargs="?", const="", metavar="CARD_JSON",
+                    help="render your profile card (terminal + card.html) from ditto-out/card.json")
+    ap.add_argument("--no-open", action="store_true", help="don't open card.html in the browser")
     ap.add_argument("--install", metavar="PROFILE", help="install an existing generated you.md profile")
     ap.add_argument("--target", choices=["claude", "codex", "cursor", "agents", "gemini"], help="where to install --install")
     ap.add_argument("--repo", default=".", help="repo path for cursor/AGENTS.md/GEMINI.md installs")
@@ -275,6 +461,10 @@ def main():
             print("--install requires --target")
             sys.exit(1)
         install_profile(args.install, args.target, args.repo, args.home, args.yes, args.dry_run)
+        return
+
+    if args.card is not None:
+        show_card(args.out, args.card or None, args.no_open)
         return
 
     roots = []
@@ -302,6 +492,7 @@ def main():
         return
 
     chunk_count = write_outputs(result["blocks"], args.out, args.chunks)
+    write_stats(result, args.out)
 
     print_counts(result, args.no_redact)
     print(f"wrote: {args.out}/you-corpus.txt  +  {chunk_count} chunks in {args.out}/chunks/")

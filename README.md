@@ -179,6 +179,16 @@ python ditto.py --install you.md --target agents --repo .
 python ditto.py --install you.md --target gemini --repo .
 ```
 
+## Your Card
+
+After mining, get your profile as a card:
+
+```bash
+python ditto.py --card
+```
+
+Terminal card + `ditto-out/card.html` — your archetype, your top laws with their receipt counts (how many of the 20 agents independently found each one), your session stats, and the one uncomfortable truth. Screenshot the card, not the profile. The `you.md` is for your agent; the card is for everyone else.
+
 ## Privacy (Read This)
 
 - **100% local.** Ditto makes zero network calls. Your logs never leave your machine. It's plain Python; read the file.
