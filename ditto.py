@@ -249,67 +249,85 @@ CARD_HTML = """<!doctype html>
 <style>
   * {{ margin: 0; box-sizing: border-box; }}
   body {{
-    background: #d9d4c7; min-height: 100vh; display: grid; place-items: center;
-    font-family: Georgia, 'Times New Roman', serif; padding: 48px 16px; color: #1c1b17;
+    background: #cfc9bb; min-height: 100vh; display: grid; place-items: center;
+    font-family: Georgia, 'Times New Roman', serif; padding: 40px 16px; color: #17160f;
   }}
   .slab {{
-    width: 700px; max-width: 100%; background: #f6f3ea;
-    border: 1px solid #1c1b17; box-shadow: 0 0 0 4px #f6f3ea, 0 0 0 5px #1c1b17, 0 18px 40px rgba(28,27,23,.25);
-    padding: 10px;
+    width: 560px; max-width: 100%;
+    background: linear-gradient(160deg, #f2efe6, #e6e2d4);
+    border: 1px solid #8f8a7a; border-radius: 14px; padding: 14px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.8), 0 22px 50px rgba(23,22,15,.35);
   }}
-  .frame {{ border: 3px double #1c1b17; padding: 34px 40px 28px; }}
   .label {{
-    display: flex; justify-content: space-between; align-items: stretch;
-    border: 1px solid #1c1b17; margin-bottom: 30px;
+    display: flex; border: 1.5px solid #17160f; background: #f8f5ec; margin-bottom: 12px;
   }}
-  .label-left {{ padding: 12px 16px; flex: 1; }}
-  .label-left .set {{ font-size: 11px; letter-spacing: .22em; text-transform: uppercase; }}
-  .label-left .name {{ font-size: 21px; font-weight: 700; letter-spacing: .01em; margin-top: 3px; }}
-  .grade {{
-    border-left: 1px solid #1c1b17; padding: 10px 18px; text-align: center;
-    display: flex; flex-direction: column; justify-content: center;
-    background: repeating-linear-gradient(45deg, transparent 0 3px, rgba(28,27,23,.05) 3px 4px);
+  .label-left {{ flex: 1; padding: 10px 14px; border-right: 1.5px solid #17160f; }}
+  .brand {{ font-weight: 700; font-size: 17px; letter-spacing: .28em; }}
+  .setline {{ font-size: 10px; letter-spacing: .18em; text-transform: uppercase; margin-top: 3px; color: #444033; }}
+  .certline {{ font-size: 10px; letter-spacing: .12em; margin-top: 5px; color: #444033; }}
+  .grade {{ width: 116px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    background: #17160f; color: #f2efe6; padding: 8px 6px; }}
+  .grade b {{ font-size: 26px; letter-spacing: .02em; font-variant-numeric: tabular-nums; }}
+  .grade span {{ font-size: 8.5px; letter-spacing: .3em; text-transform: uppercase; margin-top: 2px; }}
+  .card {{
+    background: #f8f5ec; border: 1.5px solid #17160f; overflow: hidden;
   }}
-  .grade b {{ font-size: 26px; font-variant-numeric: tabular-nums; }}
-  .grade span {{ font-size: 9px; letter-spacing: .2em; text-transform: uppercase; }}
-  .archetype {{ text-align: center; font-size: 38px; font-weight: 700; letter-spacing: .01em; line-height: 1.1; }}
-  .range {{ text-align: center; font-size: 12px; letter-spacing: .3em; text-transform: uppercase; margin: 10px 0 26px; }}
-  .rule {{ border: 0; border-top: 1px solid #1c1b17; position: relative; margin: 0; }}
-  .rule + .rule {{ margin-top: 3px; }}
-  .stats {{ display: flex; justify-content: space-around; padding: 20px 0; }}
-  .stat {{ text-align: center; }}
-  .stat b {{ display: block; font-size: 26px; font-variant-numeric: tabular-nums; }}
-  .stat span {{ font-size: 10px; letter-spacing: .24em; text-transform: uppercase; }}
-  .laws {{ padding: 24px 6px 4px; }}
-  .law {{ display: flex; align-items: baseline; gap: 14px; padding: 9px 0; }}
-  .law i {{ font-style: normal; width: 26px; font-size: 14px; }}
-  .law p {{ flex: 1; font-size: 17px; }}
-  .law code {{
-    font-family: Georgia, serif; font-size: 12px; letter-spacing: .06em;
-    border: 1px solid #1c1b17; padding: 2px 9px; white-space: nowrap;
+  .art {{ position: relative; border-bottom: 1.5px solid #17160f;
+    background: repeating-linear-gradient(45deg, #f1eee3 0 6px, #e9e5d6 6px 12px); }}
+  .art img {{ display: block; width: 100%; height: 330px; object-fit: cover; object-position: 50% 18%;
+    filter: sepia(.12) contrast(1.03); }}
+  .art.noart img {{ display: none; }}
+  .art.noart {{ height: 140px; }}
+  .nameplate {{
+    position: absolute; left: 0; right: 0; bottom: 0; text-align: center;
+    background: rgba(248,245,236,.94); border-top: 1.5px solid #17160f; padding: 10px 14px 9px;
   }}
-  .truth {{ margin: 22px 0 26px; border: 1px solid #1c1b17; padding: 18px 22px; text-align: center;
-    background: repeating-linear-gradient(0deg, transparent 0 5px, rgba(28,27,23,.03) 5px 6px); }}
-  .truth span {{ display: block; font-size: 10px; letter-spacing: .26em; text-transform: uppercase; margin-bottom: 9px; }}
-  .truth p {{ font-size: 17px; font-style: italic; line-height: 1.5; }}
-  .foot {{ display: flex; justify-content: space-between; font-size: 11px; letter-spacing: .14em;
-    text-transform: uppercase; padding-top: 16px; }}
+  .nameplate b {{ font-size: 27px; font-weight: 700; letter-spacing: .01em; }}
+  .nameplate div {{ font-size: 10px; letter-spacing: .3em; text-transform: uppercase; margin-top: 2px; color: #444033; }}
+  .stats {{ display: flex; border-bottom: 1.5px solid #17160f; }}
+  .stat {{ flex: 1; text-align: center; padding: 12px 4px 10px; }}
+  .stat + .stat {{ border-left: 1px solid #b5b0a0; }}
+  .stat b {{ display: block; font-size: 22px; font-variant-numeric: tabular-nums; }}
+  .stat span {{ font-size: 9px; letter-spacing: .22em; text-transform: uppercase; color: #444033; }}
+  .laws {{ padding: 14px 18px 6px; }}
+  .laws-head {{ font-size: 9.5px; letter-spacing: .3em; text-transform: uppercase; color: #444033; margin-bottom: 6px; }}
+  .law {{ display: flex; align-items: baseline; gap: 10px; padding: 7px 0; }}
+  .law + .law {{ border-top: 1px dotted #b5b0a0; }}
+  .law i {{ font-style: normal; width: 22px; font-size: 12px; }}
+  .law p {{ flex: 1; font-size: 14.5px; line-height: 1.35; }}
+  .law code {{ font-family: Georgia, serif; font-size: 11px; letter-spacing: .05em;
+    border: 1px solid #17160f; padding: 1px 7px; white-space: nowrap; }}
+  .truth {{ margin: 10px 18px 16px; border: 1px solid #17160f; padding: 12px 16px; text-align: center;
+    background: repeating-linear-gradient(0deg, transparent 0 5px, rgba(23,22,15,.035) 5px 6px); }}
+  .truth span {{ display: block; font-size: 9px; letter-spacing: .3em; text-transform: uppercase; margin-bottom: 6px; color: #444033; }}
+  .truth p {{ font-size: 14.5px; font-style: italic; line-height: 1.45; }}
+  .foot {{
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 9.5px; letter-spacing: .16em; text-transform: uppercase; padding: 10px 4px 0; color: #444033;
+  }}
+  .bars {{ width: 90px; height: 16px;
+    background: repeating-linear-gradient(90deg, #17160f 0 2px, transparent 2px 4px, #17160f 4px 5px, transparent 5px 8px); }}
 </style>
-<div class="slab"><div class="frame">
+<div class="slab">
   <div class="label">
-    <div class="label-left"><div class="set">ditto &middot; mined from my own sessions</div><div class="name">certified working profile</div></div>
+    <div class="label-left">
+      <div class="brand">DITTO</div>
+      <div class="setline">working profile &middot; mined from my own sessions</div>
+      <div class="certline">{certline}</div>
+    </div>
     <div class="grade"><b>{grade}</b><span>consensus</span></div>
   </div>
-  <div class="archetype">{archetype}</div>
-  <div class="range">{range}</div>
-  <hr class="rule"><hr class="rule">
-  <div class="stats">{stats}</div>
-  <hr class="rule"><hr class="rule">
-  <div class="laws">{laws}</div>
-  {truth}
-  <hr class="rule"><hr class="rule">
-  <div class="foot"><div>github.com/ohad6k/ditto</div><div>run it on your own logs</div></div>
-</div></div>
+  <div class="card">
+    <div class="art" id="art">
+      <img src="{art_local}" onerror="var a=document.getElementById('art');if(!this.dataset.f){{this.dataset.f=1;this.src='{art_remote}';}}else{{a.className='art noart';}}">
+      <div class="nameplate"><b>{archetype}</b><div>{range}</div></div>
+    </div>
+    <div class="stats">{stats}</div>
+    <div class="laws"><div class="laws-head">laws &middot; ranked by how many of the 20 agents found each</div>{laws}</div>
+    {truth}
+  </div>
+  <div class="foot"><div>github.com/ohad6k/ditto &middot; run it on your own logs</div><div class="bars"></div></div>
+</div>
 """
 
 def esc(s):
@@ -339,9 +357,22 @@ def render_card_html(card):
                  f"<p>&ldquo;{esc(card['truth'])}&rdquo;</p></div>")
     top_laws = card.get("laws", [])
     grade = esc(top_laws[0]["count"]) if top_laws and top_laws[0].get("count") else "&mdash;"
+    certline = f"no. {stats['messages']:,} messages on record" if stats.get("messages") else "&nbsp;"
+    art_remote = "https://raw.githubusercontent.com/ohad6k/ditto/main/assets/ditto.png"
+    art_local = art_remote
+    local_png = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "ditto.png")
+    if os.path.exists(local_png):
+        try:
+            out_dir = card.get("_out_dir", "")
+            art_local = os.path.relpath(local_png, out_dir).replace("\\", "/") if out_dir else art_remote
+        except ValueError:
+            art_local = art_remote
     return CARD_HTML.format(
         range=rng,
         grade=grade,
+        certline=certline,
+        art_local=art_local,
+        art_remote=art_remote,
         archetype=esc(card.get("archetype", "you")),
         stats="".join(stat_cells),
         laws="".join(laws),
@@ -350,6 +381,7 @@ def render_card_html(card):
 
 def show_card(out_dir, card_path=None, no_open=False):
     card = load_card(out_dir, card_path)
+    card["_out_dir"] = os.path.abspath(out_dir)
     print_card(card)
     html_path = os.path.join(out_dir, "card.html")
     with open(html_path, "w", encoding="utf-8") as w:
