@@ -15,6 +15,9 @@ across months and several projects. The file contains ONLY their own words —
 mostly short directives, occasionally long specs — each prefixed with a [date].
 
 Read the ENTIRE file at: <path-to-chunk>
+If it is long, read it in slices until you have covered ALL of it. Do not
+sample the top and guess the rest — the middle of the file counts as much
+as the start.
 
 Extract a dense, SPECIFIC profile. Ban generic filler ("they want working code",
 "they value quality"). Every bullet must be something a stranger could NOT have
