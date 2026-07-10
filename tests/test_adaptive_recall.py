@@ -2,9 +2,12 @@ import hashlib
 import importlib.util
 import json
 import re
+import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -90,6 +93,48 @@ def rare_signal_fixture(generic_receipts=10_000, rare_position="last"):
     if rare_position == "first":
         receipts.insert(0, receipts.pop())
     return receipts
+
+
+def history_fixture():
+    tmp = tempfile.TemporaryDirectory()
+    root = Path(tmp.name)
+    log = root / "logs" / "session.jsonl"
+    rows = [
+        {
+            "timestamp": f"2026-{(index % 9) + 1:02d}-{(index % 27) + 1:02d}T00:00:00Z",
+            "payload": {"type": "message", "role": "user", "content": [{
+                "text": f"always preserve design write workflow preference {index} " + "x" * 3_990,
+            }]},
+        }
+        for index in range(300)
+    ]
+    write_jsonl(log, rows)
+    return SimpleNamespace(tmp=tmp, root=root, logs=root / "logs", log=log, home=root / "private", rows=rows)
+
+
+def run_plugin_prepare(history, stage):
+    completed = subprocess.run(
+        [sys.executable, str(ROOT / "ditto.py"), "plugin", "prepare", "--path", str(history.logs),
+         "--stage", stage, "--ditto-home", str(history.home)],
+        check=True, capture_output=True, text=True,
+    )
+    return json.loads(completed.stdout)
+
+
+def run_plugin_preflight(history, home):
+    return subprocess.run(
+        [sys.executable, str(ROOT / "ditto.py"), "plugin", "preflight", "--path", str(history.logs),
+         "--ditto-home", str(home)],
+        check=True, capture_output=True, text=True,
+    )
+
+
+def append_live_message(history, text):
+    history.rows.append({
+        "timestamp": "2026-10-01T00:00:00Z",
+        "payload": {"type": "message", "role": "user", "content": [{"text": text}]},
+    })
+    write_jsonl(history.log, history.rows)
 
 
 class ReceiptLedgerTest(unittest.TestCase):
@@ -197,6 +242,36 @@ class PacketSelectionTest(unittest.TestCase):
         self.assertTrue({item["receipt_id"] for item in first}.isdisjoint(
             {item["receipt_id"] for item in second}
         ))
+
+
+class AdaptivePlanTest(unittest.TestCase):
+    def test_prepare_freezes_exact_packets_and_cost(self):
+        history = history_fixture()
+        self.addCleanup(history.tmp.cleanup)
+        prepared = run_plugin_prepare(history, stage="A")
+
+        self.assertEqual(6, prepared["planned_scout_calls"])
+        self.assertEqual(3, prepared["planned_domain_reducer_calls"])
+        self.assertEqual(["design", "work", "write"], prepared["planned_domains"])
+        self.assertTrue(all(Path(path).is_file() for path in prepared["packet_paths"]))
+
+    def test_live_history_change_does_not_change_prepared_run(self):
+        history = history_fixture()
+        self.addCleanup(history.tmp.cleanup)
+        prepared = run_plugin_prepare(history, stage="A")
+        before = Path(prepared["plan_path"]).read_bytes()
+
+        append_live_message(history, "new message after approval")
+
+        self.assertEqual(before, Path(prepared["plan_path"]).read_bytes())
+
+    def test_preflight_remains_read_only(self):
+        history = history_fixture()
+        self.addCleanup(history.tmp.cleanup)
+
+        run_plugin_preflight(history, history.home)
+
+        self.assertFalse(history.home.exists())
 
 
 if __name__ == "__main__":

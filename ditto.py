@@ -2013,6 +2013,11 @@ def private_paths(ditto_home):
         "segment_indexes": os.path.join(ditto_home, "cache", "segment-indexes"),
         "reports": os.path.join(ditto_home, "cache", "reports"),
         "reductions": os.path.join(ditto_home, "cache", "reductions"),
+        "receipts": os.path.join(ditto_home, "cache", "receipts"),
+        "salience": os.path.join(ditto_home, "cache", "salience"),
+        "packets": os.path.join(ditto_home, "cache", "packets"),
+        "scout_reports": os.path.join(ditto_home, "cache", "scout-reports"),
+        "domain_drafts": os.path.join(ditto_home, "cache", "domain-drafts"),
         "runs": os.path.join(ditto_home, "runs"),
         "migrations": os.path.join(ditto_home, "migrations"),
         "legacy": os.path.join(ditto_home, "legacy"),
@@ -2080,6 +2085,7 @@ def build_plugin_parser():
         command.add_argument("--no-dedupe", action="store_true")
         command.add_argument("--ditto-home")
         mode = command.add_mutually_exclusive_group()
+        mode.add_argument("--stage", choices=sorted(STAGE_CONFIGS))
         mode.add_argument("--candidate", type=int, choices=range(len(STARTER_CANDIDATES)))
         mode.add_argument("--deep", action="store_true")
         mode.add_argument("--deepen-domain", choices=["work", "design", "write"])
@@ -2280,6 +2286,110 @@ def plugin_source_result(args):
         raise ValueError("no valid user sessions remained after parsing and filtering")
     return result
 
+def build_adaptive_plan(result, stage="A"):
+    ledger = build_receipt_ledger(result["records"])
+    scored = score_receipts(ledger)
+    selected = select_salience_stage(scored, stage)
+    config = STAGE_CONFIGS[stage]
+    packets = pack_selected_receipts(selected, config["packets"], config["packet_tokens"])
+    dates = [item["date"] for item in selected if item["date"] != "undated"]
+    return {
+        "schema_version": "2",
+        "mode": "adaptive",
+        "stage": stage,
+        "selected_source_tokens": sum(item["tokens"] for item in selected),
+        "selected_receipt_ids": [item["receipt_id"] for item in selected],
+        "planned_scout_calls": len(packets),
+        "planned_domain_reducer_calls": 3,
+        "planned_domains": ["design", "work", "write"],
+        "corpus_snapshot_hash": sha256_text(canonical_json([
+            {"receipt_id": item["receipt_id"], "content_hash": item["content_hash"]}
+            for item in ledger
+        ])),
+        "source_coverage": {
+            "sources": sorted({item["source"] for item in selected}),
+            "first_date": min(dates) if dates else "undated",
+            "last_date": max(dates) if dates else "undated",
+        },
+        "ledger": scored,
+        "packets": packets,
+    }
+
+def adaptive_preflight(result, stage="A"):
+    plan = build_adaptive_plan(result, stage)
+    return {
+        key: value for key, value in plan.items()
+        if key not in {"ledger", "packets"}
+    } | {
+        "packet_hashes": [packet["packet_hash"] for packet in plan["packets"]],
+        "writes_private_state": False,
+    }
+
+def render_receipt_packet(packet):
+    sections = []
+    for item in packet["receipts"]:
+        sections.append(
+            f"===== receipt:{item['receipt_id']} session:{item['session_id']} "
+            f"source:{item['source']} date:{item['date']} =====\n{item['text']}"
+        )
+    return "\n\n".join(sections) + "\n"
+
+def prepare_adaptive_run(args):
+    home = resolve_ditto_home(args.ditto_home)
+    result = plugin_source_result(args)
+    stage = args.stage or "A"
+    prepared = build_adaptive_plan(result, stage)
+    frozen_identity = {key: value for key, value in prepared.items() if key not in {"ledger", "packets"}}
+    frozen_identity["packet_hashes"] = [packet["packet_hash"] for packet in prepared["packets"]]
+    plan_hash = sha256_text(canonical_json(frozen_identity))
+    timestamp = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
+    base_run_id = f"{timestamp}-{plan_hash[:8]}"
+    run_id = base_run_id
+    suffix = 1
+    while os.path.exists(safe_private_child(home, "runs", run_id)):
+        run_id = f"{base_run_id}-{suffix:02d}"
+        suffix += 1
+    run_dir = safe_private_child(home, "runs", run_id)
+    packets_dir = os.path.join(run_dir, "packets")
+    pack_dir = os.path.join(run_dir, "pack")
+    os.makedirs(packets_dir, exist_ok=False)
+    os.makedirs(pack_dir, exist_ok=False)
+
+    ledger_path = os.path.join(run_dir, "ledger.json")
+    atomic_write_text(ledger_path, canonical_json({
+        "schema_version": RECEIPT_SCHEMA_VERSION,
+        "receipts": prepared["ledger"],
+    }) + "\n")
+    packet_paths = []
+    manifest_packets = []
+    for packet in prepared["packets"]:
+        packet_path = os.path.join(packets_dir, packet["packet_hash"] + ".txt")
+        atomic_write_text(packet_path, render_receipt_packet(packet))
+        packet_paths.append(packet_path)
+        manifest_packets.append({key: value for key, value in packet.items() if key != "receipts"} | {
+            "packet_path": packet_path,
+        })
+    manifest_path = os.path.join(run_dir, "packet-manifest.json")
+    atomic_write_text(manifest_path, canonical_json({
+        "schema_version": PACKET_SCHEMA_VERSION,
+        "packets": manifest_packets,
+    }) + "\n")
+    plan_path = os.path.join(run_dir, "plan.json")
+    run_plan = frozen_identity | {
+        "run_id": run_id,
+        "run_dir": run_dir,
+        "plan_hash": plan_hash,
+        "plan_path": plan_path,
+        "ledger_path": ledger_path,
+        "packet_manifest_path": manifest_path,
+        "packet_paths": packet_paths,
+        "pack_path": pack_dir,
+        "scout_report_paths": [],
+        "domain_draft_paths": {},
+    }
+    atomic_write_text(plan_path, canonical_json(run_plan) + "\n")
+    return run_plan
+
 def plugin_plan_for_args(args, write=False):
     result = plugin_source_result(args)
     home = resolve_ditto_home(args.ditto_home)
@@ -2289,10 +2399,14 @@ def plugin_plan_for_args(args, write=False):
         )
     if args.deep:
         return build_deep_preflight(result, home, write=write)
+    if args.candidate is None:
+        return adaptive_preflight(result, args.stage or "A")
     candidate_index = DEFAULT_CANDIDATE_INDEX if args.candidate is None else args.candidate
     return build_preflight(result, home, candidate_index, write=write)
 
 def prepare_plugin_run(args):
+    if args.candidate is None and not args.deep and not args.deepen_domain:
+        return prepare_adaptive_run(args)
     home = resolve_ditto_home(args.ditto_home)
     plan = plugin_plan_for_args(args, write=True)
     plan_hash = sha256_text(canonical_json(plan))
