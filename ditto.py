@@ -40,6 +40,7 @@ RECEIPT_SCHEMA_VERSION = "1"
 SALIENCE_SCHEMA_VERSION = "1"
 PACKET_SCHEMA_VERSION = "1"
 SCOUT_REPORT_SCHEMA_VERSION = "2"
+DOMAIN_DRAFT_SCHEMA_VERSION = "1"
 MAX_SCOUT_REPORT_BYTES = 24_576
 
 STAGE_CONFIGS = {
@@ -800,6 +801,86 @@ def flatten_report_evidence(reports):
                 "contradictions": item.get("contradictions", []),
             }
     return flattened
+
+def json_safe_evidence(value):
+    if isinstance(value, dict):
+        return {key: json_safe_evidence(item) for key, item in sorted(value.items())}
+    if isinstance(value, set):
+        return sorted(value)
+    if isinstance(value, list):
+        return [json_safe_evidence(item) for item in value]
+    return value
+
+def compute_domain_evidence_hash(domain, evidence_by_id):
+    selected = {
+        evidence_id: item for evidence_id, item in evidence_by_id.items()
+        if item.get("domain", domain) == domain
+    }
+    return sha256_text(canonical_json({
+        "schema_version": DOMAIN_DRAFT_SCHEMA_VERSION,
+        "domain": domain,
+        "evidence": json_safe_evidence(selected),
+    }))
+
+def validate_domain_draft(draft, domain, evidence_by_id, run_plan):
+    if domain not in VALID_DOMAINS or draft.get("domain") != domain:
+        raise ValueError("domain draft name mismatch")
+    if draft.get("schema_version") != DOMAIN_DRAFT_SCHEMA_VERSION:
+        raise ValueError("unsupported domain draft schema")
+    if draft.get("evidence_set_hash") != compute_domain_evidence_hash(domain, evidence_by_id):
+        raise ValueError("domain draft evidence set hash mismatch")
+    status = draft.get("status")
+    if status == "inactive":
+        if domain == "work":
+            raise ValueError("work domain must remain active")
+        if draft.get("deepen_instruction") != f"run ditto and deepen {domain}":
+            raise ValueError("inactive domain requires exact deepen instruction")
+        if draft.get("rules"):
+            raise ValueError("inactive domain cannot install rules")
+        return draft
+    if status != "active":
+        raise ValueError("domain draft status must be active or inactive")
+    rules = draft.get("rules")
+    if not isinstance(rules, list) or not rules:
+        raise ValueError("active domain draft requires rules")
+    discarded = draft.get("discarded")
+    if not isinstance(discarded, list):
+        raise ValueError("domain draft discarded conflicts must be a list")
+    for rule in rules:
+        ids = rule.get("evidence_ids", [])
+        if any(
+            evidence_id not in evidence_by_id
+            or evidence_by_id[evidence_id].get("domain", domain) != domain
+            for evidence_id in ids
+        ):
+            raise ValueError(f"rule must reference only {domain} evidence")
+        selected = [evidence_by_id[evidence_id] for evidence_id in ids]
+        evidence_scopes = {item.get("scope", "universal") for item in selected}
+        if "contextual" in evidence_scopes and rule.get("scope") != "contextual":
+            raise ValueError("rule scope cannot broaden contextual evidence")
+        if rule.get("scope") == "contextual" and not rule.get("context", "").strip():
+            raise ValueError("contextual rule requires context")
+        validate_rule(rule, evidence_by_id, require_cross_strata=run_plan.get("adequate_strata", True))
+    coverage = draft.get("coverage", {})
+    if set(coverage) != {"evidence_items", "distinct_sessions", "strata", "unresolved_contradictions"}:
+        raise ValueError("domain draft coverage is incomplete")
+    if coverage.get("unresolved_contradictions", 0):
+        raise ValueError("domain draft has unresolved contradictions")
+    return draft
+
+def domain_draft_cache_path(ditto_home, domain, evidence_set_hash):
+    if domain not in VALID_DOMAINS or not re.fullmatch(r"[a-f0-9]{64}", evidence_set_hash or ""):
+        raise ValueError("invalid domain draft cache identity")
+    return safe_private_child(
+        ditto_home, "cache", "domain-drafts", DOMAIN_DRAFT_SCHEMA_VERSION,
+        domain, evidence_set_hash + ".json",
+    )
+
+def store_domain_draft(draft, domain, evidence_by_id, run_plan, ditto_home):
+    validate_domain_draft(draft, domain, evidence_by_id, run_plan)
+    path = domain_draft_cache_path(ditto_home, domain, draft["evidence_set_hash"])
+    atomic_write_text(path, canonical_json(draft) + "\n")
+    return path
 
 def is_link_or_reparse(path):
     info = os.lstat(path)
@@ -2139,6 +2220,12 @@ def build_plugin_parser():
         scout_command.add_argument("--packet-hash", required=True)
         scout_command.add_argument("--report", required=True)
         scout_command.add_argument("--ditto-home")
+    for name in ("validate-domain", "cache-domain"):
+        domain_command = sub.add_parser(name)
+        domain_command.add_argument("--run-id", required=True)
+        domain_command.add_argument("--domain", required=True, choices=sorted(VALID_DOMAINS))
+        domain_command.add_argument("--draft", required=True)
+        domain_command.add_argument("--ditto-home")
     validate_pack_command = sub.add_parser("validate-pack")
     validate_pack_command.add_argument("--run-id", required=True)
     validate_pack_command.add_argument("--pack", required=True)
@@ -2276,6 +2363,63 @@ def validate_run_scout(args, cache=False):
         plan["scout_report_paths"] = sorted(paths)
         atomic_write_text(plan_path, canonical_json(plan) + "\n")
         payload.update({"status": "cached", "cached_report_path": cached_path})
+    return payload
+
+def load_adaptive_evidence(plan):
+    try:
+        with open(plan["ledger_path"], "r", encoding="utf-8") as handle:
+            ledger = json.load(handle)["receipts"]
+    except (OSError, ValueError, KeyError, json.JSONDecodeError) as exc:
+        raise ValueError("adaptive receipt ledger is missing or corrupt") from exc
+    receipts = {item["receipt_id"]: item for item in ledger}
+    flattened = {}
+    for path in plan.get("scout_report_paths", []):
+        try:
+            with open(path, "r", encoding="utf-8") as handle:
+                report = json.load(handle)
+        except (OSError, ValueError, json.JSONDecodeError) as exc:
+            raise ValueError("cached scout report is missing or corrupt") from exc
+        for item in report.get("evidence", []):
+            evidence_id = item["evidence_id"]
+            if evidence_id in flattened:
+                raise ValueError("duplicate evidence id across scout reports")
+            quotes = item["quotes"]
+            try:
+                strata = {
+                    receipt_stratum(receipts[quote["receipt_id"]]["source"], quote["date"])
+                    for quote in quotes
+                }
+            except KeyError as exc:
+                raise ValueError("scout evidence references missing receipt") from exc
+            flattened[evidence_id] = {
+                "domain": item["domain"], "kind": item["kind"],
+                "scope": item.get("scope", "universal"), "context": item.get("context", ""),
+                "sessions": {quote["session_id"] for quote in quotes}, "strata": strata,
+                "quote_count": len(quotes), "quotes": quotes,
+                "contradictions": item.get("contradictions", []),
+                "instruction": item.get("instruction", ""), "implication": item.get("implication", ""),
+            }
+    return flattened
+
+def validate_run_domain(args, cache=False):
+    home = resolve_ditto_home(args.ditto_home)
+    plan_path, plan = load_run_plan(home, args.run_id)
+    evidence = load_adaptive_evidence(plan)
+    try:
+        with open(args.draft, "r", encoding="utf-8", errors="strict") as handle:
+            draft = json.load(handle)
+    except (OSError, UnicodeError, ValueError, json.JSONDecodeError) as exc:
+        raise ValueError("domain draft is not valid JSON") from exc
+    validate_domain_draft(draft, args.domain, evidence, plan)
+    payload = {"status": "valid", "domain": args.domain, "evidence_set_hash": draft["evidence_set_hash"]}
+    if cache:
+        cached_path = store_domain_draft(draft, args.domain, evidence, plan, home)
+        paths = dict(plan.get("domain_draft_paths", {}))
+        paths[args.domain] = cached_path
+        plan["domain_draft_paths"] = dict(sorted(paths.items()))
+        atomic_write_text(plan_path, canonical_json(plan) + "\n")
+        payload.update({"status": "cached", "cached_draft_path": cached_path,
+                        "domain_set_complete": set(paths) == VALID_DOMAINS})
     return payload
 
 def cache_run_report(args):
@@ -2648,6 +2792,10 @@ def plugin_main(argv):
             payload = validate_run_scout(args, cache=False)
         elif args.command == "cache-scout":
             payload = validate_run_scout(args, cache=True)
+        elif args.command == "validate-domain":
+            payload = validate_run_domain(args, cache=False)
+        elif args.command == "cache-domain":
+            payload = validate_run_domain(args, cache=True)
         elif args.command == "validate-pack":
             payload = validate_plugin_pack(args)
         elif args.command == "cache-report":

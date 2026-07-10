@@ -66,7 +66,15 @@ Rules:
 
 Before returning, run the assigned read-only `python "$DITTO_PY" plugin validate-report --run-id "$RUN_ID" --report "$REPORT_PATH"` command. If it rejects the report, correct the report and run the same validation again inside this worker pass. Return only after it reports `status: valid`. The orchestrator caches the report after the worker exits.
 
-## Reducer contract
+## Adaptive isolated domain reducer contract
+
+Run one reducer for exactly one named domain. Read only that domain's validated evidence projection; never read another domain or raw history. Write one assigned JSON draft using schema `1`, the exact `domain` and `evidence_set_hash`, an `active` or permitted `inactive` status, rules with preserved evidence IDs and scope, discarded conflict records, and coverage counts for evidence items, distinct sessions, strata, and unresolved contradictions.
+
+An inferred rule needs two distinct sessions and two available source/time strata. A single-provider pattern may qualify across two time strata. Contextual evidence cannot become a universal rule. Unresolved contradictions must be discarded, not installed. Work must remain active; inactive design/write drafts use the exact instruction `run ditto and deepen <domain>`.
+
+Before returning, run `python "$DITTO_PY" plugin validate-domain --run-id "$RUN_ID" --domain "$DOMAIN" --draft "$DRAFT_PATH"`. Correct rejected output within the same reducer pass. The orchestrator content-addresses only validated domain drafts.
+
+## Legacy combined reducer contract
 
 Read only the validated JSON report paths supplied by the run plan. Group evidence by domain and meaning while preserving every referenced `evidence_id` and contradiction. An inferred rule requires corroboration from at least two distinct user sessions and, when the selected history provides it, two source/time strata. One unequivocal explicit instruction may survive with `kind: explicit` and `confidence: low-frequency` when it is uncontradicted.
 

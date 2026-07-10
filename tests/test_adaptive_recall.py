@@ -195,6 +195,53 @@ def extra_work_evidence():
     return scout_evidence(packet_fixture()["receipts"][11], "work", 99)
 
 
+def evidence_fixture(domains=("work",)):
+    out = {}
+    for domain in domains:
+        for suffix, session, quarter in (("a", "s1", "Q1"), ("b", "s2", "Q2")):
+            out[f"ev-{domain}-{suffix}"] = {
+                "domain": domain, "kind": "inferred", "scope": "universal", "context": "",
+                "sessions": {session}, "strata": {f"codex:2026-{quarter}"}, "quote_count": 1,
+                "quotes": [{"receipt_id": f"rcpt-{domain}-{suffix}", "session_id": session,
+                            "date": "2026-01-01", "text": f"{domain} receipt {suffix}"}],
+                "contradictions": [],
+            }
+    return out
+
+
+def valid_domain_draft(domain, evidence_ids=None, scope="universal", evidence=None):
+    evidence = evidence or evidence_fixture((domain,))
+    evidence_ids = evidence_ids or [f"ev-{domain}-a", f"ev-{domain}-b"]
+    return {
+        "schema_version": "1", "domain": domain,
+        "evidence_set_hash": ditto.compute_domain_evidence_hash(domain, evidence),
+        "status": "active",
+        "rules": [{"text": f"Specific {domain} rule", "implication": f"Perform the specific {domain} action",
+                   "kind": "inferred", "scope": scope,
+                   "context": "named product" if scope == "contextual" else "",
+                   "evidence_ids": evidence_ids}],
+        "discarded": [],
+        "coverage": {"evidence_items": 2, "distinct_sessions": 2, "strata": 2,
+                     "unresolved_contradictions": 0},
+    }
+
+
+def contextual_evidence_fixture():
+    evidence = evidence_fixture(("design",))
+    for item in evidence.values():
+        item.update({"scope": "contextual", "context": "named product"})
+    return evidence
+
+
+def single_provider_two_quarter_fixture():
+    return evidence_fixture(("write",))
+
+
+def run_plan_fixture():
+    return {"adequate_strata": True, "report_set_hash": "c" * 64,
+            "source_coverage": {"sources": ["codex"], "first_date": "2026-01-01", "last_date": "2026-06-01"}}
+
+
 class ReceiptLedgerTest(unittest.TestCase):
     def test_large_session_becomes_individual_stable_receipts(self):
         record = make_record("s1", [
@@ -355,6 +402,27 @@ class ScoutReportTest(unittest.TestCase):
 
         with self.assertRaisesRegex(ValueError, "context"):
             ditto.validate_scout_report(report, packet_fixture())
+
+
+class DomainDraftTest(unittest.TestCase):
+    def test_domain_draft_cannot_reference_another_domain(self):
+        evidence = evidence_fixture(domains=("work", "design"))
+        draft = valid_domain_draft("work", evidence_ids=["ev-design-a"], evidence=evidence)
+
+        with self.assertRaisesRegex(ValueError, "work evidence"):
+            ditto.validate_domain_draft(draft, "work", evidence, run_plan_fixture())
+
+    def test_contextual_rule_cannot_be_universal(self):
+        evidence = contextual_evidence_fixture()
+        draft = valid_domain_draft("design", scope="universal", evidence=evidence)
+
+        with self.assertRaisesRegex(ValueError, "scope"):
+            ditto.validate_domain_draft(draft, "design", evidence, run_plan_fixture())
+
+    def test_repeated_single_provider_rule_can_use_two_time_strata(self):
+        evidence = single_provider_two_quarter_fixture()
+
+        ditto.validate_domain_draft(valid_domain_draft("write", evidence=evidence), "write", evidence, run_plan_fixture())
 
 
 if __name__ == "__main__":
