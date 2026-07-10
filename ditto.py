@@ -20,7 +20,7 @@ Usage:
     python ditto.py --chunks 20         # how many chunks to split into
     python ditto.py --no-redact         # DANGER: skip redaction (not recommended)
 """
-import argparse, glob, hashlib, json, os, re, shutil, sys, tempfile, uuid
+import argparse, glob, hashlib, json, os, re, shutil, sys, tempfile, time, uuid
 
 HOME = os.path.expanduser("~")
 SOURCES = {
@@ -240,6 +240,177 @@ def mine_files(files, no_redact=False, dedupe=True):
         "first_date": first_date,
         "last_date": last_date,
     }
+
+def canonical_json(value):
+    return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+
+def segment_hash(records, target_tokens):
+    identity = {
+        "schema_version": SEGMENT_SCHEMA_VERSION,
+        "extraction_schema_version": EXTRACTION_SCHEMA_VERSION,
+        "target_tokens": target_tokens,
+        "sessions": [
+            {"session_id": record["session_id"], "content_hash": record["content_hash"]}
+            for record in records
+        ],
+    }
+    return sha256_text(canonical_json(identity))
+
+def pack_records(records, target_tokens):
+    packed, current, current_tokens = [], [], 0
+    for record in sorted(records, key=lambda item: (item["source"], item["first_date"], item["session_id"])):
+        source_changed = current and current[0]["source"] != record["source"]
+        target_exceeded = current and current_tokens + record["tokens"] > target_tokens
+        if source_changed or target_exceeded:
+            packed.append(current)
+            current, current_tokens = [], 0
+        current.append(record)
+        current_tokens += record["tokens"]
+    if current:
+        packed.append(current)
+    return packed
+
+def seal_records(records, target_tokens):
+    sealed = []
+    for group in pack_records(records, target_tokens):
+        text = "\n".join(record["text"] for record in group)
+        dated_first = [record["first_date"] for record in group if record["first_date"] != "undated"]
+        dated_last = [record["last_date"] for record in group if record["last_date"] != "undated"]
+        source_tokens = sum(record["tokens"] for record in group)
+        sealed.append({
+            "segment_hash": segment_hash(group, target_tokens),
+            "active": True,
+            "source": group[0]["source"],
+            "first_date": min(dated_first) if dated_first else "undated",
+            "last_date": max(dated_last) if dated_last else "undated",
+            "source_tokens": source_tokens,
+            "text_hash": sha256_text(text),
+            "session_versions": [
+                {"session_id": record["session_id"], "content_hash": record["content_hash"]}
+                for record in group
+            ],
+            "oversize": len(group) == 1 and source_tokens > target_tokens,
+        })
+    return sealed
+
+def segment_text_for_metadata(segment, records_by_id):
+    records = []
+    for version in segment["session_versions"]:
+        record = records_by_id.get(version["session_id"])
+        if not record or record["content_hash"] != version["content_hash"]:
+            raise ValueError("segment metadata references missing session content")
+        records.append(record)
+    text = "\n".join(record["text"] for record in records)
+    if sha256_text(text) != segment["text_hash"]:
+        raise ValueError("segment text hash mismatch")
+    return text
+
+def segment_file_path(ditto_home, segment_hash_value):
+    return os.path.join(
+        private_paths(ditto_home)["segments"],
+        SEGMENT_SCHEMA_VERSION,
+        segment_hash_value + ".txt",
+    )
+
+def ensure_segment_file(segment, records_by_id, ditto_home, write=True):
+    expected = segment_text_for_metadata(segment, records_by_id)
+    path = segment_file_path(ditto_home, segment["segment_hash"])
+    if os.path.isfile(path):
+        try:
+            with open(path, "r", encoding="utf-8", errors="strict", newline="") as handle:
+                existing = handle.read()
+        except (OSError, UnicodeError):
+            existing = None
+        if existing is not None and sha256_text(existing) == segment["text_hash"]:
+            return path
+        if not write:
+            return path
+        stamp = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
+        quarantine = path + ".corrupt-" + stamp
+        if os.path.exists(quarantine):
+            quarantine += "-" + uuid.uuid4().hex[:8]
+        os.replace(path, quarantine)
+    if write:
+        atomic_write_text(path, expected)
+    return path
+
+def sync_segments(records, ditto_home, target_tokens, write=True):
+    ditto_home = resolve_ditto_home(ditto_home)
+    index_path = os.path.join(
+        private_paths(ditto_home)["segment_indexes"],
+        f"v{SEGMENT_SCHEMA_VERSION}-{target_tokens}.json",
+    )
+    index = None
+    if os.path.isfile(index_path):
+        try:
+            with open(index_path, "r", encoding="utf-8") as handle:
+                candidate = json.load(handle)
+            if (
+                candidate.get("schema_version") == SEGMENT_SCHEMA_VERSION
+                and candidate.get("extraction_schema_version") == EXTRACTION_SCHEMA_VERSION
+                and candidate.get("target_tokens") == target_tokens
+                and isinstance(candidate.get("segments"), list)
+            ):
+                index = candidate
+        except (OSError, ValueError, TypeError):
+            index = None
+    if index is None:
+        index = {
+            "schema_version": SEGMENT_SCHEMA_VERSION,
+            "extraction_schema_version": EXTRACTION_SCHEMA_VERSION,
+            "target_tokens": target_tokens,
+            "sessions": {},
+            "segments": [],
+        }
+
+    records_by_id = {record["session_id"]: record for record in records}
+    current_sessions = {
+        session_id: record["content_hash"] for session_id, record in records_by_id.items()
+    }
+    represented = set()
+    rebuild_ids = set()
+    segments = []
+    for original in index["segments"]:
+        segment = dict(original)
+        versions = segment.get("session_versions", [])
+        affected = bool(segment.get("active")) and any(
+            current_sessions.get(item.get("session_id")) != item.get("content_hash")
+            for item in versions
+        )
+        if affected:
+            segment["active"] = False
+            rebuild_ids.update(
+                item["session_id"] for item in versions if item.get("session_id") in records_by_id
+            )
+        elif segment.get("active"):
+            represented.update(item["session_id"] for item in versions)
+        segments.append(segment)
+
+    rebuild_ids.update(set(records_by_id) - represented)
+    rebuild_records = [records_by_id[session_id] for session_id in rebuild_ids]
+    for sealed in seal_records(rebuild_records, target_tokens):
+        existing = next(
+            (item for item in segments if item.get("segment_hash") == sealed["segment_hash"]),
+            None,
+        )
+        if existing is None:
+            segments.append(sealed)
+        else:
+            existing.update(sealed)
+
+    result = {
+        "schema_version": SEGMENT_SCHEMA_VERSION,
+        "extraction_schema_version": EXTRACTION_SCHEMA_VERSION,
+        "target_tokens": target_tokens,
+        "sessions": current_sessions,
+        "segments": segments,
+    }
+    for segment in result["segments"]:
+        if segment.get("active"):
+            ensure_segment_file(segment, records_by_id, ditto_home, write=write)
+    if write:
+        atomic_write_text(index_path, canonical_json(result) + "\n")
+    return result
 
 def atomic_write_bytes(path, data):
     parent = os.path.dirname(path) or "."

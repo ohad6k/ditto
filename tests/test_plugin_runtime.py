@@ -5,6 +5,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -19,6 +20,19 @@ def write_jsonl(path, rows):
     with path.open("w", encoding="utf-8") as fh:
         for row in rows:
             fh.write(json.dumps(row) + "\n")
+
+
+def fake_record(session_id, text, source="codex", date="2026-01-01", tokens=5):
+    body = f"===== session:{session_id} source:{source} =====\n[{date}]\n{text}"
+    return {
+        "session_id": session_id,
+        "source": source,
+        "first_date": date,
+        "last_date": date,
+        "tokens": tokens,
+        "text": body,
+        "content_hash": ditto.sha256_text(body),
+    }
 
 
 class PluginRuntimeCliTest(unittest.TestCase):
@@ -112,6 +126,55 @@ class SessionRecordTest(unittest.TestCase):
             record = ditto.mine_files([str(path)])["records"][0]
             self.assertNotIn("pirate", record["text"])
             self.assertIn("done means live proof", record["text"])
+
+
+class SegmentStoreTest(unittest.TestCase):
+    def test_appending_session_keeps_existing_segment_hashes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            home = str(Path(tmp) / "private")
+            initial = [fake_record("a", "one"), fake_record("b", "two")]
+            first = ditto.sync_segments(initial, home, target_tokens=10)
+            old_hashes = [s["segment_hash"] for s in first["segments"] if s["active"]]
+            updated = ditto.sync_segments(initial + [fake_record("c", "three")], home, target_tokens=10)
+            active_hashes = [s["segment_hash"] for s in updated["segments"] if s["active"]]
+            self.assertTrue(set(old_hashes).issubset(active_hashes))
+            self.assertEqual(2, len(active_hashes))
+
+    def test_changed_session_replaces_only_its_affected_segment(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            home = str(Path(tmp) / "private")
+            records = [fake_record("a", "one"), fake_record("b", "two"), fake_record("c", "three")]
+            first = ditto.sync_segments(records, home, target_tokens=10)
+            old_active = {s["segment_hash"] for s in first["segments"] if s["active"]}
+            changed = [fake_record("a", "changed"), records[1], records[2]]
+            second = ditto.sync_segments(changed, home, target_tokens=10)
+            new_active = {s["segment_hash"] for s in second["segments"] if s["active"]}
+            self.assertEqual(1, len(old_active & new_active))
+            self.assertTrue(any(not s["active"] for s in second["segments"]))
+
+    def test_extraction_schema_change_invalidates_segment_hashes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            home = str(Path(tmp) / "private")
+            records = [fake_record("a", "one"), fake_record("b", "two")]
+            first = ditto.sync_segments(records, home, target_tokens=10)
+            with mock.patch.object(ditto, "EXTRACTION_SCHEMA_VERSION", "2"):
+                second = ditto.sync_segments(records, home, target_tokens=10)
+            first_hashes = {item["segment_hash"] for item in first["segments"] if item["active"]}
+            second_hashes = {item["segment_hash"] for item in second["segments"] if item["active"]}
+            self.assertTrue(first_hashes.isdisjoint(second_hashes))
+
+    def test_corrupt_segment_file_is_quarantined_and_restored(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp) / "private"
+            records = [fake_record("a", "one"), fake_record("b", "two")]
+            first = ditto.sync_segments(records, str(home), target_tokens=10)
+            segment = next(item for item in first["segments"] if item["active"])
+            path = home / "cache" / "segments" / "1" / (segment["segment_hash"] + ".txt")
+            expected = path.read_bytes()
+            path.write_text("tampered", encoding="utf-8")
+            ditto.sync_segments(records, str(home), target_tokens=10)
+            self.assertEqual(expected, path.read_bytes())
+            self.assertTrue(any(item.name.startswith(path.name + ".corrupt-") for item in path.parent.iterdir()))
 
 
 if __name__ == "__main__":
