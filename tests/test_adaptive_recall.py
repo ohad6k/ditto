@@ -5,6 +5,7 @@ import re
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
@@ -559,6 +560,29 @@ class DocumentationContractTest(unittest.TestCase):
         self.assertIn("300K selected source tokens", text)
         self.assertIn("six scouts and three domain reducers", text)
         self.assertNotIn("6 × 25K", text)
+
+
+class PerformanceTest(unittest.TestCase):
+    def test_local_stage_a_planning_stays_under_two_minutes(self):
+        records = [
+            make_record(
+                f"session-{index}",
+                [(f"2026-{(index % 9) + 1:02d}-01", f"specific preference {index} " + "x" * 3_980)],
+                source="codex" if index % 2 == 0 else "claude",
+            )
+            for index in range(3_200)
+        ]
+        started = time.perf_counter()
+
+        receipts = ditto.build_receipt_ledger(records)
+        scored = ditto.score_receipts(receipts)
+        selected = ditto.select_salience_stage(scored, "A")
+        packets = ditto.pack_selected_receipts(selected, 6, 50_000)
+        elapsed = time.perf_counter() - started
+
+        self.assertLess(elapsed, 120)
+        self.assertLessEqual(sum(item["tokens"] for item in selected), 300_000)
+        self.assertLessEqual(len(packets), 6)
 
 
 if __name__ == "__main__":
