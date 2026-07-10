@@ -36,6 +36,7 @@ SEGMENT_SCHEMA_VERSION = "1"
 REPORT_SCHEMA_VERSION = "1"
 PROMPT_SCHEMA_VERSION = "1"
 REDUCER_SCHEMA_VERSION = "1"
+RECEIPT_SCHEMA_VERSION = "1"
 
 STARTER_CANDIDATES = (
     {"segments": 4, "segment_tokens": 25_000},
@@ -198,6 +199,7 @@ def mine_files(files, no_redact=False, dedupe=True):
         if not ums:
             continue
         buf = []
+        kept_messages = []
         kept_dates = []
         for ts, t in ums:
             if dedupe and len(t) >= DEDUPE_MIN_LEN:
@@ -218,6 +220,11 @@ def mine_files(files, no_redact=False, dedupe=True):
                 if message_date > last_date:
                     last_date = message_date
             buf.append(f"[{message_date}]\n{t}")
+            kept_messages.append({
+                "date": message_date,
+                "text": t,
+                "ordinal": len(kept_messages),
+            })
             msgs += 1
             chars += len(t)
         if not buf:            # every message was a duplicate of an earlier session
@@ -233,6 +240,7 @@ def mine_files(files, no_redact=False, dedupe=True):
             "tokens": max(1, sum(len(item) for item in buf) // 4),
             "text": text,
             "content_hash": sha256_text(text),
+            "messages": kept_messages,
         }
         sessions += 1
         records.append(record)
@@ -251,6 +259,41 @@ def mine_files(files, no_redact=False, dedupe=True):
 
 def canonical_json(value):
     return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+
+def build_receipt_ledger(records):
+    receipts = []
+    for record in records:
+        for message in record.get("messages", []):
+            text = message["text"]
+            content_hash = sha256_text(text)
+            identity = {
+                "schema_version": RECEIPT_SCHEMA_VERSION,
+                "session_id": record["session_id"],
+                "date": message["date"],
+                "ordinal": message["ordinal"],
+                "content_hash": content_hash,
+            }
+            receipts.append({
+                "schema_version": RECEIPT_SCHEMA_VERSION,
+                "receipt_id": "rcpt-" + sha256_text(canonical_json(identity))[:20],
+                "session_id": record["session_id"],
+                "source": record["source"],
+                "date": message["date"],
+                "ordinal": message["ordinal"],
+                "text": text,
+                "tokens": max(1, len(text) // 4),
+                "content_hash": content_hash,
+            })
+    return sorted(
+        receipts,
+        key=lambda item: (
+            item["source"],
+            item["date"],
+            item["session_id"],
+            item["ordinal"],
+            item["receipt_id"],
+        ),
+    )
 
 def segment_hash(records, target_tokens):
     identity = {
