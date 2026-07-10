@@ -37,7 +37,7 @@ The user path is:
 9. Future tasks activate `ditto:work`, `ditto:design`, or `ditto:write` as relevant. The static loader reads the active private profile file.
 10. An identical rerun resolves entirely from content-addressed caches. A later update processes only new or changed sealed segments.
 11. If one domain lacks adequate evidence, Ditto keeps that domain inactive and gives one exact targeted deepen action. It does not invent rules or automatically spend more tokens.
-12. After implementation, automated tests, migration, live plugin activation, and real work/design/writing probes pass, the benchmark harness can be completed. Model runs remain the final stage.
+12. After implementation, automated tests, migration, live plugin activation, and real work/design/writing probes pass, the benchmark schema and runner can be completed. Model runs remain the final stage; result-UI polish starts only after the first approved run proves the schema.
 
 ### First-run experience
 
@@ -59,6 +59,8 @@ The user path is:
 ### Existing CLI compatibility
 
 The current no-plugin path remains valid for users who prefer one-file Python. `python ditto.py --dry-run`, extraction, card rendering, and direct install targets continue to work. The plugin becomes the recommended path because it removes manual orchestration while preserving the simple current entry point.
+
+For this release, `ditto.py` remains the canonical zero-dependency, single-file Python runtime. Segment, cache, profile-store, and migration logic stay in that file; the plugin adds static manifests and skill files but does not turn the CLI into an installed Python package. If maintainability later requires modules, Ditto must first preserve a generated standalone `ditto.py` release artifact or explicitly retire the one-file claim in a separate release.
 
 ## User Answers Translated
 
@@ -87,11 +89,13 @@ The latest local dry run inspected 1,978 JSONL files, retained 7,681 messages, r
 
 ### Correctness defects that block release
 
+Temporary-directory reproductions on 2026-07-10 confirmed the key audit findings against the current `ditto.py`: a six-chunk output followed by a one-chunk rerun still contained `chunk-01` through `chunk-06`; malformed `notname:`/`notdescription:` frontmatter returned valid; corrupt-only JSONL exited `0` and wrote stats; and a Hebrew destination under `PYTHONIOENCODING=cp1252` raised `UnicodeEncodeError`.
+
 - `write_outputs` creates chunk files without atomically replacing or clearing a previous chunk directory. A smaller rerun can leave stale chunk files that are mined again.
 - Corrupt or unsupported-only JSONL input can reach the end with zero valid sessions and still exit successfully with instructions to mine empty output.
 - Skill frontmatter validation uses substring checks, so malformed keys such as `notname:` can be accepted.
 - Windows console output can raise `UnicodeEncodeError` for Hebrew or other Unicode destination paths under a non-UTF-8 code page.
-- Multi-file profile installation is not atomic and has no rollback.
+- The current installer writes directly into the destination with no staged rollback. The new multi-file profile pack would multiply that risk unless activation becomes atomic first.
 - Codex and Claude destinations are hardcoded to one `you` skill, so three side-by-side domain skills cannot coexist through the installer.
 - Current docs blur source detection, install destination, and native plugin support. Cursor and Gemini are context adapters today, not proven native Ditto plugins.
 - Current privacy copy can be read as saying the complete mining workflow is local. In reality, selected redacted text is processed by the chosen model provider unless that provider is local.
@@ -101,7 +105,7 @@ The latest local dry run inspected 1,978 JSONL files, retained 7,681 messages, r
 ### In scope
 
 - One canonical Ditto repository.
-- Native Codex and Claude plugin manifests.
+- Candidate Codex and Claude plugin manifests, retained as native v1 surfaces only for hosts that pass Workstream 0.
 - Static namespaced skills: `ditto:mine`, `ditto:work`, `ditto:design`, and `ditto:write`.
 - Durable private storage under `DITTO_HOME`, defaulting to `~/.ditto`.
 - Bounded deterministic starter mining.
@@ -112,7 +116,7 @@ The latest local dry run inspected 1,978 JSONL files, retained 7,681 messages, r
 - Existing direct Cursor, `AGENTS.md`, Gemini, Codex, and Claude install adapters retained for compatibility.
 - Honest documentation and privacy wording.
 - Automated and live verification proportional to the risk.
-- Benchmark schema and an inert empty-results UI only after the plugin is stable; actual model runs last.
+- A thin benchmark manifest, result schema, fixtures, and disabled runner only after the plugin is stable; actual model runs and result-UI polish last.
 
 ### Explicitly out of scope for this release
 
@@ -142,7 +146,7 @@ This visually keeps everything in one folder, but installed plugin caches are re
 
 ### Option 3: One canonical plugin with static loader skills and durable private profile storage
 
-The plugin contains stable behavior and thin loaders. The generated profile pack and report cache live under `~/.ditto`, outside any host cache. Codex and Claude receive native overlays from the same canonical repository. Existing adapters remain available for other hosts.
+The plugin contains stable behavior and thin loaders. The generated profile pack and report cache live under `~/.ditto`, outside any host cache. Codex and Claude overlay candidates come from the same canonical repository, but only Workstream 0 survivors ship as native surfaces. Existing adapters remain available for other hosts.
 
 **Decision:** recommended.
 
@@ -221,10 +225,13 @@ The plugin name is `ditto`; host namespacing yields `ditto:mine`, `ditto:work`, 
 
 - Plugin installation: zero scan calls and zero model calls.
 - Preflight: deterministic local work only.
-- Default starter mine: four stable segments capped near 25K source tokens each.
-- Worker plan: four map calls, using a fast worker role when the host supports model choice.
-- Reducer plan: one strong reducer call over compact structured reports.
-- Default total: five planned model calls. Host/system prompt overhead is disclosed as outside Ditto's exact measurement.
+- The release default is selected by dogfood calibration, not fixed in advance.
+- First calibration candidate: four stable segments capped near 25K source tokens each, four map calls, and one reducer call. On the current 1.95M-token corpus this samples only about 5%, so it is explicitly a recall-risk hypothesis, not a validated constant.
+- Additional bounded candidates improve temporal/source coverage with more, smaller segments: six near 20K plus one reducer, then eight near 20K plus one reducer.
+- Calibration has an absolute candidate ceiling of 160K selected source tokens and nine planned calls. Changing that ceiling requires a visible plan decision; no candidate silently exceeds it.
+- The smallest candidate that passes the predeclared recall and fresh-task quality gates becomes the release default. If none passes, Ditto does not claim the bounded starter is sufficient and the release decision is revisited.
+- Workers use a fast role when the host supports model choice. One strong reducer compiles compact structured reports.
+- Host/system prompt overhead is disclosed as outside Ditto's exact measurement.
 - Identical input plus identical prompt/schema versions: zero model calls through report and reduction cache hits.
 - New history: only new or changed stable segments become uncached work.
 - Deep mode: explicit request only, separately estimated, resumable, and never started by install, update, setup, or benchmark preparation.
@@ -256,19 +263,34 @@ One strong reducer reads the report set once and produces all three profile file
 
 The starter path is allowed to be smaller, not weaker in judgment.
 
-- Every installed instruction must be supported by at least two independent selected reports and at least two verbatim quotes in the private appendix.
+- Evidence independence is measured by distinct user-authored sessions and time/source strata, not by how many worker reports happened to contain the same session.
+- An inferred repeated behavior requires at least two distinct sessions and at least two verbatim quotes in the private appendix. Cross-stratum support increases confidence and is required when the selected corpus contains adequate coverage.
+- One direct, unequivocal user instruction may preserve a rare but high-salience law with one receipt only when it is labeled as an explicit instruction rather than a repeated pattern, carries lower frequency confidence, and has no contradictory evidence. It cannot be described as a consensus or habit.
 - Generic traits a stranger could guess are rejected.
 - The reducer receives the strongest available model role; worker model choice optimizes cost, not final judgment.
-- Reports must disclose sampled coverage as `x/4 sampled reports`; they cannot imply the full history was read.
+- Reports record stable session IDs, time/source strata, occurrence counts, and sampled coverage; they cannot imply the full history was read.
 - The manifest records source coverage by tool and time range, selected source tokens, prompt/schema versions, and every cache hash.
 - A weak domain is not installed as if complete. It remains inactive and exposes one exact targeted deepen action.
 - Generated skills remain lean for runtime context. Deep evidence stays in the appendix and is loaded only for audit or deepening.
-- Before release, the bounded mine is dogfooded against the existing deep Ohad profile. It must recover the non-negotiable working laws, design rejection patterns, and voice constraints with real receipts.
+- Before calibration, freeze a must-recover checklist from the existing deep Ohad profile covering non-negotiable working laws, design rejection patterns, and voice constraints. Run all bounded candidates against the same checklist and real receipts; choose the smallest passing candidate rather than tuning the gate after seeing results.
+- A failed release dogfood blocks the bounded-default claim. Targeted deepening remains a valid post-release response for an individual user's genuinely sparse domain, not a way to waive the flagship calibration gate.
 - Fresh-task probes must show correct activation and a human verdict for work, design, and writing. The public multi-model benchmark is a later, larger proof and does not replace these release checks.
+
+### Skill routing contract
+
+The four skill descriptions are part of the product routing layer and require positive and negative trigger tests.
+
+- `ditto:mine` triggers only for explicit Ditto setup, mining, updating, or deepening requests.
+- `ditto:design` handles UI, UX, visual judgment, and frontend-design work; it loads the core profile plus the design profile.
+- `ditto:write` handles marketing, social, replies, product copy, and writing in the user's voice; it loads the core profile plus the writing profile.
+- `ditto:work` handles other execution and verification tasks; its description explicitly excludes design and writing requests and it loads only the core profile.
+- A task that genuinely combines design and copy may deliberately load `design` and `write`. The host must not load `work` alongside them merely because all three skills mention the user profile.
 
 ## Workstream Map
 
 ```text
+host plugin viability spike
+        ↓
 P0 correctness + usage gates
         ↓
 stable segmentation + caches
@@ -283,12 +305,40 @@ migration + honest docs
         ↓
 automated and live verification
         ↓
-benchmark harness preparation
+benchmark schema + disabled runner
         ↓
 benchmark model runs last
+        ↓
+result UI + proof clips
+        ↓
+changelog + release evidence
 ```
 
 ## Workstreams
+
+### Workstream 0: Host plugin viability spike
+
+**Purpose:** prove the packaging premise before building storage, caches, and reducers around it.
+
+**User outcome:** native host support is based on a working path, not the presence of plausible manifest files.
+
+**Areas:** minimal Codex and Claude development manifests, one temporary namespaced proof skill, an isolated `DITTO_HOME` fixture, and spike notes/tests.
+
+**Tasks:**
+
+- Register the smallest valid `ditto:spike` skill in Codex and Claude through each host's supported development flow.
+- In a fresh task, prove the skill can invoke the repository's local Python runtime and read a harmless fixture through `DITTO_HOME`.
+- Record the exact host version, install command, discovered namespace, task transcript, and any shell/filesystem restrictions.
+- Use no real user logs, mining prompts, benchmark models, or generated profiles during the spike.
+- Remove the temporary public skill after the result is captured; retain only the fixture/test or decision record needed to protect the proven contract.
+
+**Dependencies:** none. It runs before the main architecture work; the existing CLI correctness fixes remain conceptually independent but follow it in the implementation sequence so the packaging decision is known first.
+
+**Acceptance signals:** a fresh Codex task discovers and invokes the namespaced skill, local Python runs, and the isolated fixture is read. Claude must pass the same proof before native Claude support remains in v1 scope.
+
+**Verification:** host validator output plus fresh-task transcripts and fixture output. Manifest existence alone is not proof.
+
+**Risk/fallback:** if Codex cannot support the shape, stop the plugin architecture and retain the CLI/direct-skill product path. If only Claude fails, v1 is native Codex plus the existing Claude adapter; the docs must not claim a native Claude plugin.
 
 ### Workstream 1: Correctness and usage safety
 
@@ -354,7 +404,7 @@ benchmark model runs last
 - Update worker output to one structured evidence report covering all three domains.
 - Update the reducer to compile `you.md`, `you-designer.md`, `you-writer.md`, `appendix.md`, and `card.json` in one pass.
 - Add the dedicated writer lens.
-- Require minimum independent support and two verbatim quotes for installed instructions.
+- Apply the session-based evidence rules, including the narrowly defined explicit-instruction exception.
 - Record contradictions and insufficient-evidence status.
 - Validate exact frontmatter names and profile manifest references before staging.
 
@@ -393,7 +443,7 @@ benchmark model runs last
 
 ### Workstream 5: Plugin packaging and loaders
 
-**Purpose:** deliver one Ditto product with native Codex and Claude plugin surfaces.
+**Purpose:** deliver one Ditto product through the native host surfaces proven in Workstream 0.
 
 **User outcome:** one plugin install reveals the relevant Ditto skills together, like Superpowers.
 
@@ -401,16 +451,17 @@ benchmark model runs last
 
 **Tasks:**
 
-- Scaffold and validate the Codex manifest with real metadata and assets.
-- Add the Claude manifest and local development marketplace overlay.
+- Scaffold and validate the Codex manifest with real metadata and assets if Codex passed Workstream 0.
+- Add the Claude manifest and local development marketplace overlay only if Claude passed Workstream 0.
 - Move or wrap the current orchestrator as `mine` without breaking current direct-skill users.
 - Create static domain loaders that resolve `DITTO_HOME`, read the active pointer, validate the manifest, and load only the relevant private file.
+- Give each skill mutually clear positive and negative trigger descriptions and test overlap cases, including design-plus-copy tasks.
 - Ensure missing/corrupt profile state instructs the exact recovery action and never silently uses a stale or partial profile.
 - Keep benchmark capability absent or inert until its final workstream.
 
-**Dependencies:** Workstream 4.
+**Dependencies:** Workstream 0 and Workstream 4.
 
-**Acceptance signals:** isolated clean installs show the four exact namespaced skills; fresh tasks load the expected active profile; plugin reinstall preserves private state.
+**Acceptance signals:** every claimed native host shows the four exact namespaced skills in an isolated clean install; fresh tasks load the expected active profile; plugin reinstall preserves private state.
 
 **Verification:** Codex plugin validator, Claude manifest validation, isolated marketplace install, cachebuster reinstall, fresh-task activation transcripts.
 
@@ -427,7 +478,10 @@ benchmark model runs last
 **Tasks:**
 
 - Detect legacy `you` skill destinations and copy into a staged private profile version after backup.
-- Leave the legacy file intact until the new plugin is live-verified.
+- Keep the legacy skill active while the new private profile and loaders are staged but not yet activated.
+- After live verification, move the legacy skill directory out of host discovery into `~/.ditto/legacy/<host>/<timestamp>/`, then atomically activate the new pointer. Never allow a fresh task to see both the legacy personal skill and the new Ditto profile loaders.
+- If activation or a fresh-task probe fails, deactivate the new pointer and restore the legacy directory to its original discovery path.
+- Treat marked `AGENTS.md`/`GEMINI.md` blocks as separate adapter migrations; a native plugin migration must not silently leave an always-on legacy context block competing with the new loaders.
 - Distinguish source auto-detection, install adapters, and native plugin support.
 - State that `ditto.py` makes no network calls while selected redacted mining text is processed by the chosen provider.
 - Document the zero-call plugin install, bounded default mine, exact preflight fields, explicit deep mode, and incremental reuse.
@@ -435,7 +489,7 @@ benchmark model runs last
 
 **Dependencies:** Workstreams 1-5.
 
-**Acceptance signals:** a current user can migrate without losing the existing profile; docs match live behavior and tests.
+**Acceptance signals:** a current user can migrate without losing the existing profile; a fresh task sees exactly one active personal-profile path; docs match live behavior and tests.
 
 **Verification:** migration tests from all supported legacy destinations, documentation command smoke tests, manual claim audit against code and live plugin state.
 
@@ -447,16 +501,16 @@ benchmark model runs last
 
 **User outcome:** Ditto is demonstrably installed, efficient, and behaviorally useful before model-comparison content is produced.
 
-**Areas:** tests, isolated homes, plugin development marketplace, benchmark manifest/schema, empty-results UI.
+**Areas:** tests, isolated homes, plugin development marketplace, benchmark manifest/schema, fixtures, and disabled runner.
 
 **Tasks:**
 
 - Run all automated correctness, cache, atomicity, and migration tests.
-- Validate clean Codex and Claude plugin installs in fresh tasks.
+- Validate clean installs in fresh tasks for every host still claimed as native after Workstream 0.
 - Run one real `done` probe, one design probe, and one writing probe with human verdicts.
 - Record source-token and call-plan evidence for bounded mining without claiming subscription-percentage savings.
 - Define the 14-entry initial benchmark roster from the supplied model menus.
-- Build the benchmark manifest and UI with every result as `--`.
+- Build only the thin benchmark manifest, result schema, deterministic fixtures, and disabled runner before any real run.
 - Keep every model runner disabled until an explicit final-stage approval.
 
 **Dependencies:** all prior workstreams.
@@ -465,9 +519,35 @@ benchmark model runs last
 
 **Verification:** complete release checklist and separate read-only spec/code-quality reviews followed by fixes and re-review.
 
-**Risk/fallback:** if the bounded profile fails a real probe, deepen only the failing domain after showing the additional plan. Do not silently fall back to full history.
+**Risk/fallback:** if the chosen bounded candidate fails a real release probe, reopen calibration or block release; do not use targeted deepening to disguise a failed flagship default. For later users with sparse evidence in one domain, show a separate targeted deepen plan.
 
-### Workstream 8: Changelog and GitHub release handoff
+### Workstream 8: Approved benchmark execution and visual proof
+
+**Purpose:** produce the public model comparison and viral visual proof only after the product itself has passed every release gate.
+
+**User outcome:** people can see both whether Ditto improves behavior and how the current Codex/Claude systems compare, with every result traceable to raw evidence.
+
+**Areas:** benchmark runner, raw artifacts, blind verdicts, result UI, leaderboard, and three cold-versus-Ditto proof clips plus one combined hero clip.
+
+**Tasks:**
+
+- Obtain explicit approval before the first model invocation.
+- Freeze the supplied 14-label roster: Codex `5.5`, `5.6 Sol`, `5.6 Terra`, `5.6 Luna`, `5.4`, `5.4 Mini`, `5.3 Codex Spark`; Claude `Fable 5`, `Opus 4.8`, `Sonnet 5`, `Haiku 4.5`, `Opus 4.7`, `Opus 4.6`, `Sonnet 4.6`.
+- Run one approved pilot cell, validate the schema against the real host/model/mode/tool/budget output, and revise the schema before bulk execution if needed.
+- Run the same cold and `+Ditto` qualifier conditions for all 14 menu entries and retain every raw prompt, output, environment field, timing, and verdict.
+- Advance the top four qualifier systems into the repeated full benchmark defined by the frozen manifest; do not change tasks or scoring after seeing results.
+- Build the polished leaderboard only from validated artifacts.
+- Produce separate `done`, design, and writing proof clips plus one combined hero clip from real cold-versus-Ditto outputs. Never reconstruct or improve a weak model result for the video.
+
+**Dependencies:** every product, migration, quality, and verification gate in Workstreams 0-7 plus explicit user approval.
+
+**Acceptance signals:** all 14 entries have comparable qualifier artifacts; the top-four advancement is reproducible; repeated results link to raw evidence; UI and videos contain no placeholder or hand-entered claims.
+
+**Verification:** schema validation on the pilot, runner logs, artifact hashes, blind-verdict records, leaderboard-to-artifact link audit, and frame-by-frame claim audit of the proof clips.
+
+**Risk/fallback:** if a menu label disappears or the host changes during execution, stop that system's run, record the drift, and ask before substituting it. Never silently compare a replacement as if it were the captured model.
+
+### Workstream 9: Changelog and GitHub release handoff
 
 **Purpose:** make every shipped Ditto update visible, understandable, and easy to follow from GitHub.
 
@@ -484,7 +564,7 @@ benchmark model runs last
 - Add a README note explaining that starring bookmarks the repository but does not subscribe to release notifications. Give the exact GitHub path: `Watch` → `Custom` → `Releases`, backed by GitHub's official notification and release documentation.
 - Keep release publication as the final ship gate. Prepare the draft and evidence; Ohad publishes it or explicitly authorizes publication.
 
-**Dependencies:** all product, live verification, and approved benchmark work.
+**Dependencies:** all product, live verification, and approved benchmark work in Workstreams 0-8.
 
 **Acceptance signals:** changelog, tag, release draft, upgrade instructions, proof links, and known limitations all describe the same verified release; no benchmark number is copied without a raw artifact.
 
@@ -495,19 +575,20 @@ benchmark model runs last
 ## Execution Tasks
 
 - [ ] Create a git checkpoint before product changes.
+- [ ] Run the minimal Codex/Claude plugin viability spike and record the per-host decision before building plugin-dependent architecture.
 - [ ] Add failing tests for stale chunks, zero-session success, malformed frontmatter, Hebrew paths, and partial install rollback.
 - [ ] Fix P0 correctness defects one at a time and keep the existing suite green.
 - [ ] Add a deterministic preflight/run-plan model with no model calls.
 - [ ] Add stable sealed segment generation and schema-versioned hashes.
-- [ ] Add deterministic stratified starter selection with a four-segment hard default.
+- [ ] Add deterministic stratified starter selection with configurable bounded calibration candidates and a 160K/nine-call calibration ceiling.
 - [ ] Add report and reduction cache lookups and fail-closed validation.
 - [ ] Update mining prompts to one shared evidence report per segment.
 - [ ] Add one-pass profile compilation for work, design, writing, appendix, and card.
 - [ ] Add output validation and insufficient-evidence behavior.
 - [ ] Add versioned `DITTO_HOME` profile storage and atomic active pointer.
-- [ ] Add migration from legacy profile destinations without deletion.
-- [ ] Scaffold and validate the Codex plugin manifest.
-- [ ] Add and validate the Claude plugin overlay.
+- [ ] Add staged legacy migration with backup, discovery-path deactivation, single-active-profile proof, and rollback restoration.
+- [ ] Scaffold and validate the Codex plugin manifest if Codex passed the spike.
+- [ ] Add and validate the Claude plugin overlay if Claude passed the spike.
 - [ ] Add static `mine`, `work`, `design`, and `write` skills.
 - [ ] Add isolated clean-install and cachebuster-reinstall tests.
 - [ ] Correct README and security claims.
@@ -515,29 +596,35 @@ benchmark model runs last
 - [ ] Run fresh-task work, design, and writing activation probes.
 - [ ] Complete separate spec-compliance and code-quality reviews.
 - [ ] Fix all actionable findings and rerun verification.
-- [ ] Prepare benchmark manifest and empty-results UI without running models.
+- [ ] Prepare a thin benchmark manifest, result schema, fixtures, and disabled runner without running models.
 - [ ] Ask for explicit approval before any benchmark model run.
+- [ ] Validate the schema against one approved pilot cell, then run cold and `+Ditto` qualifiers for all 14 frozen menu entries.
+- [ ] Advance the top four into the repeated full benchmark and retain raw artifacts and blind verdicts.
+- [ ] Build the evidence-linked result UI, leaderboard, three domain proof clips, and combined hero clip.
 - [ ] Create `CHANGELOG.md` and add the release-notification instructions to the README.
 - [ ] After approved benchmark runs, draft the matching changelog entry and GitHub Release from verified evidence.
 - [ ] Ask for final ship approval before publishing the GitHub Release.
 
 ## Implementation Sequence
 
-1. Checkpoint and failing tests for current correctness defects.
-2. P0 correctness fixes.
-3. Preflight plan and stable segmentation.
-4. Cache and incremental behavior.
-5. Shared evidence prompt and three-profile compilation.
-6. Durable versioned profile store and atomic activation.
-7. Codex plugin packaging, then Claude overlay.
-8. Legacy migration and honest documentation.
-9. Automated verification and failure injection.
-10. Real fresh-task activation and quality probes.
-11. Separate reviews, fixes, and re-review.
-12. Benchmark harness and empty-results UI.
-13. Benchmark model runs only after explicit approval.
-14. Verified changelog entry and matching GitHub Release draft.
-15. Final ship approval and GitHub Release publication.
+1. Checkpoint, then run the minimal Codex/Claude host-plugin viability spike.
+2. Add failing tests for current correctness defects.
+3. Fix P0 correctness defects.
+4. Add the preflight plan and stable segmentation.
+5. Add cache and incremental behavior.
+6. Add shared evidence extraction, session-based receipts, and three-profile compilation.
+7. Add the durable versioned profile store and atomic activation.
+8. Build the proven Codex plugin path, then only the host overlays that passed Workstream 0.
+9. Add staged legacy cutover, rollback, skill-routing tests, and honest documentation.
+10. Run bounded-candidate dogfood and select the smallest passing release default.
+11. Run automated verification, failure injection, and real fresh-task quality probes.
+12. Complete separate reviews, fixes, and re-review.
+13. Prepare the benchmark manifest, schema, fixtures, and disabled runner.
+14. After explicit approval, run one pilot cell and validate the result schema.
+15. Complete the frozen 14-entry qualifier and top-four repeated stage.
+16. Build the benchmark UI, leaderboard, and proof clips from verified artifacts.
+17. Create the verified changelog entry and matching GitHub Release draft.
+18. Obtain final ship approval before GitHub Release publication.
 
 ## Data, Auth, Provider, And Deploy Boundaries
 
@@ -554,18 +641,19 @@ benchmark model runs last
 |---|---|---|---|
 | Extraction | Valid Codex/Claude/Copilot sessions | Corrupt JSONL, unsupported-only logs, zero valid sessions | Exit code, counts, no output on failure |
 | Redaction | Known secret patterns removed | Unicode text around secrets, malformed tokens | Byte-level fixture comparison |
-| Segmentation | Four stable selected segments | Small corpus, huge session, added session, deleted file | Stable hashes and bounded plan |
+| Segmentation | Calibrated bounded candidate | Small corpus, huge session, added session, deleted file | Stable hashes and plan below selected ceiling |
 | Chunk replacement | Rerun replaces prior set | Previous 5 chunks then new 1 chunk | Directory listing contains only new set |
 | Cache | Identical rerun hits all caches | Changed prompt schema, corrupt report, changed segment | Planned call count and invalidation reason |
 | Reduction | Valid three-profile pack | Missing receipt, invalid frontmatter, contradiction, weak domain | Validation report and no activation on failure |
 | Atomic activation | Full pack activates | Failure after each staged write, read-only target | Prior active hash preserved |
 | Windows/Unicode | Spaces, CRLF, Hebrew paths | Long paths, reserved names, case collisions | Exact UTF-8 round trip and safe failure |
-| Plugin install | Codex/Claude manifests register | Invalid manifest, stale cache, reinstall | Exact version and skill list in fresh task |
-| Migration | Legacy `you` copied safely | Multiple conflicting legacy files | Backup, no deletion, explicit stop |
-| Runtime activation | Correct domain skill loads | Missing/corrupt active pointer | Transcript shows exact loader or recovery |
-| Usage budget | Default plans four maps and one reducer | Deep requested, host lacks model selection | Visible plan; no implicit expansion |
+| Plugin viability | Namespaced spike invokes local Python and reads `DITTO_HOME` fixture | Host rejects manifest, namespace, shell, or file access | Per-host validator output and fresh-task transcript |
+| Plugin install | Proven host manifests register | Invalid manifest, stale cache, reinstall | Exact version and skill list in fresh task |
+| Migration | Legacy `you` is backed up then removed from discovery at cutover | Multiple legacy files, activation failure, double-load attempt | Exactly one active path; restoration transcript |
+| Runtime activation | Correct domain skill loads | Missing/corrupt active pointer, overlapping trigger | Transcript shows exact loader/recovery and trigger matrix result |
+| Usage budget | Selected default stays under the calibrated ceiling | No candidate passes, deep requested, host lacks model selection | Visible plan; no implicit expansion; failed calibration blocks claim |
 | Regression | Existing card and direct installs work | Existing user updates plugin | Full suite plus legacy command smoke tests |
-| Benchmark | Empty roster/UI exists | Accidental runner invocation | All result values remain `--`; zero runner calls |
+| Benchmark | All 14 qualifiers and top-four repeats follow the frozen manifest | Accidental invocation, schema gap, menu drift, missing artifact | Zero pre-approval calls; raw hashes and blind verdicts before UI/video claims |
 | Changelog/release | Entry, tag, and release draft agree | Missing proof, stale command, unverified metric | Draft preview, tag-to-commit proof, command/link smoke tests |
 
 Unauthorized-access, archived-data, and external-provider-failure cases are not applicable because this release adds no shared accounts, remote database, or hosted provider. Equivalent fail-closed coverage is provided for invalid local paths, corrupt caches, missing profiles, and model-host capability limits.
@@ -583,14 +671,15 @@ Unauthorized-access, archived-data, and external-provider-failure cases are not 
 
 ### Manual/live
 
+- Complete the bounded Workstream 0 spike first and record whether each host supports the required namespace, local Python invocation, and `DITTO_HOME` read.
 - Install the plugin into a development marketplace.
 - Confirm the exact enabled plugin version and the four namespaced skills.
 - Start a fresh Codex task after reinstall and verify `ditto:work`, `ditto:design`, and `ditto:write` load the active private profile.
 - Repeat in Claude before claiming native Claude plugin support.
 - Perform one real task in each domain and collect the artifact plus the user's verdict.
-- Inspect preflight output on the current 1.95M-token corpus and confirm the default remains bounded.
+- Inspect every calibration candidate on the current 1.95M-token corpus, freeze the must-recover checklist before model work, and select the smallest candidate that passes it and the three fresh-task probes.
 - Verify plugin update and uninstall do not modify `~/.ditto`.
-- Confirm benchmark results remain `--` and no model runner was called.
+- Confirm the benchmark runner remains disabled and no model runner was called before approval.
 - After approved model runs, preview the changelog and GitHub Release together and verify every result link.
 - Confirm the README accurately directs users to `Watch` → `Custom` → `Releases` without claiming stars trigger notifications.
 
@@ -598,28 +687,30 @@ Unauthorized-access, archived-data, and external-provider-failure cases are not 
 
 ### Rollout
 
-1. Ship correctness and usage fixes behind the existing CLI without changing the default installed profile.
-2. Add durable profile storage and migration tests.
-3. Install the new plugin in a personal development marketplace.
-4. Migrate a copy of the existing Ohad profile while leaving the old skill intact.
-5. Verify plugin activation in a fresh task.
-6. Switch the active profile pointer only after all three loaders pass.
-7. Keep the legacy skill for one release as a fallback.
-8. Publish updated docs only after behavior matches them.
-9. After explicit benchmark approval and verified results, prepare the final changelog entry and GitHub Release draft.
-10. Publish the release only after the final ship approval.
+1. Prove the minimum native plugin path per host; remove any host that fails from native v1 claims.
+2. Ship correctness and usage fixes behind the existing CLI without changing the default installed profile.
+3. Add durable profile storage, loaders, routing, and migration tests.
+4. Install the new plugin in a personal development marketplace with its personal loaders inactive.
+5. Import a backed-up copy of the existing Ohad profile and verify all new loaders against the staged profile.
+6. Move the legacy skill out of host discovery into `~/.ditto/legacy/...`, then activate the new pointer as one cutover operation.
+7. Start a fresh task and prove exactly one personal-profile path is active. On failure, deactivate the new pointer and restore the legacy discovery path.
+8. Keep the legacy backup for one release, but never keep it discoverable while the new profile is active.
+9. Publish updated docs only after behavior matches them.
+10. After explicit benchmark approval and verified results, prepare the final changelog entry and GitHub Release draft.
+11. Publish the release only after the final ship approval.
 
 ### Rollback
 
 - Disable or uninstall the plugin without deleting `~/.ditto`.
 - Restore the previous active profile pointer from its backup.
-- Continue using the untouched legacy `you` skill.
+- Move the backed-up legacy `you` skill from `~/.ditto/legacy/...` back to its original host discovery path before the next fresh task.
 - Revert the release commit if automated or live verification regresses.
 - Do not attempt to migrate benchmark artifacts because benchmark execution is deferred.
 
 ## Risks And Fallbacks
 
-- **Starter sample misses an important trait:** fail the affected domain quality gate and offer targeted deepening. Never invent or silently full-mine.
+- **Starter sample misses an important trait during release calibration:** try the next predeclared bounded candidate. If no candidate under the ceiling passes, block the bounded-default claim and revisit the release decision.
+- **A later user's domain is genuinely sparse:** keep that domain inactive and offer a separately planned targeted deepen. Never invent or silently full-mine.
 - **Worker model quality is inadequate:** keep the same bounded source selection and rerun only failed report hashes with a stronger worker after showing the revised plan.
 - **One-pass reducer produces weaker domain files:** compile domain files from the cached shared evidence model, not from raw history again.
 - **Cache corruption:** fail closed, quarantine the corrupt entry, and recompute only that entry.
@@ -627,17 +718,19 @@ Unauthorized-access, archived-data, and external-provider-failure cases are not 
 - **Cross-host behavior differs:** claim support per host only after live proof. Keep direct adapters for unproven hosts.
 - **Usage estimate differs from subscription allowance:** report source tokens and planned calls only. Do not promise a percentage of a proprietary quota.
 - **Legacy migration ambiguity:** preserve every legacy file and require explicit selection rather than overwriting.
+- **Legacy and plugin profiles both trigger:** make discoverability mutually exclusive at cutover and verify in a fresh task; a backup is not left in an active skill directory.
 - **Scope expands into a living-memory platform:** reject watchers, hosted sync, drift systems, and broad workflow compilation until the focused plugin and benchmark prove demand.
 
 ## Open Questions
 
 No blocking product questions remain for the implementation plan. The following release decisions are deliberately fixed:
 
-- Native plugin v1 targets Codex and Claude; Cursor and Gemini remain adapters until separately proven.
-- The default starter mine plans four bounded worker segments and one reducer.
+- Native plugin v1 targets Codex and Claude only if each passes the front-loaded viability spike; Cursor and Gemini remain adapters until separately proven.
+- Four segments near 25K are the first calibration candidate, not a fixed release default. The smallest candidate that passes under the 160K/nine-call ceiling becomes the default.
 - Full-history deep mode is explicit only.
 - Generated profile state lives outside plugin caches.
-- The benchmark is built and run last.
+- The core CLI remains a zero-dependency, single-file `ditto.py` runtime for this release.
+- The benchmark schema and disabled runner are prepared last; real runs require approval, and result UI follows the first schema-valid run.
 
 The exact public marketplace destination is a later distribution decision and does not affect the local plugin architecture or implementation tests.
 
@@ -646,11 +739,15 @@ The exact public marketplace destination is a later distribution decision and do
 - Chose one canonical Ditto repository with thin host overlays, following the useful part of the Superpowers pattern.
 - Chose static plugin loaders plus durable external private profile state.
 - Chose bounded starter mining over full-history default mining.
+- Chose dogfood calibration under a hard ceiling over treating 4×25K as an already validated constant.
+- Chose session-based corroboration over worker-report counts, with a narrow labeled exception for direct high-salience instructions.
 - Chose stable content-addressed segments over equal-N rebalanced chunks.
 - Chose one shared evidence fan-out and one reducer for all three profiles.
 - Chose evidence failure over generic profile completion.
 - Chose exact source-token/call disclosure over subscription-percentage claims.
-- Chose Codex and Claude native proof before broader plugin claims.
+- Chose a front-loaded Codex/Claude viability spike before plugin-dependent implementation and per-host claims.
+- Chose mutually exclusive legacy/new profile activation over a one-release double-load window.
+- Chose to preserve `ditto.py` as the canonical zero-dependency single-file runtime for this release.
 - Chose to defer every benchmark model run until all product and verification work is complete.
 - Chose `CHANGELOG.md` plus GitHub Releases for updates and rejected the false claim that stars notify every stargazer.
 

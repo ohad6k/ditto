@@ -33,7 +33,7 @@ The public product remains **Ditto**. The initial plugin skills are:
 - `ditto:design`
 - `ditto:write`
 
-Codex and Claude receive native plugin overlays from one canonical repository. Existing Cursor, Gemini, `AGENTS.md`, Codex, and Claude direct install adapters remain available, but native plugin support is claimed only where a clean install and fresh-task activation have been proven.
+Codex and Claude are native-plugin candidates from one canonical repository. Before the new storage or mining architecture is built, a minimal per-host spike must prove that a namespaced skill can invoke local Python and read a harmless fixture under `DITTO_HOME`. Existing Cursor, Gemini, `AGENTS.md`, Codex, and Claude direct install adapters remain available. Native support is claimed only for hosts that pass the spike plus clean-install and fresh-task activation proof.
 
 The installed plugin contains only stable product code, prompts, and loader skills. It never contains the user's generated profile.
 
@@ -48,6 +48,15 @@ Private state lives under `DITTO_HOME`, defaulting to:
 ```
 
 This separation ensures plugin update or uninstall cannot erase the personal profile or mining cache.
+
+Skill descriptions route tasks deliberately:
+
+- `ditto:mine` is only for explicit setup, mining, update, or deepen requests.
+- `ditto:design` loads core plus design context for UI, UX, visual, and frontend-design work.
+- `ditto:write` loads core plus writing context for marketing, social, replies, copy, and user-voice work.
+- `ditto:work` loads core context for other execution and verification tasks and explicitly excludes design and writing triggers.
+
+Combined design-and-copy work may load `design` and `write`; it must not accidentally load all three domain skills.
 
 ## End-to-End User Flow
 
@@ -86,7 +95,7 @@ Ditto checks only new or changed sessions. If nothing changed, it makes zero mod
 
 ### Existing CLI path
 
-The current one-file Python flow remains supported. Dry run, extraction, card rendering, and direct installs continue to work. The plugin is the recommended path because it automates orchestration without removing the simple CLI fallback.
+The current one-file Python flow remains supported. For this release, `ditto.py` stays the canonical zero-dependency, single-file runtime, including the new cache and profile-store behavior. Dry run, extraction, card rendering, and direct installs continue to work. The plugin is the recommended path because it automates orchestration without removing the simple CLI fallback.
 
 ## Installation and Mining Are Separate
 
@@ -114,14 +123,9 @@ The default does not require a configuration wizard. It proceeds with the bounde
 
 The current flow can send nearly the complete post-dedupe corpus through one worker per roughly 70K tokens. On the current local history, that means approximately 1.95M source tokens and about 28 workers before reduction.
 
-The new starter mine uses:
+The release default is calibrated rather than assumed. Ditto first tests 4×25K source tokens plus one reducer, then bounded wider-coverage candidates of 6×20K and 8×20K if needed. The calibration ceiling is 160K selected source tokens and nine planned calls. The smallest candidate that passes a predeclared must-recover checklist and the three fresh-task probes becomes the default. If none passes, Ditto does not ship the claim that bounded starter mining is good enough.
 
-- four stable selected segments;
-- approximately 25K source tokens maximum per segment;
-- four worker calls;
-- one reducer call;
-- one shared worker-report set for work, design, and writing;
-- no implicit expansion beyond the displayed plan.
+Every candidate uses one shared worker-report set for work, design, and writing and never expands beyond its displayed plan.
 
 The model host may add system prompt or tool overhead that Ditto cannot measure precisely. Ditto reports selected source tokens and planned calls, not a guessed percentage of a subscription allowance.
 
@@ -151,12 +155,7 @@ Therefore:
 
 The bounded default may reduce how much history is read. It may not reduce the evidence bar.
 
-Every instruction installed into a personal skill requires:
-
-- support from at least two independent selected reports;
-- at least two verbatim quotes in the private appendix;
-- a specific operational implication for the agent;
-- no generic filler a stranger could have guessed.
+Evidence is counted across distinct user-authored sessions and time/source strata, not worker-report boundaries. An inferred repeated behavior needs two distinct sessions and two private quotes. A direct, unequivocal instruction may preserve a rare high-salience law from one session only when labeled as an explicit low-frequency instruction, never as a repeated habit, and only when no evidence contradicts it. Every installed instruction still needs a specific operational implication and no generic filler.
 
 The fast worker role extracts evidence. The strongest available reducer role makes the final judgment.
 
@@ -169,13 +168,13 @@ Every profile manifest records:
 - report and reduction hashes;
 - domains that passed or failed the evidence gate.
 
-Receipts state `x/4 sampled reports`. They never imply all history was read.
+Receipts state the sampled sessions, strata, and occurrence count. They never imply all history was read.
 
 If a domain is weak, Ditto does not install invented instructions. It keeps that domain inactive and gives one exact targeted deepen action. It does not silently run deep mode.
 
 Generated runtime skills stay lean. Full quotes, contradictions, and lower-confidence evidence remain in the private appendix and are loaded only for audit or deepening.
 
-Before release, the starter mine is compared with the existing deep Ohad profile. It must preserve the core working laws, design rejection patterns, and voice constraints with real receipts. It must also pass one fresh-task human-reviewed probe in each domain.
+Before any candidate runs, the existing deep Ohad profile is turned into a frozen must-recover checklist of core working laws, design rejection patterns, and voice constraints. Every candidate is judged against the same checklist and real receipts. The smallest passing candidate must also pass one fresh-task human-reviewed probe in each domain. Release dogfood failure blocks the bounded-default claim; targeted deepening remains for later users whose history is genuinely sparse, not as a waiver for failed flagship calibration.
 
 ## Generation and Activation
 
@@ -207,7 +206,7 @@ The release must fix and test:
 - corrupt or unsupported-only logs incorrectly reaching a successful empty output;
 - malformed frontmatter passing substring validation;
 - Hebrew and Unicode Windows paths failing at console output;
-- partial multi-file installs without rollback;
+- direct in-place installs without rollback, which must become atomic before multi-file packs;
 - hardcoded one-profile destinations preventing coexistence;
 - misleading distinctions between source support, adapter support, and native plugin support.
 
@@ -229,6 +228,7 @@ The release is not called done because manifests and files exist.
 
 Required proof includes:
 
+- a front-loaded Codex/Claude viability spike proving namespacing, local Python invocation, and `DITTO_HOME` fixture access per claimed native host;
 - the complete automated suite passing;
 - stale chunk and corrupt-input regressions covered;
 - exact call-count tests through a fake runner;
@@ -236,8 +236,9 @@ Required proof includes:
 - incremental history producing only uncached work;
 - failure injection preserving the prior profile after every staged-write boundary;
 - plugin manifest validation;
-- clean Codex and Claude install in isolated environments;
+- clean isolated install for every host still claimed as native after the spike;
 - fresh-task visibility of the namespaced skills;
+- positive and negative trigger tests proving domain skills do not overlap accidentally;
 - plugin reinstall preserving `~/.ditto`;
 - exact UTF-8/Hebrew round trip;
 - one real work probe, one design probe, and one writing probe with human verdicts;
@@ -247,16 +248,16 @@ Native support is claimed per host only after that host passes live registration
 
 ## Migration and Rollback
 
-Existing `you` installs are copied into a staged Ditto profile version after backup. The original file is not deleted during the migration release.
+Existing `you` installs are copied into a staged Ditto profile version after backup. While the new profile is staged and verified, the legacy skill remains active and the new personal loaders remain inactive. At cutover, the legacy skill directory is moved out of host discovery into `~/.ditto/legacy/...` before the new active pointer is enabled. A fresh task must never see both personal instruction sets.
 
 If the plugin fails:
 
 - uninstall or disable the plugin;
 - restore the prior active-profile pointer;
-- continue using the untouched legacy `you` skill;
+- move the legacy `you` backup back to its original host discovery path;
 - keep `~/.ditto` for repair or reinstall.
 
-No migration writes into a replaceable plugin cache.
+Marked `AGENTS.md` and `GEMINI.md` context blocks are handled as separate adapter migrations so they cannot remain always-on and compete with native loaders. No migration writes private state into a replaceable plugin cache.
 
 ## Benchmark Boundary
 
@@ -269,11 +270,15 @@ Before model runs, Ditto may prepare:
 - cold versus `+Ditto` cells;
 - blind verdict workflow;
 - raw artifact locations;
-- a result UI where every value is `--`.
+- a thin result schema, deterministic fixtures, and a disabled runner.
 
 Actual model runs remain disabled until the plugin, token contract, quality gates, migration, tests, and live probes are complete and the user gives explicit approval.
 
-The initial roster includes all entries supplied from the Codex and Claude model menus. Exact menu labels, underlying model IDs when available, host version, date, mode, tools, and budgets are recorded. Different native agent harnesses are described as system comparisons, not pure model comparisons.
+The first approved run validates the result schema against real host/model/mode/tool/budget output. Only after that proof does Ditto build the polished result UI and video-facing leaderboard, avoiding speculative UI work around fields that may change.
+
+The frozen initial roster includes every supplied menu entry: Codex `5.5`, `5.6 Sol`, `5.6 Terra`, `5.6 Luna`, `5.4`, `5.4 Mini`, and `5.3 Codex Spark`; Claude `Fable 5`, `Opus 4.8`, `Sonnet 5`, `Haiku 4.5`, `Opus 4.7`, `Opus 4.6`, and `Sonnet 4.6`. Exact menu labels, underlying model IDs when available, host version, date, mode, tools, and budgets are recorded. Different native agent harnesses are described as system comparisons, not pure model comparisons.
+
+After the pilot validates the schema, all 14 entries run the same cold and `+Ditto` qualifier. The top four advance to the frozen repeated benchmark. Real artifacts then power the evidence-linked leaderboard, separate `done`, design, and writing proof clips, and one combined hero clip.
 
 ## Changelog and GitHub Releases
 
@@ -298,13 +303,14 @@ This release is complete only when:
 - one Ditto plugin exposes the four approved skills;
 - installation performs zero model calls;
 - the starter mine stays within its displayed hard plan;
+- its default is the smallest bounded calibration candidate that passed the frozen recall and fresh-task gates;
 - cached reruns avoid duplicate model work;
 - all three personal domains pass the evidence and activation gates;
 - existing profiles migrate without loss;
-- Codex and Claude support are live-verified separately;
+- every claimed native host passed the viability spike and was live-verified separately;
 - privacy and cost claims match real behavior;
-- benchmark runners stayed disabled until every preceding gate passed and explicit approval was given;
+- benchmark runners stayed disabled until every preceding gate passed and explicit approval was given, and UI polish waited for a schema-valid real result;
 - approved benchmark results are backed by raw artifacts;
 - the changelog entry and GitHub Release draft match the verified tag and proof.
 
-Watchers, hosted sync, billing, correction ledgers, profile drift, broad workflow compilation, and a public leaderboard remain outside this release.
+Watchers, hosted sync, billing, correction ledgers, profile drift, broad workflow compilation, and a hosted leaderboard service remain outside this release.
