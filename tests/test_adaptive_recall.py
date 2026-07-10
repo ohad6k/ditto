@@ -57,6 +57,41 @@ def receipt_fixtures(texts, sessions=None, domains=None):
     ]
 
 
+def scored_history_fixture(tokens=600_000):
+    domains = ("work", "design", "write")
+    per_receipt = 500
+    count = tokens // per_receipt
+    receipts = receipt_fixtures(
+        [f"always preserve exact {domains[index % 3]} preference " + "x" * 1950 for index in range(count)],
+        sessions=[f"session-{index}" for index in range(count)],
+        domains=[(domains[index % 3],) for index in range(count)],
+    )
+    for index, item in enumerate(receipts):
+        item["tokens"] = per_receipt
+        item["salience"] = 100 - (index % 20)
+        item["signal_families"] = ["directive"]
+        item["fixture_id"] = f"fixture-{index}"
+    return receipts
+
+
+def rare_signal_fixture(generic_receipts=10_000, rare_position="last"):
+    receipts = receipt_fixtures(
+        ["generic exploration"] * generic_receipts + ["never use a fake screenshot"],
+        sessions=[f"session-{index}" for index in range(generic_receipts + 1)],
+        domains=[("work",)] * generic_receipts + [("design",)],
+    )
+    for index, item in enumerate(receipts):
+        item["tokens"] = 40
+        item["salience"] = 1
+        item["signal_families"] = ["exploration"]
+        item["fixture_id"] = f"generic-{index}"
+    rare = receipts[-1]
+    rare.update({"salience": 100, "signal_families": ["directive", "rejection"], "fixture_id": "rare-rejection"})
+    if rare_position == "first":
+        receipts.insert(0, receipts.pop())
+    return receipts
+
+
 class ReceiptLedgerTest(unittest.TestCase):
     def test_large_session_becomes_individual_stable_receipts(self):
         record = make_record("s1", [
@@ -133,6 +168,35 @@ class SalienceIndexTest(unittest.TestCase):
         item = ditto.score_receipts(receipt_fixtures([text]))[0]
 
         self.assertEqual(text, item["text"])
+
+
+class PacketSelectionTest(unittest.TestCase):
+    def test_stage_a_is_deterministic_bounded_and_domain_balanced(self):
+        scored = scored_history_fixture(tokens=600_000)
+        selected = ditto.select_salience_stage(scored, "A")
+        packets = ditto.pack_selected_receipts(selected, 6, 50_000)
+
+        self.assertLessEqual(sum(item["tokens"] for item in selected), 300_000)
+        self.assertLessEqual(len(packets), 6)
+        self.assertTrue(all(packet["source_tokens"] <= 50_000 for packet in packets))
+        for domain in ("work", "design", "write"):
+            self.assertTrue(any(domain in item["domain_hints"] for item in selected))
+        self.assertEqual(packets, ditto.pack_selected_receipts(selected, 6, 50_000))
+
+    def test_rare_late_rejection_survives_large_generic_history(self):
+        scored = rare_signal_fixture(generic_receipts=10_000, rare_position="last")
+        selected = ditto.select_salience_stage(scored, "A")
+
+        self.assertIn("rare-rejection", {item["fixture_id"] for item in selected})
+
+    def test_stage_b_excludes_every_stage_a_receipt(self):
+        scored = scored_history_fixture(tokens=800_000)
+        first = ditto.select_salience_stage(scored, "A")
+        second = ditto.select_salience_stage(scored, "B", [item["receipt_id"] for item in first])
+
+        self.assertTrue({item["receipt_id"] for item in first}.isdisjoint(
+            {item["receipt_id"] for item in second}
+        ))
 
 
 if __name__ == "__main__":

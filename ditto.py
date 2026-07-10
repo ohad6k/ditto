@@ -38,6 +38,12 @@ PROMPT_SCHEMA_VERSION = "1"
 REDUCER_SCHEMA_VERSION = "1"
 RECEIPT_SCHEMA_VERSION = "1"
 SALIENCE_SCHEMA_VERSION = "1"
+PACKET_SCHEMA_VERSION = "1"
+
+STAGE_CONFIGS = {
+    "A": {"packets": 6, "packet_tokens": 50_000, "source_tokens": 300_000},
+    "B": {"packets": 6, "packet_tokens": 50_000, "source_tokens": 300_000},
+}
 
 STARTER_CANDIDATES = (
     {"segments": 4, "segment_tokens": 25_000},
@@ -365,6 +371,113 @@ def score_receipts(receipts):
         }))
         scored.append(item)
     return sorted(scored, key=lambda value: value["receipt_id"])
+
+def receipt_quarter(receipt):
+    match = re.match(r"(\d{4})-(\d{2})", receipt.get("date", ""))
+    if not match:
+        return "unknown"
+    year, month = match.groups()
+    return f"{year}-Q{((int(month) - 1) // 3) + 1}"
+
+def select_salience_stage(receipts, stage, excluded_receipt_ids=None):
+    if stage not in STAGE_CONFIGS:
+        raise ValueError(f"unknown adaptive stage: {stage}")
+    config = STAGE_CONFIGS[stage]
+    excluded = set(excluded_receipt_ids or [])
+    eligible = [
+        item for item in receipts
+        if item["receipt_id"] not in excluded and item["tokens"] <= config["packet_tokens"]
+    ]
+    lanes = {}
+    for item in eligible:
+        domains = item.get("domain_hints") or ["work"]
+        families = item.get("signal_families") or ["exploration"]
+        for domain in domains:
+            for family in families:
+                key = (domain, item.get("source", "unknown"), receipt_quarter(item), family)
+                lanes.setdefault(key, []).append(item)
+    for queue in lanes.values():
+        queue.sort(key=lambda item: (-item.get("salience", 0), item["receipt_id"]))
+
+    selected = []
+    selected_ids = set()
+    selected_tokens = 0
+    lane_keys = sorted(lanes)
+    while True:
+        progressed = False
+        for key in lane_keys:
+            queue = lanes[key]
+            while queue and queue[0]["receipt_id"] in selected_ids:
+                queue.pop(0)
+            if not queue:
+                continue
+            item = queue.pop(0)
+            if selected_tokens + item["tokens"] > config["source_tokens"]:
+                continue
+            selected.append(item)
+            selected_ids.add(item["receipt_id"])
+            selected_tokens += item["tokens"]
+            progressed = True
+        if not progressed:
+            break
+
+    for item in sorted(eligible, key=lambda value: (-value.get("salience", 0), value["receipt_id"])):
+        if item["receipt_id"] in selected_ids:
+            continue
+        if selected_tokens + item["tokens"] > config["source_tokens"]:
+            continue
+        selected.append(item)
+        selected_ids.add(item["receipt_id"])
+        selected_tokens += item["tokens"]
+    return selected
+
+def pack_selected_receipts(receipts, packet_limit, packet_token_limit):
+    groups = []
+    current = []
+    current_tokens = 0
+    for receipt in receipts:
+        if receipt["tokens"] > packet_token_limit:
+            raise ValueError(f"receipt exceeds packet token limit: {receipt['receipt_id']}")
+        if current and current_tokens + receipt["tokens"] > packet_token_limit:
+            groups.append(current)
+            current = []
+            current_tokens = 0
+        if len(groups) >= packet_limit:
+            break
+        current.append(receipt)
+        current_tokens += receipt["tokens"]
+    if current and len(groups) < packet_limit:
+        groups.append(current)
+
+    packets = []
+    for group in groups:
+        receipt_ids = [item["receipt_id"] for item in group]
+        domain_counts = {
+            domain: sum(domain in item.get("domain_hints", []) for item in group)
+            for domain in ("work", "design", "write")
+        }
+        signal_counts = {}
+        for item in group:
+            for family in item.get("signal_families", ["exploration"]):
+                signal_counts[family] = signal_counts.get(family, 0) + 1
+        identity = {
+            "schema_version": PACKET_SCHEMA_VERSION,
+            "receipt_ids": receipt_ids,
+            "content_hashes": [item["content_hash"] for item in group],
+        }
+        packets.append({
+            "schema_version": PACKET_SCHEMA_VERSION,
+            "packet_hash": sha256_text(canonical_json(identity)),
+            "source_tokens": sum(item["tokens"] for item in group),
+            "receipt_ids": receipt_ids,
+            "receipts": group,
+            "domain_counts": domain_counts,
+            "signal_counts": dict(sorted(signal_counts.items())),
+            "first_date": min(item["date"] for item in group),
+            "last_date": max(item["date"] for item in group),
+            "sources": sorted({item["source"] for item in group}),
+        })
+    return packets
 
 def segment_hash(records, target_tokens):
     identity = {
