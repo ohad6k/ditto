@@ -20,7 +20,7 @@ Usage:
     python ditto.py --chunks 20         # how many chunks to split into
     python ditto.py --no-redact         # DANGER: skip redaction (not recommended)
 """
-import argparse, glob, hashlib, json, os, re, shutil, stat, sys, tempfile, time, uuid
+import argparse, base64, glob, hashlib, json, os, re, shutil, stat, sys, tempfile, time, uuid
 
 HOME = os.path.expanduser("~")
 SOURCES = {
@@ -838,6 +838,251 @@ def select_run_segments(segments, current_segment_hashes, count, max_tokens):
     report = sorted(retained + work, key=lambda item: (item["source"], item["first_date"], item["segment_hash"]))
     return report, work, len([item for item in new if item["segment_hash"] not in work_hashes])
 
+MIGRATION_ID_PATTERN = re.compile(r"^[a-f0-9]{20}$")
+
+def sha256_bytes(data):
+    return hashlib.sha256(data).hexdigest()
+
+def encode_optional_bytes(data):
+    return None if data is None else base64.b64encode(data).decode("ascii")
+
+def decode_optional_bytes(value):
+    return None if value is None else base64.b64decode(value.encode("ascii"), validate=True)
+
+def migration_record_path(ditto_home, migration_id):
+    if not MIGRATION_ID_PATTERN.fullmatch(migration_id):
+        raise ValueError("invalid migration id")
+    return safe_private_child(ditto_home, "migrations", migration_id + ".json")
+
+def write_migration_record(ditto_home, record):
+    path = migration_record_path(ditto_home, record["migration_id"])
+    atomic_write_text(path, canonical_json(record) + "\n")
+    return record
+
+def load_migration_record(ditto_home, migration_id):
+    path = migration_record_path(ditto_home, migration_id)
+    try:
+        with open(path, "r", encoding="utf-8") as handle:
+            record = json.load(handle)
+    except (OSError, ValueError) as exc:
+        raise ValueError("migration record is missing or corrupt") from exc
+    if record.get("migration_id") != migration_id or record.get("schema_version") != "1":
+        raise ValueError("migration record is invalid")
+    return record
+
+def stage_legacy_migration(target, home_dir, ditto_home):
+    if target not in {"codex", "claude"}:
+        raise ValueError("legacy migration target must be codex or claude")
+    home = resolve_ditto_home(ditto_home)
+    legacy_path = os.path.abspath(
+        os.path.join(os.path.expanduser(home_dir), f".{target}", "skills", "you", "SKILL.md")
+    )
+    try:
+        with open(legacy_path, "rb") as handle:
+            legacy_bytes = handle.read()
+        text = legacy_bytes.decode("utf-8")
+    except (OSError, UnicodeError) as exc:
+        raise ValueError("legacy profile is missing or not UTF-8") from exc
+    fields = parse_frontmatter(text)
+    name = fields.get("name") if fields else None
+    if name not in {"you", "ditto-work-profile"} or not fields.get("description"):
+        raise ValueError("legacy profile requires exact supported frontmatter")
+    legacy_origin = "classic-you" if name == "you" else "skills-sh-core"
+    legacy_hash = sha256_bytes(legacy_bytes)
+    current_path = safe_private_child(home, "profiles", "default", "current.json")
+    active_path = safe_private_child(home, "active-profile.json")
+    prior_current = optional_bytes(current_path)
+    prior_active = optional_bytes(active_path)
+    active = active_profile_state(home)
+    mode = "deactivate-legacy-only" if active is not None else "legacy-import"
+    staged_version = None
+    staged_pointer = None
+    if mode == "legacy-import":
+        manifest = {
+            "schema_version": "1",
+            "profile_id": "default",
+            "profile_version": "",
+            "origin": "legacy-migration",
+            "legacy_unverified": True,
+            "report_set_hash": None,
+            "prompt_schema_version": None,
+            "reducer_schema_version": None,
+            "source_coverage": {},
+            "selected_source_tokens": 0,
+            "segment_hashes": [],
+            "domains": {
+                "work": {"status": "active", "file": "you.md", "legacy_unverified": True},
+                "design": {"status": "inactive", "reason": "insufficient evidence", "deepen_instruction": "run ditto and deepen design"},
+                "write": {"status": "inactive", "reason": "insufficient evidence", "deepen_instruction": "run ditto and deepen write"},
+            },
+            "files": {"you.md": legacy_hash},
+        }
+        manifest["profile_version"] = sha256_text(canonical_json(manifest))[:20]
+        staged_version = manifest["profile_version"]
+        version_dir = safe_private_child(home, "profiles", "default", "versions", staged_version)
+        if os.path.exists(version_dir):
+            existing, _ = validate_version_directory(version_dir)
+            if existing != manifest:
+                raise ValueError("existing legacy migration version conflicts")
+        else:
+            staged = version_dir + ".staged-" + uuid.uuid4().hex
+            os.makedirs(staged, exist_ok=False)
+            try:
+                atomic_write_bytes(os.path.join(staged, "you.md"), legacy_bytes)
+                manifest_bytes = (canonical_json(manifest) + "\n").encode("utf-8")
+                atomic_write_bytes(os.path.join(staged, "manifest.json"), manifest_bytes)
+                validate_version_directory(staged)
+                os.makedirs(os.path.dirname(version_dir), exist_ok=True)
+                os.replace(staged, version_dir)
+            finally:
+                if os.path.isdir(staged):
+                    shutil.rmtree(staged)
+        manifest_bytes = (canonical_json(manifest) + "\n").encode("utf-8")
+        staged_pointer = {
+            "schema_version": "1",
+            "profile_id": "default",
+            "profile_version": staged_version,
+            "manifest_hash": sha256_bytes(manifest_bytes),
+        }
+    identity = {"target": target, "legacy_path": legacy_path, "legacy_hash": legacy_hash}
+    migration_id = sha256_text(canonical_json(identity))[:20]
+    record = {
+        "schema_version": "1",
+        "migration_id": migration_id,
+        "target": target,
+        "status": "staged",
+        "mode": mode,
+        "legacy_origin": legacy_origin,
+        "legacy_path": legacy_path,
+        "legacy_hash": legacy_hash,
+        "staged_version": staged_version,
+        "staged_pointer": staged_pointer,
+        "prior_current_base64": encode_optional_bytes(prior_current),
+        "prior_current_hash": None if prior_current is None else sha256_bytes(prior_current),
+        "prior_active_base64": encode_optional_bytes(prior_active),
+        "prior_active_hash": None if prior_active is None else sha256_bytes(prior_active),
+        "legacy_backup": None,
+    }
+    return write_migration_record(home, record)
+
+def restore_migration_pointers(home, record):
+    current_path = safe_private_child(home, "profiles", "default", "current.json")
+    active_path = safe_private_child(home, "active-profile.json")
+    restore_optional(current_path, decode_optional_bytes(record["prior_current_base64"]))
+    restore_optional(active_path, decode_optional_bytes(record["prior_active_base64"]))
+
+def cutover_legacy_migration(migration_id, ditto_home, fail_after=None):
+    home = resolve_ditto_home(ditto_home)
+    record = load_migration_record(home, migration_id)
+    if record["status"] != "staged":
+        raise ValueError("migration is not staged")
+    legacy_file = record["legacy_path"]
+    if not os.path.isfile(legacy_file) or sha256_file(legacy_file) != record["legacy_hash"]:
+        raise ValueError("legacy profile changed after staging")
+    source_dir = os.path.dirname(legacy_file)
+    backup_dir = safe_private_child(home, "legacy", record["target"], migration_id, "you")
+    if os.path.exists(backup_dir):
+        raise ValueError("legacy backup destination already exists")
+    os.makedirs(os.path.dirname(backup_dir), exist_ok=True)
+    moved = False
+    try:
+        os.replace(source_dir, backup_dir)
+        moved = True
+        record["legacy_backup"] = backup_dir
+        if fail_after == "legacy-move":
+            raise RuntimeError("injected migration failure after legacy-move")
+        if record["mode"] == "legacy-import":
+            current_path = safe_private_child(home, "profiles", "default", "current.json")
+            active_path = safe_private_child(home, "active-profile.json")
+            atomic_write_text(current_path, canonical_json(record["staged_pointer"]) + "\n")
+            if fail_after == "active-write":
+                raise RuntimeError("injected migration failure after active-write")
+            atomic_write_text(active_path, canonical_json({"schema_version": "1", "profile_id": "default"}) + "\n")
+            active_profile_state(home)
+        record["status"] = "cutover"
+        return write_migration_record(home, record)
+    except Exception:
+        restore_migration_pointers(home, record)
+        if moved and os.path.isdir(backup_dir) and not os.path.exists(source_dir):
+            os.makedirs(os.path.dirname(source_dir), exist_ok=True)
+            os.replace(backup_dir, source_dir)
+        raise
+
+def rollback_legacy_migration(migration_id, ditto_home):
+    home = resolve_ditto_home(ditto_home)
+    record = load_migration_record(home, migration_id)
+    if record["status"] != "cutover":
+        raise ValueError("migration is not cut over")
+    backup_dir = record.get("legacy_backup")
+    source_dir = os.path.dirname(record["legacy_path"])
+    if os.path.exists(source_dir):
+        raise ValueError("legacy discovery path already exists; refusing to overwrite it")
+    if not backup_dir or not os.path.isdir(backup_dir):
+        raise ValueError("legacy backup is missing")
+    restore_migration_pointers(home, record)
+    os.makedirs(os.path.dirname(source_dir), exist_ok=True)
+    os.replace(backup_dir, source_dir)
+    if sha256_file(record["legacy_path"]) != record["legacy_hash"]:
+        raise ValueError("restored legacy profile hash mismatch")
+    record["status"] = "rolled-back"
+    return write_migration_record(home, record)
+
+def migrate_adapter_block(target, repo, ditto_home, mode):
+    if target not in {"agents", "gemini"}:
+        raise ValueError("adapter target must be agents or gemini")
+    if mode not in {"backup-remove", "restore"}:
+        raise ValueError("adapter mode must be backup-remove or restore")
+    filename = "AGENTS.md" if target == "agents" else "GEMINI.md"
+    path = os.path.abspath(os.path.join(repo, filename))
+    home = resolve_ditto_home(ditto_home)
+    key = sha256_text(f"{target}:{os.path.normcase(path)}")[:20]
+    record_path = safe_private_child(home, "migrations", "adapter-" + key + ".json")
+    if mode == "restore":
+        try:
+            with open(record_path, "r", encoding="utf-8") as handle:
+                record = json.load(handle)
+        except (OSError, ValueError) as exc:
+            raise ValueError("adapter migration record is missing or corrupt") from exc
+        current = optional_bytes(path) or b""
+        if sha256_bytes(current) != record["removed_hash"]:
+            raise ValueError("adapter file changed after Ditto block removal")
+        with open(record["backup_path"], "rb") as handle:
+            original = handle.read()
+        if sha256_bytes(original) != record["original_hash"]:
+            raise ValueError("adapter backup hash mismatch")
+        atomic_write_bytes(path, original)
+        record["status"] = "restored"
+        atomic_write_text(record_path, canonical_json(record) + "\n")
+        return record
+    try:
+        with open(path, "rb") as handle:
+            original = handle.read()
+        text = original.decode("utf-8")
+    except (OSError, UnicodeError) as exc:
+        raise ValueError("adapter file is missing or not UTF-8") from exc
+    if text.count(DITTO_START) != 1 or text.count(DITTO_END) != 1:
+        raise ValueError("adapter requires one complete Ditto marked block")
+    pattern = re.compile(r"(?:\r?\n)*" + re.escape(DITTO_START) + r".*?" + re.escape(DITTO_END) + r"(?:\r?\n)*", re.DOTALL)
+    updated = pattern.sub("\n", text).rstrip() + "\n"
+    original_hash = sha256_bytes(original)
+    backup_path = safe_private_child(home, "legacy", "adapters", original_hash, filename)
+    atomic_write_bytes(backup_path, original)
+    atomic_write_text(path, updated)
+    removed_bytes = updated.encode("utf-8")
+    record = {
+        "schema_version": "1",
+        "adapter_id": key,
+        "target": target,
+        "repo": os.path.abspath(repo),
+        "path": path,
+        "status": "removed",
+        "original_hash": original_hash,
+        "removed_hash": sha256_bytes(removed_bytes),
+        "backup_path": backup_path,
+    }
+    atomic_write_text(record_path, canonical_json(record) + "\n")
+    return record
+
 def split_segment_sessions(text):
     marker = re.compile(
         r"^===== session:([A-Za-z0-9_-]+) source:([a-z0-9_-]+) =====$",
@@ -1569,6 +1814,21 @@ def build_plugin_parser():
     profile_path = sub.add_parser("profile-path")
     profile_path.add_argument("--domain", required=True, choices=["work", "design", "write"])
     profile_path.add_argument("--ditto-home")
+    migrate_stage = sub.add_parser("migrate-stage")
+    migrate_stage.add_argument("--target", required=True, choices=["codex", "claude"])
+    migrate_stage.add_argument("--home", default=HOME)
+    migrate_stage.add_argument("--ditto-home")
+    migrate_cutover = sub.add_parser("migrate-cutover")
+    migrate_cutover.add_argument("--migration-id", required=True)
+    migrate_cutover.add_argument("--ditto-home")
+    migrate_rollback = sub.add_parser("migrate-rollback")
+    migrate_rollback.add_argument("--migration-id", required=True)
+    migrate_rollback.add_argument("--ditto-home")
+    migrate_adapter = sub.add_parser("migrate-adapter")
+    migrate_adapter.add_argument("--target", required=True, choices=["agents", "gemini"])
+    migrate_adapter.add_argument("--repo", required=True)
+    migrate_adapter.add_argument("--mode", required=True, choices=["backup-remove", "restore"])
+    migrate_adapter.add_argument("--ditto-home")
     for name in ("preflight", "prepare"):
         command = sub.add_parser(name)
         command.add_argument("--source", choices=["auto", "codex", "claude", "copilot"], default="auto")
@@ -1692,12 +1952,18 @@ def resolve_profile_paths(ditto_home, domain):
     for path in paths:
         if not os.path.isfile(path) or sha256_file(path) != state["manifest"]["files"].get(os.path.basename(path)):
             raise ValueError("corrupt active profile; run ditto to recover")
-    return {
+    payload = {
         "status": "active",
         "domain": domain,
         "profile_version": state["manifest"]["profile_version"],
         "paths": paths,
     }
+    if state["manifest"].get("origin") == "legacy-migration":
+        payload.update({
+            "legacy_unverified": True,
+            "recovery_instruction": "update ditto to generate an evidence-backed profile",
+        })
+    return payload
 
 def activate_plugin_run(args):
     home = resolve_ditto_home(args.ditto_home)
@@ -1835,9 +2101,18 @@ def plugin_main(argv):
                     "ditto_home": home,
                     "profile_version": active["manifest"]["profile_version"],
                     "domains": active["manifest"]["domains"],
-                    "card_path": os.path.join(active["version_dir"], "card.json"),
+                    "card_path": (
+                        os.path.join(active["version_dir"], "card.json")
+                        if "card.json" in active["manifest"].get("files", {})
+                        else None
+                    ),
                 }
             )
+            if active is not None and active["manifest"].get("origin") == "legacy-migration":
+                payload.update({
+                    "legacy_unverified": True,
+                    "recovery_instruction": "update ditto to generate an evidence-backed profile",
+                })
         elif args.command == "preflight":
             payload = plugin_plan_for_args(args, write=False)
         elif args.command == "prepare":
@@ -1848,6 +2123,14 @@ def plugin_main(argv):
             payload = activate_plugin_run(args)
         elif args.command == "profile-path":
             payload = resolve_profile_paths(args.ditto_home, args.domain)
+        elif args.command == "migrate-stage":
+            payload = stage_legacy_migration(args.target, args.home, args.ditto_home)
+        elif args.command == "migrate-cutover":
+            payload = cutover_legacy_migration(args.migration_id, args.ditto_home)
+        elif args.command == "migrate-rollback":
+            payload = rollback_legacy_migration(args.migration_id, args.ditto_home)
+        elif args.command == "migrate-adapter":
+            payload = migrate_adapter_block(args.target, args.repo, args.ditto_home, args.mode)
         else:
             raise ValueError("unsupported plugin command")
     except ValueError as exc:

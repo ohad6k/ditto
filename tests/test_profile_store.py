@@ -1,5 +1,7 @@
 import importlib.util
 import json
+import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -224,6 +226,137 @@ class AtomicProfileStoreTest(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "hash"):
                 ditto.activate_cached_reduction(home, report_set_hash)
             self.assertEqual(before, current.read_bytes())
+
+
+class MigrationTest(unittest.TestCase):
+    def test_migration_cli_stage_returns_json_without_cutover(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            host_home = root / "home"
+            ditto_home = root / "private"
+            legacy = host_home / ".codex" / "skills" / "you" / "SKILL.md"
+            legacy.parent.mkdir(parents=True)
+            legacy.write_text("---\nname: you\ndescription: legacy\n---\nbody\n", encoding="utf-8")
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(ROOT / "ditto.py"),
+                    "plugin",
+                    "migrate-stage",
+                    "--target",
+                    "codex",
+                    "--home",
+                    str(host_home),
+                    "--ditto-home",
+                    str(ditto_home),
+                ],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            payload = json.loads(result.stdout)
+            self.assertEqual("staged", payload["status"])
+            self.assertTrue(legacy.exists())
+            self.assertFalse((ditto_home / "active-profile.json").exists())
+
+    def test_cutover_moves_legacy_out_of_discovery_before_pointer_activation(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            home = root / "home"
+            ditto_home = root / "private"
+            legacy = home / ".codex" / "skills" / "you" / "SKILL.md"
+            legacy.parent.mkdir(parents=True)
+            legacy.write_text("---\nname: you\ndescription: legacy\n---\nlegacy body\n", encoding="utf-8")
+            migration = ditto.stage_legacy_migration("codex", str(home), str(ditto_home))
+            self.assertTrue(legacy.exists())
+            self.assertFalse((ditto_home / "active-profile.json").exists())
+            result = ditto.cutover_legacy_migration(migration["migration_id"], str(ditto_home))
+            self.assertFalse(legacy.parent.exists())
+            self.assertTrue(Path(result["legacy_backup"]).exists())
+            self.assertTrue((ditto_home / "active-profile.json").exists())
+
+    def test_failed_cutover_restores_legacy_and_previous_pointer(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            home = root / "home"
+            ditto_home = root / "private"
+            legacy = home / ".codex" / "skills" / "you" / "SKILL.md"
+            legacy.parent.mkdir(parents=True)
+            legacy_bytes = b"---\nname: you\ndescription: legacy\n---\nlegacy body\n"
+            legacy.write_bytes(legacy_bytes)
+            active = ditto_home / "active-profile.json"
+            current = ditto_home / "profiles" / "default" / "current.json"
+            report_set_hash = "f" * 64
+            pack = make_valid_pack(root / "pack", report_set_hash)
+            ditto.activate_profile_pack(str(ditto_home), pack, evidence_fixture(), run_plan_fixture(report_set_hash))
+            active_before, current_before = active.read_bytes(), current.read_bytes()
+            migration = ditto.stage_legacy_migration("codex", str(home), str(ditto_home))
+            with self.assertRaisesRegex(RuntimeError, "injected"):
+                ditto.cutover_legacy_migration(migration["migration_id"], str(ditto_home), fail_after="legacy-move")
+            self.assertEqual(legacy_bytes, legacy.read_bytes())
+            self.assertEqual(active_before, active.read_bytes())
+            self.assertEqual(current_before, current.read_bytes())
+
+    def test_successful_cutover_then_rollback_restores_exact_legacy_state(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            home = root / "home"
+            ditto_home = root / "private"
+            legacy = home / ".codex" / "skills" / "you" / "SKILL.md"
+            legacy.parent.mkdir(parents=True)
+            original = b"---\nname: you\ndescription: legacy\n---\nlegacy body\n"
+            legacy.write_bytes(original)
+            migration = ditto.stage_legacy_migration("codex", str(home), str(ditto_home))
+            ditto.cutover_legacy_migration(migration["migration_id"], str(ditto_home))
+            ditto.rollback_legacy_migration(migration["migration_id"], str(ditto_home))
+            self.assertEqual(original, legacy.read_bytes())
+            self.assertFalse((ditto_home / "active-profile.json").exists())
+            self.assertFalse((ditto_home / "profiles" / "default" / "current.json").exists())
+
+    def test_stage_accepts_the_skills_sh_core_profile_name(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            home = root / "home"
+            ditto_home = root / "private"
+            legacy = home / ".codex" / "skills" / "you" / "SKILL.md"
+            legacy.parent.mkdir(parents=True)
+            legacy.write_text("---\nname: ditto-work-profile\ndescription: bounded core profile\n---\nbody\n", encoding="utf-8")
+            migration = ditto.stage_legacy_migration("codex", str(home), str(ditto_home))
+            self.assertEqual("skills-sh-core", migration["legacy_origin"])
+
+    def test_imported_legacy_profile_is_labeled_unverified(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            host_home = root / "home"
+            ditto_home = root / "private"
+            legacy = host_home / ".codex" / "skills" / "you" / "SKILL.md"
+            legacy.parent.mkdir(parents=True)
+            legacy.write_text("---\nname: you\ndescription: legacy\n---\nlegacy body\n", encoding="utf-8")
+            migration = ditto.stage_legacy_migration("codex", str(host_home), str(ditto_home))
+            ditto.cutover_legacy_migration(migration["migration_id"], str(ditto_home))
+            status = subprocess.run(
+                [sys.executable, str(ROOT / "ditto.py"), "plugin", "status", "--ditto-home", str(ditto_home)],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            payload = json.loads(status.stdout)
+            self.assertTrue(payload["legacy_unverified"])
+            self.assertIn("update ditto", payload["recovery_instruction"])
+
+    def test_adapter_migration_preserves_unrelated_agents_content(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            repo = root / "repo"
+            repo.mkdir()
+            agents = repo / "AGENTS.md"
+            agents.write_text("# keep\n\n<!-- ditto profile:start -->\nold\n<!-- ditto profile:end -->\n", encoding="utf-8")
+            home = root / "private"
+            removed = ditto.migrate_adapter_block("agents", str(repo), str(home), "backup-remove")
+            self.assertEqual("# keep\n", agents.read_text(encoding="utf-8").strip() + "\n")
+            ditto.migrate_adapter_block("agents", str(repo), str(home), "restore")
+            self.assertIn("old", agents.read_text(encoding="utf-8"))
+            self.assertTrue(Path(removed["backup_path"]).exists())
 
 
 if __name__ == "__main__":
