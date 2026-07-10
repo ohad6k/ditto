@@ -20,7 +20,7 @@ Usage:
     python ditto.py --chunks 20         # how many chunks to split into
     python ditto.py --no-redact         # DANGER: skip redaction (not recommended)
 """
-import argparse, glob, json, os, re, sys
+import argparse, glob, json, os, re, shutil, sys, tempfile, uuid
 
 HOME = os.path.expanduser("~")
 SOURCES = {
@@ -173,33 +173,77 @@ def mine_files(files, no_redact=False, dedupe=True):
         "last_date": last_date,
     }
 
-def write_outputs(blocks, out_dir, chunks):
+def atomic_write_bytes(path, data):
+    parent = os.path.dirname(path) or "."
+    os.makedirs(parent, exist_ok=True)
+    fd, staged = tempfile.mkstemp(prefix=".ditto-", suffix=".tmp", dir=parent)
+    try:
+        with os.fdopen(fd, "wb") as fh:
+            fh.write(data)
+            fh.flush()
+            os.fsync(fh.fileno())
+        os.replace(staged, path)
+    except Exception:
+        if os.path.exists(staged):
+            os.remove(staged)
+        raise
+
+def atomic_write_text(path, text):
+    atomic_write_bytes(path, text.encode("utf-8"))
+
+def replace_directory(staged, target):
+    backup = target + ".ditto-backup-" + uuid.uuid4().hex
+    if os.path.exists(target):
+        os.replace(target, backup)
+    try:
+        os.replace(staged, target)
+    except Exception:
+        if os.path.exists(backup):
+            os.replace(backup, target)
+        raise
+    if os.path.exists(backup):
+        try:
+            shutil.rmtree(backup)
+        except OSError:
+            pass
+
+def write_outputs(blocks, out_dir, chunks, stats_result=None):
     os.makedirs(out_dir, exist_ok=True)
     chunks_dir = os.path.join(out_dir, "chunks")
-    os.makedirs(chunks_dir, exist_ok=True)
+    staged_chunks = tempfile.mkdtemp(prefix=".ditto-chunks-", dir=out_dir)
 
     corpus = "\n".join(blocks)
-    with open(os.path.join(out_dir, "you-corpus.txt"), "w", encoding="utf-8") as w:
-        w.write(corpus)
+    try:
+        idx = 1
+        if blocks:
+            # split on session boundaries into ~N chunks
+            n = max(1, chunks)
+            target = max(1, len(corpus) // n)
+            cur, size = [], 0
+            for b in blocks:
+                cur.append(b); size += len(b)
+                if size >= target:
+                    atomic_write_text(
+                        os.path.join(staged_chunks, f"chunk-{idx:02d}.txt"),
+                        "\n".join(cur),
+                    )
+                    idx += 1; cur, size = [], 0
+            if cur:
+                atomic_write_text(
+                    os.path.join(staged_chunks, f"chunk-{idx:02d}.txt"),
+                    "\n".join(cur),
+                )
+                idx += 1
 
-    if not blocks:
-        return 0
-
-    # split on session boundaries into ~N chunks
-    n = max(1, chunks)
-    target = max(1, len(corpus) // n)
-    cur, size, idx = [], 0, 1
-    for b in blocks:
-        cur.append(b); size += len(b)
-        if size >= target:
-            with open(os.path.join(chunks_dir, f"chunk-{idx:02d}.txt"), "w", encoding="utf-8") as w:
-                w.write("\n".join(cur))
-            idx += 1; cur, size = [], 0
-    if cur:
-        with open(os.path.join(chunks_dir, f"chunk-{idx:02d}.txt"), "w", encoding="utf-8") as w:
-            w.write("\n".join(cur))
-        idx += 1
-    return idx - 1
+        atomic_write_text(os.path.join(out_dir, "you-corpus.txt"), corpus)
+        if stats_result is not None:
+            write_stats(stats_result, out_dir)
+        replace_directory(staged_chunks, chunks_dir)
+        staged_chunks = None
+        return idx - 1
+    finally:
+        if staged_chunks and os.path.exists(staged_chunks):
+            shutil.rmtree(staged_chunks)
 
 def write_stats(result, out_dir):
     stats = {
@@ -210,8 +254,10 @@ def write_stats(result, out_dir):
         "first_date": result.get("first_date", ""),
         "last_date": result.get("last_date", ""),
     }
-    with open(os.path.join(out_dir, "stats.json"), "w", encoding="utf-8") as w:
-        json.dump(stats, w, indent=2)
+    atomic_write_text(
+        os.path.join(out_dir, "stats.json"),
+        json.dumps(stats, indent=2, sort_keys=True) + "\n",
+    )
     return stats
 
 def months_between(first_date, last_date):
@@ -530,13 +576,26 @@ def install_profile(profile_path, target, repo_dir, home_dir, yes=False, dry_run
     os.makedirs(os.path.dirname(dest), exist_ok=True)
 
     if target in ("agents", "gemini"):
-        body = strip_frontmatter(profile)
-        block = f"\n\n{DITTO_START}\n# ditto profile\n\n{body}\n{DITTO_END}\n"
         existing = ""
         if os.path.exists(dest):
-            with open(dest, "r", encoding="utf-8", errors="replace") as fh:
+            with open(dest, "r", encoding="utf-8", errors="replace", newline="") as fh:
                 existing = fh.read()
-        if DITTO_START in existing and DITTO_END in existing:
+        newline = "\r\n" if "\r\n" in existing else "\n"
+        body = strip_frontmatter(profile).replace("\r\n", "\n").replace("\r", "\n")
+        body = body.replace("\n", newline)
+        block = (
+            newline * 2
+            + DITTO_START + newline
+            + "# ditto profile" + newline * 2
+            + body + newline
+            + DITTO_END + newline
+        )
+        has_start = DITTO_START in existing
+        has_end = DITTO_END in existing
+        if has_start != has_end:
+            print("existing Ditto block is incomplete; refusing to modify it", file=sys.stderr)
+            sys.exit(1)
+        if has_start and has_end:
             if not yes:
                 print("ditto profile block already exists. pass --yes to replace it.")
                 sys.exit(1)
@@ -547,8 +606,7 @@ def install_profile(profile_path, target, repo_dir, home_dir, yes=False, dry_run
             updated = pattern.sub(block.strip(), existing)
         else:
             updated = existing.rstrip() + block
-        with open(dest, "w", encoding="utf-8") as fh:
-            fh.write(updated.lstrip() if not existing else updated)
+        atomic_write_text(dest, updated.lstrip() if not existing else updated)
         print(f"installed: {dest}")
         return
 
@@ -558,8 +616,7 @@ def install_profile(profile_path, target, repo_dir, home_dir, yes=False, dry_run
     if os.path.exists(dest) and not yes:
         print("destination already exists. pass --yes to overwrite it.")
         sys.exit(1)
-    with open(dest, "w", encoding="utf-8") as fh:
-        fh.write(profile)
+    atomic_write_text(dest, profile)
     print(f"installed: {dest}")
 
 def main():
@@ -620,8 +677,7 @@ def main():
         print(f"would write: {args.out}/you-corpus.txt  +  chunks in {args.out}/chunks/")
         return
 
-    chunk_count = write_outputs(result["blocks"], args.out, args.chunks)
-    write_stats(result, args.out)
+    chunk_count = write_outputs(result["blocks"], args.out, args.chunks, stats_result=result)
 
     print_counts(result, args.no_redact)
     print(f"wrote: {args.out}/you-corpus.txt  +  {chunk_count} chunks in {args.out}/chunks/")

@@ -376,6 +376,89 @@ class DittoCliTest(unittest.TestCase):
             self.assertNotEqual(result.returncode, 0)
             self.assertIn("exact name and description", result.stderr)
 
+    def test_smaller_rerun_removes_stale_chunks(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            logs = root / "logs"
+            for i in range(12):
+                write_jsonl(logs / f"session-{i}.jsonl", [{
+                    "timestamp": f"2026-07-{i + 1:02d}T10:00:00Z",
+                    "payload": {
+                        "type": "message",
+                        "role": "user",
+                        "content": [{"text": "x" * 1000 + str(i)}],
+                    },
+                }])
+            out = root / "out"
+            subprocess.run(
+                [sys.executable, str(DITTO), "--path", str(logs), "--out", str(out), "--chunks", "6"],
+                check=True,
+            )
+            subprocess.run(
+                [sys.executable, str(DITTO), "--path", str(logs), "--out", str(out), "--chunks", "1"],
+                check=True,
+            )
+            self.assertEqual(["chunk-01.txt"], sorted(p.name for p in (out / "chunks").iterdir()))
+
+    def test_partial_marked_block_fails_without_modifying_file(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            repo = root / "repo"
+            repo.mkdir()
+            agents = repo / "AGENTS.md"
+            original = "# rules\n\n<!-- ditto profile:start -->\nbroken\n"
+            agents.write_text(original, encoding="utf-8")
+            profile = root / "you.md"
+            profile.write_text(
+                "---\nname: you\ndescription: test\n---\nbody\n",
+                encoding="utf-8",
+            )
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(DITTO),
+                    "--install",
+                    str(profile),
+                    "--target",
+                    "agents",
+                    "--repo",
+                    str(repo),
+                    "--yes",
+                ],
+                capture_output=True,
+                text=True,
+            )
+            self.assertNotEqual(result.returncode, 0)
+            self.assertEqual(original, agents.read_text(encoding="utf-8"))
+
+    def test_agents_install_preserves_existing_crlf_style(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            repo = root / "repo"
+            repo.mkdir()
+            agents = repo / "AGENTS.md"
+            agents.write_bytes(b"# keep\r\n\r\n")
+            profile = root / "you.md"
+            profile.write_text(
+                "---\nname: you\ndescription: test\n---\nbody\n",
+                encoding="utf-8",
+            )
+            subprocess.run(
+                [
+                    sys.executable,
+                    str(DITTO),
+                    "--install",
+                    str(profile),
+                    "--target",
+                    "agents",
+                    "--repo",
+                    str(repo),
+                ],
+                check=True,
+            )
+            installed = agents.read_bytes()
+            self.assertNotIn(b"\n", installed.replace(b"\r\n", b""))
+
 
 if __name__ == "__main__":
     unittest.main()
