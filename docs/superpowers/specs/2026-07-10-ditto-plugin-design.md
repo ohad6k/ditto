@@ -152,7 +152,7 @@ The default does not require a configuration wizard. It proceeds with the bounde
 
 The current flow can send nearly the complete post-dedupe corpus through one worker per roughly 70K tokens. On the current local history, that means approximately 1.95M source tokens and about 28 workers before reduction.
 
-The release default is calibrated rather than assumed. Ditto first tests 4×25K source tokens plus one reducer, then bounded wider-coverage candidates of 6×20K and 8×20K if needed. The calibration ceiling is 160K selected source tokens and nine planned calls. The smallest candidate that passes a predeclared must-recover checklist and the three fresh-task probes becomes the default. If none passes, Ditto does not ship the claim that bounded starter mining is good enough.
+The release default is calibrated rather than assumed. Ditto first tests 4×25K source tokens plus one reducer, then expands the same immutable 25K segmentation to six and eight selected segments if needed. Keeping one segmentation makes the ladder monotonic and reuses validated reports from earlier candidates. The calibration ceiling remains 160K selected source tokens and nine planned calls. The smallest candidate that passes a predeclared must-recover checklist and the three fresh-task probes becomes the default. If none passes, Ditto does not ship the claim that bounded starter mining is good enough.
 
 Every candidate uses one shared worker-report set for work, design, and writing and never expands beyond its displayed plan.
 

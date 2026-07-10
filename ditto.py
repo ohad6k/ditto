@@ -39,8 +39,8 @@ REDUCER_SCHEMA_VERSION = "1"
 
 STARTER_CANDIDATES = (
     {"segments": 4, "segment_tokens": 25_000},
-    {"segments": 6, "segment_tokens": 20_000},
-    {"segments": 8, "segment_tokens": 20_000},
+    {"segments": 6, "segment_tokens": 25_000},
+    {"segments": 8, "segment_tokens": 25_000},
 )
 STARTER_MAX_SOURCE_TOKENS = 160_000
 STARTER_MAX_MODEL_CALLS = 9
@@ -1809,6 +1809,14 @@ def build_plugin_parser():
     sub = parser.add_subparsers(dest="command", required=True)
     status = sub.add_parser("status")
     status.add_argument("--ditto-home")
+    validate_report_command = sub.add_parser("validate-report")
+    validate_report_command.add_argument("--run-id", required=True)
+    validate_report_command.add_argument("--report", required=True)
+    validate_report_command.add_argument("--ditto-home")
+    validate_pack_command = sub.add_parser("validate-pack")
+    validate_pack_command.add_argument("--run-id", required=True)
+    validate_pack_command.add_argument("--pack", required=True)
+    validate_pack_command.add_argument("--ditto-home")
     cache_report = sub.add_parser("cache-report")
     cache_report.add_argument("--run-id", required=True)
     cache_report.add_argument("--report", required=True)
@@ -1865,10 +1873,9 @@ def load_run_plan(ditto_home, run_id):
         raise ValueError("Ditto run plan id mismatch")
     return path, plan
 
-def cache_run_report(args):
-    home = resolve_ditto_home(args.ditto_home)
-    plan_path, plan = load_run_plan(home, args.run_id)
-    requested = os.path.abspath(args.report)
+def load_assigned_run_report(home, run_id, report_path):
+    plan_path, plan = load_run_plan(home, run_id)
+    requested = os.path.abspath(report_path)
     selected = next(
         (
             item for item in plan.get("selected_segments", [])
@@ -1897,6 +1904,24 @@ def cache_run_report(args):
     segment = dict(selected)
     with open(selected["segment_path"], "r", encoding="utf-8", errors="strict", newline="") as handle:
         segment["text"] = handle.read()
+    validate_report(report, segment)
+    return plan_path, plan, selected, report, segment
+
+def validate_run_report(args):
+    home = resolve_ditto_home(args.ditto_home)
+    _, _, selected, _, _ = load_assigned_run_report(home, args.run_id, args.report)
+    return {
+        "status": "valid",
+        "segment_hash": selected["segment_hash"],
+    }
+
+def cache_run_report(args):
+    home = resolve_ditto_home(args.ditto_home)
+    plan_path, plan, selected, report, segment = load_assigned_run_report(
+        home,
+        args.run_id,
+        args.report,
+    )
     cached_path = store_report(report, home, segment)
 
     cached_paths = []
@@ -1973,6 +1998,31 @@ def resolve_profile_paths(ditto_home, domain):
         })
     return payload
 
+def load_plugin_pack_context(home, run_id, pack_path, quarantine):
+    _, plan = load_run_plan(home, run_id)
+    expected_pack = os.path.realpath(plan["pack_path"])
+    if os.path.realpath(os.path.abspath(pack_path)) != expected_pack:
+        raise ValueError("pack path was not assigned to this Ditto run")
+    reports = []
+    for segment in plan["selected_segments"]:
+        report = load_cached_report(home, segment, quarantine=quarantine)
+        if report is None:
+            raise ValueError("run has an uncached or invalid report")
+        reports.append(report)
+    evidence = flatten_report_evidence(reports)
+    return plan, expected_pack, evidence
+
+def validate_plugin_pack(args):
+    home = resolve_ditto_home(args.ditto_home)
+    plan, expected_pack, evidence = load_plugin_pack_context(
+        home,
+        args.run_id,
+        args.pack,
+        quarantine=False,
+    )
+    validate_profile_pack(expected_pack, evidence, plan)
+    return {"status": "valid", "report_set_hash": plan["report_set_hash"]}
+
 def activate_plugin_run(args):
     home = resolve_ditto_home(args.ditto_home)
     _, plan = load_run_plan(home, args.run_id)
@@ -1980,16 +2030,12 @@ def activate_plugin_run(args):
         if not plan.get("report_set_hash"):
             raise ValueError("run has no complete cached report set")
         return activate_cached_reduction(home, plan["report_set_hash"])
-    expected_pack = os.path.realpath(plan["pack_path"])
-    if os.path.realpath(os.path.abspath(args.pack)) != expected_pack:
-        raise ValueError("pack path was not assigned to this Ditto run")
-    reports = []
-    for segment in plan["selected_segments"]:
-        report = load_cached_report(home, segment)
-        if report is None:
-            raise ValueError("run has an uncached or invalid report")
-        reports.append(report)
-    evidence = flatten_report_evidence(reports)
+    plan, expected_pack, evidence = load_plugin_pack_context(
+        home,
+        args.run_id,
+        args.pack,
+        quarantine=True,
+    )
     return activate_profile_pack(home, expected_pack, evidence, plan)
 
 def plugin_source_result(args):
@@ -2125,6 +2171,10 @@ def plugin_main(argv):
             payload = plugin_plan_for_args(args, write=False)
         elif args.command == "prepare":
             payload = prepare_plugin_run(args)
+        elif args.command == "validate-report":
+            payload = validate_run_report(args)
+        elif args.command == "validate-pack":
+            payload = validate_plugin_pack(args)
         elif args.command == "cache-report":
             payload = cache_run_report(args)
         elif args.command == "activate":

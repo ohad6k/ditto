@@ -48,11 +48,13 @@ Rules:
 
 1. `domain_coverage` must contain exactly `work`, `design`, and `write`. Use `evidence` only when at least one evidence item exists for that domain; otherwise use `no-signal`.
 2. Use only `session_ids` present in the selected segment. Coverage must list every session in the segment even when it has no useful signal.
-3. Every quote and contradiction receipt must be short, dated, and verbatim from the named session. Never paraphrase inside `text`.
+3. Every quote and contradiction receipt must be short, dated, and verbatim from the named session. Set `date` from the exact containing `[YYYY-MM-DD]` message header, not another message or the session date range. Never paraphrase inside `text`.
 4. Use `kind: inferred` for a pattern the user demonstrates. Use `kind: explicit` only when the user directly states the instruction as a rule or unambiguous command.
 5. Record counter-evidence in `contradictions` with the same `{session_id, date, text}` receipt shape. Do not hide it.
 6. Ban generic filler such as “be helpful,” “write good code,” or “values quality.” If a stranger could guess it without the receipts, omit it.
 7. A truthful all-`no-signal` report with an empty `evidence` list is valid. Invented evidence is not.
+
+Before returning, run the assigned read-only `python "$DITTO_PY" plugin validate-report --run-id "$RUN_ID" --report "$REPORT_PATH"` command. If it rejects the report, correct the report and run the same validation again inside this worker pass. Return only after it reports `status: valid`. The orchestrator caches the report after the worker exits.
 
 ## Reducer contract
 
@@ -112,3 +114,5 @@ Work must be active. Activate design or write only when that domain has valid ru
 `card.json` contains an archetype, up to three work-domain laws, and an optional truth. Each law text must exactly match a validated work rule. Its count is the number of distinct supporting sessions, formatted like `12 sessions`, never a worker/report count.
 
 Do not invent file hashes. Python validates this draft pack, computes every file hash and immutable profile version, and refuses incomplete or generic output.
+
+Before returning, run the assigned read-only `python "$DITTO_PY" plugin validate-pack --run-id "$RUN_ID" --pack "$PACK_DIR"` command. If it rejects the pack, correct only the assigned pack and run the same validation again inside this reducer pass. Return only after it reports `status: valid`. The orchestrator activates the pack after the reducer exits.

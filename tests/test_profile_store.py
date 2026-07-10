@@ -86,6 +86,97 @@ def make_valid_pack(path, report_set_hash):
 
 
 class ProfilePackValidationTest(unittest.TestCase):
+    def test_validate_pack_command_is_read_only(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            home = str(Path(tmp) / "private")
+            run_id = "20260710T120000Z-1234abcd"
+            run_dir = Path(home) / "runs" / run_id
+            pack = run_dir / "pack"
+            selected = []
+            cached_paths = []
+            fixtures = [
+                ("a" * 64, "s1", "codex", "2026-01-01", "done means live", "done"),
+                ("b" * 64, "s2", "claude", "2026-02-01", "show me it works", "proof"),
+            ]
+            for segment_hash, session_id, source, date, quote, slug in fixtures:
+                text = f"===== session:{session_id} source:{source} =====\n[{date}]\n{quote}\n"
+                segment = {
+                    "segment_hash": segment_hash,
+                    "source": source,
+                    "first_date": date,
+                    "last_date": date,
+                    "source_tokens": 10,
+                    "session_versions": [{"session_id": session_id, "content_hash": segment_hash}],
+                    "text": text,
+                }
+                segment_path = Path(ditto.segment_file_path(home, segment_hash))
+                segment_path.parent.mkdir(parents=True, exist_ok=True)
+                segment_path.write_bytes(text.encode("utf-8"))
+                report = {
+                    "schema_version": "1",
+                    "segment_hash": segment_hash,
+                    "coverage": {
+                        "session_ids": [session_id],
+                        "sources": [source],
+                        "first_date": date,
+                        "last_date": date,
+                        "source_tokens": 10,
+                    },
+                    "domain_coverage": {"work": "evidence", "design": "no-signal", "write": "no-signal"},
+                    "evidence": [{
+                        "evidence_id": f"ev-{segment_hash[:8]}-{slug}",
+                        "domain": "work",
+                        "kind": "inferred",
+                        "instruction": "Always prove done.",
+                        "implication": "Run the relevant verification before reporting completion.",
+                        "quotes": [{"session_id": session_id, "date": date, "text": quote}],
+                        "contradictions": [],
+                    }],
+                }
+                cached_paths.append(ditto.store_report(report, home, segment))
+                selected.append({key: value for key, value in segment.items() if key != "text"})
+            report_set_hash = ditto.compute_report_set_hash(sorted(cached_paths))
+            for segment in selected:
+                cached_report = json.loads(Path(ditto.report_cache_path(home, segment["segment_hash"])).read_text(encoding="utf-8"))
+                ditto.validate_report(cached_report, ditto.hydrate_segment(home, segment))
+            run_dir.mkdir(parents=True, exist_ok=True)
+            plan = {
+                "run_id": run_id,
+                "run_dir": str(run_dir),
+                "pack_path": str(pack),
+                "selected_segments": selected,
+                "segment_hashes": [item["segment_hash"] for item in selected],
+                "report_set_hash": report_set_hash,
+                "source_coverage": {"sources": ["claude", "codex"], "first_date": "2026-01-01", "last_date": "2026-02-01"},
+                "selected_source_tokens": 20,
+                "adequate_strata": True,
+            }
+            (run_dir / "plan.json").write_text(json.dumps(plan), encoding="utf-8")
+            make_valid_pack(pack, report_set_hash)
+
+            validated = subprocess.run(
+                [
+                    sys.executable,
+                    str(ROOT / "ditto.py"),
+                    "plugin",
+                    "validate-pack",
+                    "--run-id",
+                    run_id,
+                    "--pack",
+                    str(pack),
+                    "--ditto-home",
+                    home,
+                ],
+                capture_output=True,
+                text=True,
+            )
+
+            self.assertEqual(validated.returncode, 0, validated.stderr)
+            payload = json.loads(validated.stdout)
+            self.assertEqual(payload, {"report_set_hash": report_set_hash, "status": "valid"})
+            self.assertFalse((Path(home) / "active-profile.json").exists())
+            self.assertFalse((Path(home) / "profiles").exists())
+
     def test_inferred_rule_requires_two_distinct_sessions(self):
         reports = {
             "ev-a": {"kind": "inferred", "sessions": {"s1"}, "strata": {"codex:2026-Q1"}, "quote_count": 1, "contradictions": []},

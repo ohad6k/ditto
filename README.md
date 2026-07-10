@@ -65,8 +65,8 @@ The bounded starter ladder is:
 | Candidate | New source text | Maximum planned passes |
 |---|---:|---:|
 | 4 × 25K | 100K tokens | 4 workers + 1 reducer |
-| 6 × 20K | 120K tokens | 6 workers + 1 reducer |
-| 8 × 20K | 160K tokens | 8 workers + 1 reducer |
+| 6 × 25K | up to 150K tokens | up to 6 workers + 1 reducer |
+| 8 × 25K | 160K-token hard cap | up to 8 workers + 1 reducer |
 
 Ditto uses the smallest calibrated candidate that recovers the required profile. It never silently falls back to full history. Deep mode is explicit, separately planned, and requires approval.
 

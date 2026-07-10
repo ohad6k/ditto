@@ -225,6 +225,37 @@ class SegmentStoreTest(unittest.TestCase):
 
 
 class PreflightTest(unittest.TestCase):
+    def test_candidate_ladder_reuses_one_segmentation_and_only_expands_selection(self):
+        configs = [ditto.candidate_config(index) for index in range(3)]
+        self.assertEqual({config["segment_tokens"] for config in configs}, {25_000})
+        self.assertEqual([config["segments"] for config in configs], [4, 6, 8])
+
+        segments = []
+        for source in ("claude", "codex"):
+            for month in range(1, 7):
+                segments.append({
+                    "segment_hash": f"{source}-{month}",
+                    "active": True,
+                    "source": source,
+                    "first_date": f"2026-{month:02d}-01",
+                    "last_date": f"2026-{month:02d}-28",
+                    "source_tokens": 24_000,
+                    "session_versions": [],
+                })
+        selections = [
+            {
+                segment["segment_hash"]
+                for segment in ditto.select_segments(
+                    segments,
+                    count=config["segments"],
+                    max_tokens=ditto.STARTER_MAX_SOURCE_TOKENS,
+                )
+            }
+            for config in configs
+        ]
+        self.assertLess(selections[0], selections[1])
+        self.assertTrue(selections[1].issubset(selections[2]))
+
     def test_selection_is_deterministic_source_and_time_stratified(self):
         segments = []
         for source in ("claude", "codex"):
@@ -451,7 +482,82 @@ class ReportCacheTest(unittest.TestCase):
         self.assertIn('"work"', prompt)
         self.assertIn('"design"', prompt)
         self.assertIn('"write"', prompt)
+        self.assertIn("exact containing `[YYYY-MM-DD]` message header", prompt)
+        self.assertIn("plugin validate-report", prompt)
         self.assertNotIn("18/20", prompt)
+
+    def test_validate_report_command_is_read_only(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            logs = root / "logs"
+            write_jsonl(logs / "one.jsonl", [{
+                "timestamp": "2026-01-01T00:00:00Z",
+                "payload": {
+                    "type": "message",
+                    "role": "user",
+                    "content": [{"text": "specific signal"}],
+                },
+            }])
+            home = root / "private"
+            prepared = subprocess.run(
+                [
+                    sys.executable,
+                    str(DITTO),
+                    "plugin",
+                    "prepare",
+                    "--path",
+                    str(logs),
+                    "--candidate",
+                    "0",
+                    "--ditto-home",
+                    str(home),
+                ],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            plan = json.loads(prepared.stdout)
+            segment = plan["selected_segments"][0]
+            report = {
+                "schema_version": "1",
+                "segment_hash": segment["segment_hash"],
+                "coverage": {
+                    "session_ids": [item["session_id"] for item in segment["session_versions"]],
+                    "sources": [segment["source"]],
+                    "first_date": segment["first_date"],
+                    "last_date": segment["last_date"],
+                    "source_tokens": segment["source_tokens"],
+                },
+                "domain_coverage": {domain: "no-signal" for domain in ("work", "design", "write")},
+                "evidence": [],
+            }
+            Path(segment["report_path"]).write_text(json.dumps(report), encoding="utf-8")
+
+            validated = subprocess.run(
+                [
+                    sys.executable,
+                    str(DITTO),
+                    "plugin",
+                    "validate-report",
+                    "--run-id",
+                    plan["run_id"],
+                    "--report",
+                    segment["report_path"],
+                    "--ditto-home",
+                    str(home),
+                ],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+
+            payload = json.loads(validated.stdout)
+            self.assertEqual(payload["status"], "valid")
+            self.assertEqual(payload["segment_hash"], segment["segment_hash"])
+            self.assertFalse((home / "cache" / "reports" / "1" / (segment["segment_hash"] + ".json")).exists())
+            stored_plan = json.loads((Path(plan["run_dir"]) / "plan.json").read_text(encoding="utf-8"))
+            self.assertEqual(stored_plan["report_paths"], [])
+            self.assertIsNone(stored_plan["report_set_hash"])
 
     def test_prepare_assigns_and_cache_report_validates_a_complete_run(self):
         with tempfile.TemporaryDirectory() as tmp:

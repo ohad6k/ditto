@@ -2987,7 +2987,7 @@ Use `ditto:mine` with explicit candidate `0`. Store raw private reports/profile 
 
 If candidate 0 passes every frozen must-recover item and all three probes, keep `DEFAULT_CANDIDATE_INDEX = 0` and stop calibration.
 
-If it fails, show candidate 1's additional plan and ask before spending it. Run candidate 1 (`6 × 20K`, at most seven calls) only after approval. If candidate 1 fails, repeat once for candidate 2 (`8 × 20K`, at most nine calls). Never alter the checklist between candidates.
+If it fails, show candidate 1's additional plan and ask before spending it. Run candidate 1 by expanding the same immutable 25K segmentation from four to six selected segments (at most seven total calls, with earlier report caches reused) only after approval. If candidate 1 fails, repeat once by expanding to eight selected segments under the unchanged 160K-token and nine-call ceilings. Never alter the checklist between candidates.
 
 If candidate 2 fails, stop the release. Do not weaken the checklist, silently deepen, or claim the bounded default is sufficient.
 
