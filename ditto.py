@@ -20,7 +20,7 @@ Usage:
     python ditto.py --chunks 20         # how many chunks to split into
     python ditto.py --no-redact         # DANGER: skip redaction (not recommended)
 """
-import argparse, base64, glob, hashlib, json, os, re, shutil, stat, sys, tempfile, time, uuid
+import argparse, base64, glob, hashlib, json, os, re, shutil, stat, sys, tempfile, time, unicodedata, uuid
 
 HOME = os.path.expanduser("~")
 SOURCES = {
@@ -37,6 +37,7 @@ REPORT_SCHEMA_VERSION = "1"
 PROMPT_SCHEMA_VERSION = "1"
 REDUCER_SCHEMA_VERSION = "1"
 RECEIPT_SCHEMA_VERSION = "1"
+SALIENCE_SCHEMA_VERSION = "1"
 
 STARTER_CANDIDATES = (
     {"segments": 4, "segment_tokens": 25_000},
@@ -294,6 +295,76 @@ def build_receipt_ledger(records):
             item["receipt_id"],
         ),
     )
+
+SALIENCE_MARKERS = {
+    "directive": ("never", "always", "do not", "don't", "must", "make sure", "need to", "remember", "אל ", "תמיד", "חייב"),
+    "correction": ("wrong", "not what", "stop", "instead", "fix this", "you missed", "זה לא", "לא נכון"),
+    "rejection": ("hate", "reject", "no ", "don't", "do not", "fake", "bad", "שונא", "אל "),
+    "preference": ("prefer", "i want", "i like", "i love", "should", "style", "taste", "voice", "אני רוצה", "מעדיף"),
+    "verification": ("done", "live", "verify", "verified", "production", "test", "proof", "בדיקה", "מוכן"),
+}
+DOMAIN_MARKERS = {
+    "work": ("done", "verify", "test", "production", "release", "deploy", "plan", "debug", "commit", "proof", "workflow"),
+    "design": ("ui", "ux", "design", "visual", "layout", "screenshot", "color", "pixel", "animation", "premium", "gradient", "icon", "figma", "css", "עיצוב", "ממשק", "צבע"),
+    "write": ("write", "copy", "tweet", "reddit", "marketing", "title", "tone", "voice", "post", "reply", "launch", "lowercase", "em dash", "wording", "כתיבה", "פוסט", "שיווק"),
+}
+SALIENCE_WEIGHTS = {"directive": 24, "correction": 20, "rejection": 18, "preference": 12, "verification": 10}
+
+def normalized_salience_tokens(text):
+    normalized = unicodedata.normalize("NFKC", text).casefold()
+    return re.findall(r"\w+", normalized, flags=re.UNICODE)
+
+def score_receipts(receipts):
+    normalized = {}
+    sessions_by_fingerprint = {}
+    for receipt in receipts:
+        tokens = normalized_salience_tokens(receipt["text"])
+        fingerprint = " ".join(tokens)
+        normalized[receipt["receipt_id"]] = (fingerprint, tokens)
+        sessions_by_fingerprint.setdefault(fingerprint, set()).add(receipt["session_id"])
+
+    scored = []
+    for receipt in receipts:
+        item = dict(receipt)
+        fingerprint, tokens = normalized[item["receipt_id"]]
+        searchable = f" {fingerprint} "
+        families = set()
+        salience = 1
+        for family, markers in SALIENCE_MARKERS.items():
+            if any(marker in searchable for marker in markers):
+                families.add(family)
+                salience += SALIENCE_WEIGHTS[family]
+        recurrence_sessions = len(sessions_by_fingerprint.get(fingerprint, ()))
+        if recurrence_sessions > 1:
+            families.add("recurrence")
+            salience += min(24, (recurrence_sessions - 1) * 6)
+        if not families:
+            families.add("exploration")
+
+        domain_hints = set(item.get("domain_hints", []))
+        for domain, markers in DOMAIN_MARKERS.items():
+            if any(marker in searchable for marker in markers):
+                domain_hints.add(domain)
+        if not domain_hints:
+            domain_hints.add("work")
+        item.update({
+            "salience_schema_version": SALIENCE_SCHEMA_VERSION,
+            "salience": salience,
+            "signal_families": sorted(families),
+            "domain_hints": sorted(domain_hints),
+            "recurrence_sessions": recurrence_sessions,
+            "normalized_token_count": len(tokens),
+        })
+        item["salience_hash"] = sha256_text(canonical_json({
+            "schema_version": SALIENCE_SCHEMA_VERSION,
+            "receipt_id": item["receipt_id"],
+            "salience": salience,
+            "signal_families": item["signal_families"],
+            "domain_hints": item["domain_hints"],
+            "recurrence_sessions": recurrence_sessions,
+        }))
+        scored.append(item)
+    return sorted(scored, key=lambda value: value["receipt_id"])
 
 def segment_hash(records, target_tokens):
     identity = {
