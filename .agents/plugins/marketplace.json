@@ -1,0 +1,16 @@
+{
+  "name": "ditto",
+  "interface": {"displayName": "Ditto development"},
+  "plugins": [
+    {
+      "name": "ditto",
+      "source": {"source": "local", "path": "./"},
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL",
+        "products": ["CODEX"]
+      },
+      "category": "Developer Tools"
+    }
+  ]
+}

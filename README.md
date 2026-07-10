@@ -172,7 +172,7 @@ Your `you.md` is just a context file. Drop it where your agent already looks and
 
 Ditto writes the `you.md` with the right frontmatter already, so on Claude Code, Codex, and Cursor it **registers as a skill the moment you drop it in** - nothing to wire. For Codex, use the native skill path above if you want it everywhere; use `AGENTS.md` if you only want it in one repo. That's it, no plugin, no config.
 
-**Using a coding agent?** Point it at this repo and say *"run ditto and install my you.md"* - the skill in [`skills/ditto/`](skills/ditto/SKILL.md) walks it through the whole flow (extract, mine, write, place the file) on its own. Works in Claude Code, Cursor, Codex, and Gemini.
+**Using a coding agent?** Point it at this repo and say *"run ditto and install my you.md"* - the skill in [`.agents/skills/ditto/`](.agents/skills/ditto/SKILL.md) walks it through the whole flow (extract, mine, write, place the file) on its own. Works in Claude Code, Cursor, Codex, and Gemini.
 
 Copy/paste version:
 
