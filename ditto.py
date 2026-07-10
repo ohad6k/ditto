@@ -968,7 +968,10 @@ def validate_profile_pack(pack_dir, evidence_by_id, run_plan):
                 if evidence_id not in appendix:
                     raise ValueError("appendix is missing a referenced evidence id")
                 for receipt in evidence.get("quotes", []):
-                    if receipt["date"] not in appendix or receipt["text"] not in appendix:
+                    if (
+                        escape_private_markdown(receipt["date"]) not in appendix
+                        or escape_private_markdown(receipt["text"]) not in appendix
+                    ):
                         raise ValueError("appendix is missing an exact private quote receipt")
             validated_rules[rule["text"]] = rule
     if names != allowed_names:
@@ -984,6 +987,107 @@ def validate_profile_pack(pack_dir, evidence_by_id, run_plan):
         if law.get("count") != f"{len(sessions)} sessions":
             raise ValueError("card law count must use distinct supporting sessions")
     return draft
+
+def escape_private_markdown(value):
+    return re.sub(r"([\\`*_{}\[\]<>#])", r"\\\1", value)
+
+def render_domain_profile(domain, rules):
+    _, skill_name = DOMAIN_FILES[domain]
+    lines = [
+        "---", f"name: {skill_name}",
+        f"description: Evidence-backed Ditto {domain} profile", "---", "",
+        f"# Ditto {domain} profile", "",
+    ]
+    for rule in sorted(rules, key=lambda item: (item["text"], item["implication"])):
+        lines.extend([f"- {rule['text']}", f"  - Action: {rule['implication']}"])
+    return "\n".join(lines) + "\n"
+
+def assemble_profile_pack(ditto_home, run_plan, domain_drafts):
+    if set(domain_drafts) != VALID_DOMAINS:
+        raise ValueError("assembly requires exactly three domain drafts")
+    evidence = run_plan.get("evidence_by_id") or load_adaptive_evidence(run_plan)
+    for domain in sorted(VALID_DOMAINS):
+        validate_domain_draft(domain_drafts[domain], domain, evidence, run_plan)
+    pack_path = os.path.abspath(run_plan["pack_path"])
+    os.makedirs(pack_path, exist_ok=True)
+    for entry in os.scandir(pack_path):
+        if entry.is_dir(follow_symlinks=False) or entry.is_symlink():
+            raise ValueError("assigned pack contains unsafe existing content")
+        os.remove(entry.path)
+
+    domain_states = {}
+    referenced_ids = set()
+    for domain in sorted(VALID_DOMAINS):
+        draft = domain_drafts[domain]
+        if draft["status"] == "inactive":
+            domain_states[domain] = {
+                "status": "inactive", "reason": "insufficient evidence",
+                "deepen_instruction": f"run ditto and deepen {domain}",
+            }
+            continue
+        filename, _ = DOMAIN_FILES[domain]
+        rules = sorted(draft["rules"], key=lambda item: (item["text"], item["implication"]))
+        atomic_write_text(os.path.join(pack_path, filename), render_domain_profile(domain, rules))
+        rendered_rules = []
+        for rule in rules:
+            rendered = {
+                key: rule[key] for key in (
+                    "text", "implication", "kind", "evidence_ids"
+                )
+            }
+            if "confidence" in rule:
+                rendered["confidence"] = rule["confidence"]
+            rendered_rules.append(rendered)
+            referenced_ids.update(rule["evidence_ids"])
+        domain_states[domain] = {"status": "active", "file": filename, "rules": rendered_rules}
+
+    appendix = ["# Private evidence receipts", ""]
+    for evidence_id in sorted(referenced_ids):
+        item = evidence[evidence_id]
+        appendix.extend([f"## {escape_private_markdown(evidence_id)}", ""])
+        for quote in sorted(item.get("quotes", []), key=lambda value: (
+            value.get("date", ""), value.get("session_id", ""), value.get("receipt_id", "")
+        )):
+            appendix.append(
+                f"- {escape_private_markdown(quote.get('session_id', ''))} "
+                f"{escape_private_markdown(quote.get('date', ''))}: "
+                f"{escape_private_markdown(quote.get('text', ''))}"
+            )
+        for quote in item.get("contradictions", []):
+            appendix.append(
+                f"- contradiction {escape_private_markdown(quote.get('session_id', ''))} "
+                f"{escape_private_markdown(quote.get('date', ''))}: "
+                f"{escape_private_markdown(quote.get('text', ''))}"
+            )
+        appendix.append("")
+    atomic_write_text(os.path.join(pack_path, "appendix.md"), "\n".join(appendix))
+
+    work_rules = domain_states["work"]["rules"]
+    ranked_laws = []
+    for rule in work_rules:
+        sessions = set().union(*(evidence[value]["sessions"] for value in rule["evidence_ids"]))
+        ranked_laws.append((len(sessions), rule["text"]))
+    ranked_laws.sort(key=lambda item: (-item[0], item[1]))
+    card = {
+        "archetype": "Evidence-First Builder",
+        "laws": [{"text": text, "count": f"{count} sessions"} for count, text in ranked_laws[:3]],
+        "truth": "",
+    }
+    atomic_write_text(os.path.join(pack_path, "card.json"), canonical_json(card) + "\n")
+    manifest = {
+        "schema_version": "1", "profile_id": "default",
+        "report_set_hash": run_plan["report_set_hash"],
+        "domains": {domain: domain_states[domain] for domain in sorted(domain_states)},
+    }
+    atomic_write_text(os.path.join(pack_path, "draft-manifest.json"), canonical_json(manifest) + "\n")
+    validate_profile_pack(pack_path, evidence, run_plan)
+    return {
+        "status": "assembled", "pack_path": pack_path,
+        "report_set_hash": run_plan["report_set_hash"],
+        "domain_evidence_hashes": {
+            domain: domain_drafts[domain]["evidence_set_hash"] for domain in sorted(VALID_DOMAINS)
+        },
+    }
 
 def file_sha256_map(directory, names):
     return {name: sha256_file(os.path.join(directory, name)) for name in sorted(names)}
@@ -2230,6 +2334,9 @@ def build_plugin_parser():
     validate_pack_command.add_argument("--run-id", required=True)
     validate_pack_command.add_argument("--pack", required=True)
     validate_pack_command.add_argument("--ditto-home")
+    assemble_command = sub.add_parser("assemble")
+    assemble_command.add_argument("--run-id", required=True)
+    assemble_command.add_argument("--ditto-home")
     cache_report = sub.add_parser("cache-report")
     cache_report.add_argument("--run-id", required=True)
     cache_report.add_argument("--report", required=True)
@@ -2361,6 +2468,11 @@ def validate_run_scout(args, cache=False):
         paths = set(plan.get("scout_report_paths", []))
         paths.add(cached_path)
         plan["scout_report_paths"] = sorted(paths)
+        plan["report_set_hash"] = sha256_text(canonical_json([
+            {"path": os.path.basename(path), "sha256": sha256_file(path)}
+            for path in plan["scout_report_paths"]
+        ]))
+        plan["adequate_strata"] = True
         atomic_write_text(plan_path, canonical_json(plan) + "\n")
         payload.update({"status": "cached", "cached_report_path": cached_path})
     return payload
@@ -2421,6 +2533,21 @@ def validate_run_domain(args, cache=False):
         payload.update({"status": "cached", "cached_draft_path": cached_path,
                         "domain_set_complete": set(paths) == VALID_DOMAINS})
     return payload
+
+def assemble_plugin_run(args):
+    home = resolve_ditto_home(args.ditto_home)
+    _, plan = load_run_plan(home, args.run_id)
+    paths = plan.get("domain_draft_paths", {})
+    if set(paths) != VALID_DOMAINS:
+        raise ValueError("run requires three validated domain drafts before assembly")
+    drafts = {}
+    for domain, path in paths.items():
+        try:
+            with open(path, "r", encoding="utf-8", errors="strict") as handle:
+                drafts[domain] = json.load(handle)
+        except (OSError, UnicodeError, ValueError, json.JSONDecodeError) as exc:
+            raise ValueError("cached domain draft is missing or corrupt") from exc
+    return assemble_profile_pack(home, plan, drafts)
 
 def cache_run_report(args):
     home = resolve_ditto_home(args.ditto_home)
@@ -2798,6 +2925,8 @@ def plugin_main(argv):
             payload = validate_run_domain(args, cache=True)
         elif args.command == "validate-pack":
             payload = validate_plugin_pack(args)
+        elif args.command == "assemble":
+            payload = assemble_plugin_run(args)
         elif args.command == "cache-report":
             payload = cache_run_report(args)
         elif args.command == "activate":

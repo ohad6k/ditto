@@ -242,6 +242,51 @@ def run_plan_fixture():
             "source_coverage": {"sources": ["codex"], "first_date": "2026-01-01", "last_date": "2026-06-01"}}
 
 
+def adaptive_run_fixture(active_domains=("work",), shared_receipts=False):
+    tmp = tempfile.TemporaryDirectory()
+    home = Path(tmp.name) / "private"
+    run_dir = home / "runs" / "20260711T120000Z-1234abcd"
+    run_dir.mkdir(parents=True)
+    evidence = evidence_fixture(tuple(active_domains))
+    if shared_receipts and "work" in active_domains:
+        evidence["ev-work-b"]["sessions"] = {"s2"}
+    plan = {
+        "run_id": "20260711T120000Z-1234abcd", "run_dir": str(run_dir),
+        "pack_path": str(run_dir / "pack"), "report_set_hash": "c" * 64,
+        "source_coverage": {"sources": ["claude", "codex"], "first_date": "2026-01-01", "last_date": "2026-06-01"},
+        "selected_source_tokens": 100, "adequate_strata": True,
+        "evidence_by_id": evidence,
+    }
+    drafts = {}
+    for domain in ("work", "design", "write"):
+        if domain in active_domains:
+            drafts[domain] = valid_domain_draft(domain, evidence=evidence)
+        else:
+            domain_evidence = evidence_fixture((domain,))
+            drafts[domain] = {
+                "schema_version": "1", "domain": domain,
+                "evidence_set_hash": ditto.compute_domain_evidence_hash(domain, evidence),
+                "status": "inactive", "reason": "insufficient evidence",
+                "deepen_instruction": f"run ditto and deepen {domain}", "rules": [], "discarded": [],
+                "coverage": {"evidence_items": 0, "distinct_sessions": 0, "strata": 0,
+                             "unresolved_contradictions": 0},
+            }
+    return SimpleNamespace(tmp=tmp, home=str(home), run_dir=run_dir, plan=plan, domain_drafts=drafts)
+
+
+def directory_hash(path):
+    digest = hashlib.sha256()
+    for item in sorted(Path(path).iterdir(), key=lambda value: value.name):
+        digest.update(item.name.encode("utf-8"))
+        digest.update(item.read_bytes())
+    return digest.hexdigest()
+
+
+def load_assembled_card(run):
+    result = ditto.assemble_profile_pack(run.home, run.plan, run.domain_drafts)
+    return json.loads((Path(result["pack_path"]) / "card.json").read_text(encoding="utf-8"))
+
+
 class ReceiptLedgerTest(unittest.TestCase):
     def test_large_session_becomes_individual_stable_receipts(self):
         record = make_record("s1", [
@@ -423,6 +468,36 @@ class DomainDraftTest(unittest.TestCase):
         evidence = single_provider_two_quarter_fixture()
 
         ditto.validate_domain_draft(valid_domain_draft("write", evidence=evidence), "write", evidence, run_plan_fixture())
+
+
+class DeterministicAssemblyTest(unittest.TestCase):
+    def test_assembly_writes_only_exact_active_domain_files(self):
+        run = adaptive_run_fixture(active_domains=("work", "write"))
+        self.addCleanup(run.tmp.cleanup)
+
+        result = ditto.assemble_profile_pack(run.home, run.plan, run.domain_drafts)
+
+        self.assertEqual(
+            {"you.md", "you-writer.md", "appendix.md", "card.json", "draft-manifest.json"},
+            {item.name for item in Path(result["pack_path"]).iterdir()},
+        )
+
+    def test_assembly_is_byte_deterministic(self):
+        run = adaptive_run_fixture(active_domains=("work", "design", "write"))
+        self.addCleanup(run.tmp.cleanup)
+
+        first = directory_hash(ditto.assemble_profile_pack(run.home, run.plan, run.domain_drafts)["pack_path"])
+        second = directory_hash(ditto.assemble_profile_pack(run.home, run.plan, run.domain_drafts)["pack_path"])
+
+        self.assertEqual(first, second)
+
+    def test_card_counts_distinct_sessions(self):
+        run = adaptive_run_fixture(active_domains=("work",), shared_receipts=True)
+        self.addCleanup(run.tmp.cleanup)
+
+        card = load_assembled_card(run)
+
+        self.assertEqual("2 sessions", card["laws"][0]["count"])
 
 
 if __name__ == "__main__":
