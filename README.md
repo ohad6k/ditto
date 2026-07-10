@@ -110,7 +110,15 @@ That `you.md` is a skill/context file. Drop it in `.claude/skills/`, `.codex/ski
 
 ## Quickstart
 
-No clone needed - it's one stdlib file:
+One command installs the Ditto skill into your agent:
+
+```bash
+npx skills add ohad6k/ditto
+```
+
+Then tell your agent **`run ditto`** and it mines your local Claude / Codex / Cursor logs into your `you.md`. Works in Claude Code, Codex, and Cursor.
+
+Prefer the raw script? It's one stdlib file, no clone needed:
 
 ```bash
 curl -O https://raw.githubusercontent.com/ohad6k/ditto/main/ditto.py
