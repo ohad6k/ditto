@@ -89,6 +89,31 @@ class PluginRuntimeCliTest(unittest.TestCase):
 
 
 class SessionRecordTest(unittest.TestCase):
+    def test_assistant_lines_are_rejected_before_json_decode(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "one.jsonl"
+            assistant = {
+                "timestamp": "2026-07-08T09:00:00Z",
+                "payload": {
+                    "type": "message",
+                    "role": "assistant",
+                    "content": [{"text": "large irrelevant output " * 1000}],
+                },
+            }
+            user = {
+                "timestamp": "2026-07-08T10:00:00Z",
+                "payload": {
+                    "type": "message",
+                    "role": "user",
+                    "content": [{"text": "done means live proof"}],
+                },
+            }
+            write_jsonl(path, [assistant, user])
+            with mock.patch.object(ditto.json, "loads", wraps=json.loads) as decoder:
+                messages = ditto.user_messages(str(path))
+            self.assertEqual(1, decoder.call_count)
+            self.assertEqual([("2026-07-08", "done means live proof")], messages)
+
     def test_records_use_stable_hashed_ids_without_raw_paths(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / ".codex" / "sessions" / "private-project.jsonl"

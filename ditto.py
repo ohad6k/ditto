@@ -108,6 +108,14 @@ INJECTED_CONTEXT_PREFIXES = (
     "<recommended_plugins",
     "<summary>",
 )
+USER_LINE_MARKERS = (
+    '"role":"user"',
+    '"role": "user"',
+    '"type":"user"',
+    '"type": "user"',
+    '"type":"user.message"',
+    '"type": "user.message"',
+)
 
 def is_injected_context(text):
     stripped = text.lstrip()
@@ -118,7 +126,7 @@ def user_messages(path):
     try:
         with open(path, "r", encoding="utf-8", errors="replace") as fh:
             for line in fh:
-                if '"role"' not in line and '"user"' not in line and "user.message" not in line:
+                if not any(marker in line for marker in USER_LINE_MARKERS):
                     continue
                 try:
                     o = json.loads(line)
