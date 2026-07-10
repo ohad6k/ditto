@@ -218,6 +218,22 @@ Your logs are ~95% noise (tool output, file contents, diffs). The signal is the 
 - Garbage in, garbage out: if your logs are 3 sessions long, the profile is thin. It shines around months of history.
 - It reads Codex (`~/.codex/sessions`), Claude Code (`~/.claude/projects`), and Copilot CLI (`~/.copilot/session-state`) jsonl out of the box. Other tools: point `--path` at a folder of jsonl.
 
+## FAQ
+
+The three things people push back on, answered once.
+
+**"Why not just ask Claude to summarize my logs?"**
+
+One pass can't do it. My history is 1,656 sessions, about 3M tokens after extraction, and the raw logs are ~95% noise (tool output, file dumps, pasted errors). A single summarize call skims the top of that and burns the window on noise. Ditto keeps only the words you typed, chunks them so an agent can genuinely read every line, fans one agent out per chunk, then keeps only the traits many agents found independently. `(18/20)` next to a law means 18 of 20 agents pulled it out of different months of your life. A summary has no receipts.
+
+**"Claude already has memory. Why do I need this?"**
+
+Use both. Memory is what you told the model: curated notes, `CLAUDE.md`, and it stays inside one tool. Ditto reads the raw sessions across Claude Code, Codex, and Cursor and pulls out what you never wrote down: what you reject, what "done" means to you, when you demand proof. The output is one plain file you own and can drop into any agent.
+
+**"Claude only keeps 30 days of logs. Where did 9 months come from?"**
+
+Claude Code's retention is a setting (`cleanupPeriodDays`, 30 by default), and my 9 months is Claude plus Codex and Cursor history plus archived sessions. But the default is real: your oldest Claude sessions are being deleted right now. Raise the retention today, then mine what's left before it rolls off.
+
 ## Roadmap
 
 Next up: one-command installer, more log sources, and counterweight profiles that use your `you.md` to challenge you instead of mimic you.
