@@ -1,5 +1,6 @@
 import importlib.util
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -306,6 +307,7 @@ class PreflightTest(unittest.TestCase):
                 check=True,
                 capture_output=True,
                 text=True,
+                env={**os.environ, "DITTO_ALLOW_LEGACY_CANDIDATES": "1"},
             )
             plan = json.loads(result.stdout)
             self.assertLessEqual(plan["selected_source_tokens"], 160_000)
@@ -371,6 +373,7 @@ class UpdatePlanningTest(unittest.TestCase):
                 ],
                 capture_output=True,
                 text=True,
+                env={**os.environ, "DITTO_ALLOW_LEGACY_CANDIDATES": "1"},
             )
             self.assertNotEqual(0, result.returncode)
             self.assertIn("no eligible bounded segment", result.stderr)
@@ -515,6 +518,7 @@ class ReportCacheTest(unittest.TestCase):
                 check=True,
                 capture_output=True,
                 text=True,
+                env={**os.environ, "DITTO_ALLOW_LEGACY_CANDIDATES": "1"},
             )
             plan = json.loads(prepared.stdout)
             segment = plan["selected_segments"][0]
@@ -588,6 +592,7 @@ class ReportCacheTest(unittest.TestCase):
                 check=True,
                 capture_output=True,
                 text=True,
+                env={**os.environ, "DITTO_ALLOW_LEGACY_CANDIDATES": "1"},
             )
             plan = json.loads(prepared.stdout)
             segment = plan["selected_segments"][0]

@@ -545,5 +545,21 @@ class AdaptiveStageTest(unittest.TestCase):
         self.assertEqual(["write"], next_plan["planned_domains"])
 
 
+class DocumentationContractTest(unittest.TestCase):
+    def test_mine_skill_freezes_before_model_approval(self):
+        text = (ROOT / "skills" / "mine" / "SKILL.md").read_text(encoding="utf-8")
+
+        self.assertLess(text.index("plugin prepare"), text.index("wait for approval"))
+        self.assertIn("three domain reducers", text)
+        self.assertIn("plugin assemble", text)
+
+    def test_readme_states_stage_a_exact_ceiling(self):
+        text = (ROOT / "README.md").read_text(encoding="utf-8")
+
+        self.assertIn("300K selected source tokens", text)
+        self.assertIn("six scouts and three domain reducers", text)
+        self.assertNotIn("6 × 25K", text)
+
+
 if __name__ == "__main__":
     unittest.main()

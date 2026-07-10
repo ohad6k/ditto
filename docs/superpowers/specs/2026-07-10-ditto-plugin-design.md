@@ -15,7 +15,7 @@ The **Benchmark release** follows from one exact already-published plugin tag. I
 
 Version numbers are assigned from repository tag state at each ship gate. `Plugin release` and `Benchmark release` are milestone names, not hardcoded `v1` and `v2` tags.
 
-The full implementation architecture is documented in [the architecture plan](../plans/2026-07-10-ditto-plugin-architecture-plan.md).
+The full implementation architecture is documented in [the architecture plan](../plans/2026-07-10-ditto-plugin-architecture-plan.md). The later [adaptive-recall amendment](2026-07-11-ditto-adaptive-recall-design.md) supersedes the original random candidate ladder.
 
 ## Product Promise
 
@@ -146,15 +146,15 @@ The mine starts with a local preflight that shows:
 - planned worker and reducer calls;
 - full-history deep-mode cost as a separate option.
 
-The default does not require a configuration wizard. It proceeds with the bounded starter contract. Only deep mode or targeted deepening requires explicit approval because it expands model usage.
+The default does not require a configuration wizard. Read-only preflight is followed by a local-only prepare step that freezes the exact redacted packets and call ceiling. The user approves that immutable plan before model work begins.
 
 ## Token Contract
 
 The current flow can send nearly the complete post-dedupe corpus through one worker per roughly 70K tokens. On the current local history, that means approximately 1.95M source tokens and about 28 workers before reduction.
 
-The release default is calibrated rather than assumed. Ditto first tests 4×25K source tokens plus one reducer, then expands the same immutable 25K segmentation to six and eight selected segments if needed. Keeping one segmentation makes the ladder monotonic and reuses validated reports from earlier candidates. The calibration ceiling remains 160K selected source tokens and nine planned calls. The smallest candidate that passes a predeclared must-recover checklist and the three fresh-task probes becomes the default. If none passes, Ditto does not ship the claim that bounded starter mining is good enough.
+The release default is adaptive Stage A: full-history local salience indexing selects at most 300K source tokens into six packets of at most 50K, followed by one isolated reducer for each of work, design, and writing. The maximum remains nine model calls. Selection is deterministic across domain, source, time stratum, and signal family rather than random or top-heavy.
 
-Every candidate uses one shared worker-report set for work, design, and writing and never expands beyond its displayed plan.
+If Stage A is weak, the next stage is prepared from the same frozen corpus, excludes already selected receipts, reuses valid scout and domain artifacts, and displays only additional cost. It cannot start without separate approval. Full-history mining remains a separately planned fallback.
 
 The model host may add system prompt or tool overhead that Ditto cannot measure precisely. Ditto reports selected source tokens and planned calls, not a guessed percentage of a subscription allowance.
 
@@ -165,7 +165,7 @@ Full-history mining remains available as explicit deep mode. Deep mode is separa
 The equal-N chunk splitter is replaced for mining orchestration by stable sealed segments.
 
 - Valid session blocks are normalized after redaction and filtering.
-- Whole sessions are grouped into bounded segments.
+- Individual redacted user-message receipts are selected into bounded packets.
 - A sealed segment is identified by a content hash and extraction schema version.
 - New sessions create new segments rather than rebalancing old segments.
 - Default selection is deterministic and stratified across the observed timeline and available sources.
@@ -337,7 +337,7 @@ The Plugin release is complete only when:
 - native plugin installation performs zero mining model calls;
 - `npx skills add ohad6k/ditto@ditto` selects only the bootstrap, preserves its companion files, and resolves the exact tag-pinned runtime hashes;
 - the starter mine stays within its displayed hard plan;
-- its default is the smallest bounded calibration candidate that passed the frozen recall and fresh-task gates;
+- adaptive Stage A passes the frozen recall checklist and fresh-task gates within its 300K/nine-call ceiling;
 - cached reruns avoid duplicate model work;
 - all three personal domains pass the evidence and activation gates;
 - existing profiles migrate without loss;

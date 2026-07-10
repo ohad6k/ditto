@@ -52,33 +52,29 @@ Ditto first prints a read-only plan:
 {
   "valid_sessions": 1656,
   "post_dedupe_source_tokens": 1950000,
-  "selected_source_tokens": 100000,
-  "cached_segments": 0,
-  "planned_worker_calls": 4,
-  "planned_reducer_calls": 1,
-  "deep_mode": {"available": true, "automatic": false, "selected": false}
+  "stage": "A",
+  "selected_source_tokens": 300000,
+  "planned_scout_calls": 6,
+  "planned_domain_reducer_calls": 3,
+  "planned_domains": ["design", "work", "write"]
 }
 ```
 
-The bounded starter ladder is:
+Stage A has a hard ceiling of **300K selected source tokens**, split into at most six 50K packets, followed by **six scouts and three domain reducers** at maximum. Local salience indexing considers the full redacted history first, so rare corrections and rejections are not lost just because they occurred outside a random sample.
 
-| Candidate | New source text | Maximum planned passes |
-|---|---:|---:|
-| 4 × 25K | 100K tokens | 4 workers + 1 reducer |
-| 6 × 25K | up to 150K tokens | up to 6 workers + 1 reducer |
-| 8 × 25K | 160K-token hard cap | up to 8 workers + 1 reducer |
+Ditto runs read-only preflight, then freezes the exact redacted packet plan locally before asking for model-cost approval. History changes after preparation cannot alter the approved run.
 
-Ditto uses the smallest calibrated candidate that recovers the required profile. It never silently falls back to full history. Deep mode is explicit, separately planned, and requires approval.
+If a domain is weak, `plugin next-stage` prepares an additional immutable stage from the same frozen corpus, reuses valid artifacts, and shows only the added cost. It never silently starts that stage. Full-history mining remains a separate explicit fallback with its own plan and approval.
 
-On update, unchanged segment and evidence hashes are reused. An identical update plans zero additional Ditto mining passes. New or changed history plans only the affected bounded work plus one reducer.
+On update, unchanged receipt, scout, and domain-draft hashes are reused. Installation itself remains a zero-call operation.
 
-These are `planned_worker_calls` and `planned_reducer_calls`, not provider billing events. Ditto cannot measure provider system prompts, tool traffic, orchestration overhead, or a percentage of a proprietary subscription allowance.
+These are selected source tokens and planned Ditto calls, not provider billing events. Ditto cannot measure provider system prompts, tool traffic, orchestration overhead, or a percentage of a proprietary subscription allowance.
 
 ## What makes the result trustworthy
 
 - Only real user-authored `.jsonl` messages are mined. `AGENTS.md`, `CLAUDE.md`, memory files, and typed self-descriptions are rejected as source evidence.
-- Every worker covers work, design, and writing in one bounded JSON report.
-- Quotes must be short, dated, verbatim receipts from known session IDs.
+- Each scout maximizes recall from one frozen packet; work, design, and writing then use isolated reducers.
+- Quotes must be dated, verbatim receipts with exact receipt and session IDs.
 - Inferred rules require at least two distinct sessions and, when available, two source/time strata.
 - One uncontradicted explicit instruction may survive as low-frequency evidence.
 - Generic filler, invented quotes, unresolved contradictions, partial profile packs, and corrupt caches fail closed.
