@@ -2337,6 +2337,9 @@ def build_plugin_parser():
     assemble_command = sub.add_parser("assemble")
     assemble_command.add_argument("--run-id", required=True)
     assemble_command.add_argument("--ditto-home")
+    next_stage_command = sub.add_parser("next-stage")
+    next_stage_command.add_argument("--run-id", required=True)
+    next_stage_command.add_argument("--ditto-home")
     cache_report = sub.add_parser("cache-report")
     cache_report.add_argument("--run-id", required=True)
     cache_report.add_argument("--report", required=True)
@@ -2791,6 +2794,77 @@ def prepare_adaptive_run(args):
     atomic_write_text(plan_path, canonical_json(run_plan) + "\n")
     return run_plan
 
+def domain_needs_deepening(draft):
+    if draft.get("status") != "active":
+        return True
+    coverage = draft.get("coverage", {})
+    return (
+        not draft.get("rules")
+        or coverage.get("evidence_items", 0) < 2
+        or coverage.get("distinct_sessions", 0) < 2
+        or coverage.get("strata", 0) < 2
+        or coverage.get("unresolved_contradictions", 0) > 0
+    )
+
+def build_next_stage_plan(ditto_home, run_id):
+    home = resolve_ditto_home(ditto_home)
+    _, prior = load_run_plan(home, run_id)
+    if prior.get("stage") != "A":
+        raise ValueError("next-stage requires a completed adaptive Stage A run")
+    drafts = {}
+    for domain, path in prior.get("domain_draft_paths", {}).items():
+        try:
+            with open(path, "r", encoding="utf-8", errors="strict") as handle:
+                drafts[domain] = json.load(handle)
+        except (OSError, UnicodeError, ValueError, json.JSONDecodeError) as exc:
+            raise ValueError("completed Stage A domain draft is missing or corrupt") from exc
+    if set(drafts) != VALID_DOMAINS:
+        raise ValueError("complete all three Stage A domain drafts before planning expansion")
+    planned_domains = sorted(domain for domain, draft in drafts.items() if domain_needs_deepening(draft))
+    if not planned_domains:
+        raise ValueError("all adaptive domains are already stable")
+    try:
+        with open(prior["ledger_path"], "r", encoding="utf-8", errors="strict") as handle:
+            ledger_value = json.load(handle)
+        ledger = ledger_value.get("receipts", []) if isinstance(ledger_value, dict) else ledger_value
+    except (OSError, UnicodeError, ValueError, json.JSONDecodeError) as exc:
+        raise ValueError("frozen adaptive ledger is missing or corrupt") from exc
+    eligible = [item for item in ledger if set(item.get("domain_hints", [])) & set(planned_domains)]
+    selected = select_salience_stage(eligible, "B", prior.get("selected_receipt_ids", []))
+    config = STAGE_CONFIGS["B"]
+    packets = pack_selected_receipts(selected, config["packets"], config["packet_tokens"])
+    identity = {
+        "parent_run_id": run_id, "stage": "B", "planned_domains": planned_domains,
+        "selected_receipt_ids": [item["receipt_id"] for item in selected],
+        "packet_hashes": [item["packet_hash"] for item in packets],
+        "corpus_snapshot_hash": prior["corpus_snapshot_hash"],
+    }
+    stage_id = "B-" + sha256_text(canonical_json(identity))[:8]
+    stage_dir = safe_private_child(home, "runs", run_id, "stages", stage_id)
+    packets_dir = os.path.join(stage_dir, "packets")
+    os.makedirs(packets_dir, exist_ok=True)
+    packet_paths = []
+    for packet in packets:
+        path = os.path.join(packets_dir, packet["packet_hash"] + ".txt")
+        atomic_write_text(path, render_receipt_packet(packet))
+        packet_paths.append(path)
+    next_plan = {
+        "schema_version": "2", "parent_run_id": run_id, "stage": "B", "stage_id": stage_id,
+        "stage_dir": stage_dir, "corpus_snapshot_hash": prior["corpus_snapshot_hash"],
+        "planned_domains": planned_domains,
+        "selected_receipt_ids": [item["receipt_id"] for item in selected],
+        "selected_source_tokens": sum(item["tokens"] for item in selected),
+        "planned_scout_calls": len(packets), "planned_domain_reducer_calls": len(planned_domains),
+        "packet_hashes": [item["packet_hash"] for item in packets], "packet_paths": packet_paths,
+        "cached_scout_reports": len(prior.get("scout_report_paths", [])),
+        "reused_domain_drafts": sorted(set(VALID_DOMAINS) - set(planned_domains)),
+        "full_history_option": "prepare a separate full-history stage with explicit approval",
+    }
+    plan_path = os.path.join(stage_dir, "plan.json")
+    next_plan["plan_path"] = plan_path
+    atomic_write_text(plan_path, canonical_json(next_plan) + "\n")
+    return next_plan
+
 def plugin_plan_for_args(args, write=False):
     result = plugin_source_result(args)
     home = resolve_ditto_home(args.ditto_home)
@@ -2927,6 +3001,8 @@ def plugin_main(argv):
             payload = validate_plugin_pack(args)
         elif args.command == "assemble":
             payload = assemble_plugin_run(args)
+        elif args.command == "next-stage":
+            payload = build_next_stage_plan(args.ditto_home, args.run_id)
         elif args.command == "cache-report":
             payload = cache_run_report(args)
         elif args.command == "activate":

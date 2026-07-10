@@ -287,6 +287,30 @@ def load_assembled_card(run):
     return json.loads((Path(result["pack_path"]) / "card.json").read_text(encoding="utf-8"))
 
 
+def completed_stage_a_fixture(weak_domains):
+    active = tuple(domain for domain in ("work", "design", "write") if domain not in weak_domains)
+    run = adaptive_run_fixture(active_domains=active)
+    run.run_id = run.plan["run_id"]
+    run.plan.pop("evidence_by_id", None)
+    ledger = scored_history_fixture(tokens=700_000)
+    ledger_path = run.run_dir / "ledger.json"
+    ledger_path.write_text(json.dumps({"schema_version": "1", "receipts": ledger}), encoding="utf-8")
+    draft_paths = {}
+    for domain, draft in run.domain_drafts.items():
+        path = run.run_dir / f"{domain}-draft.json"
+        path.write_text(json.dumps(draft), encoding="utf-8")
+        draft_paths[domain] = str(path)
+    scout_path = run.run_dir / "scout-a.json"
+    scout_path.write_text("{}", encoding="utf-8")
+    run.plan.update({
+        "stage": "A", "ledger_path": str(ledger_path), "domain_draft_paths": draft_paths,
+        "scout_report_paths": [str(scout_path)], "corpus_snapshot_hash": "d" * 64,
+        "selected_receipt_ids": [item["receipt_id"] for item in ledger[:600]],
+    })
+    (run.run_dir / "plan.json").write_text(json.dumps(run.plan), encoding="utf-8")
+    return run
+
+
 class ReceiptLedgerTest(unittest.TestCase):
     def test_large_session_becomes_individual_stable_receipts(self):
         record = make_record("s1", [
@@ -498,6 +522,27 @@ class DeterministicAssemblyTest(unittest.TestCase):
         card = load_assembled_card(run)
 
         self.assertEqual("2 sessions", card["laws"][0]["count"])
+
+
+class AdaptiveStageTest(unittest.TestCase):
+    def test_next_stage_reuses_snapshot_and_prior_artifacts(self):
+        run = completed_stage_a_fixture(weak_domains=("design", "write"))
+        self.addCleanup(run.tmp.cleanup)
+
+        next_plan = ditto.build_next_stage_plan(run.home, run.run_id)
+
+        self.assertEqual(run.plan["corpus_snapshot_hash"], next_plan["corpus_snapshot_hash"])
+        self.assertEqual(["design", "write"], next_plan["planned_domains"])
+        self.assertGreater(next_plan["cached_scout_reports"], 0)
+        self.assertTrue(set(next_plan["selected_receipt_ids"]).isdisjoint(run.plan["selected_receipt_ids"]))
+
+    def test_strong_stable_domains_are_not_rereduced(self):
+        run = completed_stage_a_fixture(weak_domains=("write",))
+        self.addCleanup(run.tmp.cleanup)
+
+        next_plan = ditto.build_next_stage_plan(run.home, run.run_id)
+
+        self.assertEqual(["write"], next_plan["planned_domains"])
 
 
 if __name__ == "__main__":
