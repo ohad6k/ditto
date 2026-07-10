@@ -103,8 +103,18 @@ ALSO write `ditto-out/card.json` — the shareable card. Exact shape:
   "truth": "<the ONE uncomfortable/surprising thing the reports agree on that they never wrote down anywhere>"
 }
 
-Counts are real report counts, never invented. Then tell the user to run
-`python ditto.py --card` to see their card.
+Counts are real report counts, never invented.
+
+The truth must sting. Name the cost, not the habit: what it breaks, when it
+bites, what it keeps costing them. If it could pass as a compliment or a
+LinkedIn strength ("cares deeply about quality"), it failed — rewrite it until
+it's the line they'd wince at before admitting it's true. No softeners
+("sometimes", "can tend to", "a bit"). Calibration for the right sharpness:
+"Their real bottleneck is trust recovery: once scope gets misread or success
+gets claimed without proof, they stop building the product and start building
+the process, until reality is observable again."
+
+Then tell the user to run `python ditto.py --card` to see their card.
 ```
 
 ---
