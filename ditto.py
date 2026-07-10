@@ -31,6 +31,25 @@ SOURCES = {
 DITTO_START = "<!-- ditto profile:start -->"
 DITTO_END = "<!-- ditto profile:end -->"
 
+EXTRACTION_SCHEMA_VERSION = "1"
+SEGMENT_SCHEMA_VERSION = "1"
+REPORT_SCHEMA_VERSION = "1"
+PROMPT_SCHEMA_VERSION = "1"
+REDUCER_SCHEMA_VERSION = "1"
+
+STARTER_CANDIDATES = (
+    {"segments": 4, "segment_tokens": 25_000},
+    {"segments": 6, "segment_tokens": 20_000},
+    {"segments": 8, "segment_tokens": 20_000},
+)
+STARTER_MAX_SOURCE_TOKENS = 160_000
+STARTER_MAX_MODEL_CALLS = 9
+DEFAULT_CANDIDATE_INDEX = 0
+DEEP_SEGMENT_TOKENS = 20_000
+MAX_REPORT_BYTES = 8_192
+MAX_EVIDENCE_PER_REPORT = 12
+MAX_QUOTE_CHARS = 200
+
 # --- redaction: run BEFORE any of your text is written or seen by an agent ---
 REDACTIONS = [
     (re.compile(r"sk-[A-Za-z0-9]{20,}"),                 "[OPENAI_KEY]"),
@@ -628,8 +647,53 @@ def configure_console():
             except (AttributeError, ValueError):
                 pass
 
-def main():
-    configure_console()
+def resolve_ditto_home(value=None):
+    raw = value or os.environ.get("DITTO_HOME") or os.path.join(HOME, ".ditto")
+    return os.path.abspath(os.path.expanduser(raw))
+
+def private_paths(ditto_home):
+    return {
+        "root": ditto_home,
+        "active": os.path.join(ditto_home, "active-profile.json"),
+        "profiles": os.path.join(ditto_home, "profiles"),
+        "segments": os.path.join(ditto_home, "cache", "segments"),
+        "segment_indexes": os.path.join(ditto_home, "cache", "segment-indexes"),
+        "reports": os.path.join(ditto_home, "cache", "reports"),
+        "reductions": os.path.join(ditto_home, "cache", "reductions"),
+        "runs": os.path.join(ditto_home, "runs"),
+        "migrations": os.path.join(ditto_home, "migrations"),
+        "legacy": os.path.join(ditto_home, "legacy"),
+    }
+
+def safe_private_child(ditto_home, *parts):
+    if any(".." in re.split(r"[\\/]+", os.fspath(part)) for part in parts):
+        raise ValueError("path escapes Ditto private state")
+    root = os.path.realpath(resolve_ditto_home(ditto_home))
+    candidate = os.path.realpath(os.path.join(root, *parts))
+    try:
+        contained = os.path.commonpath((root, candidate)) == root
+    except ValueError:
+        contained = False
+    if not contained:
+        raise ValueError("path escapes Ditto private state")
+    return candidate
+
+def build_plugin_parser():
+    parser = argparse.ArgumentParser(prog="ditto.py plugin")
+    sub = parser.add_subparsers(dest="command", required=True)
+    status = sub.add_parser("status")
+    status.add_argument("--ditto-home")
+    return parser
+
+def plugin_main(argv):
+    parser = build_plugin_parser()
+    args = parser.parse_args(argv)
+    if args.command == "status":
+        home = resolve_ditto_home(args.ditto_home)
+        payload = {"status": "missing", "ditto_home": home}
+        print(json.dumps(payload, sort_keys=True))
+
+def legacy_main():
     ap = argparse.ArgumentParser(description="mine your AI sessions into a model of you")
     ap.add_argument("--source", choices=["auto", "codex", "claude", "copilot"], default="auto")
     ap.add_argument("--path", help="a folder of .jsonl session logs to read instead")
@@ -692,6 +756,13 @@ def main():
     print_counts(result, args.no_redact)
     print(f"wrote: {args.out}/you-corpus.txt  +  {chunk_count} chunks in {args.out}/chunks/")
     print(f"\nnext: open your coding agent, paste MINING_PROMPT.md, point it at {args.out}/chunks/, merge into you.md")
+
+def main():
+    configure_console()
+    if len(sys.argv) > 1 and sys.argv[1] == "plugin":
+        plugin_main(sys.argv[2:])
+        return
+    legacy_main()
 
 if __name__ == "__main__":
     main()
