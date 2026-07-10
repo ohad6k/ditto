@@ -1,4 +1,5 @@
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -458,6 +459,35 @@ class DittoCliTest(unittest.TestCase):
             )
             installed = agents.read_bytes()
             self.assertNotIn(b"\n", installed.replace(b"\r\n", b""))
+
+    def test_hebrew_install_path_survives_cp1252_console(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            profile = root / "you.md"
+            profile.write_text(
+                "---\nname: you\ndescription: test\n---\nbody\n",
+                encoding="utf-8",
+            )
+            home = root / "שלום"
+            env = dict(os.environ, PYTHONIOENCODING="cp1252")
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(DITTO),
+                    "--install",
+                    str(profile),
+                    "--target",
+                    "codex",
+                    "--home",
+                    str(home),
+                    "--yes",
+                ],
+                capture_output=True,
+                env=env,
+            )
+            self.assertEqual(0, result.returncode, result.stderr.decode("utf-8", errors="replace"))
+            self.assertIn("שלום", result.stdout.decode("utf-8"))
+            self.assertTrue((home / ".codex" / "skills" / "you" / "SKILL.md").exists())
 
 
 if __name__ == "__main__":

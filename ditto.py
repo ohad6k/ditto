@@ -619,7 +619,17 @@ def install_profile(profile_path, target, repo_dir, home_dir, yes=False, dry_run
     atomic_write_text(dest, profile)
     print(f"installed: {dest}")
 
+def configure_console():
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure:
+            try:
+                reconfigure(encoding="utf-8", errors="backslashreplace")
+            except (AttributeError, ValueError):
+                pass
+
 def main():
+    configure_console()
     ap = argparse.ArgumentParser(description="mine your AI sessions into a model of you")
     ap.add_argument("--source", choices=["auto", "codex", "claude", "copilot"], default="auto")
     ap.add_argument("--path", help="a folder of .jsonl session logs to read instead")
