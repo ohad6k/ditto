@@ -38,14 +38,17 @@ Existing classic `you` profiles can be staged, cut over, and rolled back. Cutove
 - `127` unit tests, the Codex plugin validator, the bootstrap skill validator, CLI help checks, JSON parsing, and `git diff --check` pass on the local release candidate.
 - Separate spec-compliance and Python safety/quality reviews both returned `PASS`.
 - Codex CLI `0.142.5` discovered exactly the four native skills. Uninstall/reinstall preserved isolated private state byte-for-byte.
-- A deterministic full-history fixture verified a zero-worker, zero-reducer identical update. Full-history mining has not yet been live-dogfooded on the maintainer's actual corpus in the new format; at this release-candidate stage, the full path is fixture-verified only.
+- A real full-history mine ran against a frozen, locally redacted snapshot of `1,968` actual sessions and `3,284,544` selected source tokens. It produced `147` validated reports, `846` validated evidence items, and one strong reducer. The activated profile version is `e61ae342557034ff9a9b`, and work, design, and writing are active with five rules each.
+- The identical frozen-corpus update then planned zero workers and zero reducers with all `147` segments cached.
+- Against the unchanged private calibration, full history recovered `12/22` requirements: work `5/10`, design `5/5`, and writing `2/7`. That materially beats quick preview's `5/22`, but it is not complete recall.
 - Redaction happens locally before selected text reaches the user-chosen model. `ditto.py` makes zero network calls. Runtime download and hash verification occur before log discovery.
 
 See [the dogfood evidence](plugin-dogfood.md), [the security boundary](../../SECURITY.md), and [the roadmap](../../ROADMAP.md).
 
 ## Known limits
 
-- A real full-history mine on the maintainer's corpus is still required before ship approval unless the release keeps the explicit fixture-only disclosure.
+- Full history remains the quality default relative to preview, but the first real run missed `10/22` frozen traits. The release must not imply that a full mine guarantees a complete personal model.
+- Additional failed or aborted compatibility attempts occurred around the `147` successful assigned reports while correcting Windows sandbox and oversize-input orchestration. Exact provider billing remains outside Ditto's measurement.
 - Native Codex routing was not uniformly clean when an older global Ditto profile competed with the plugin.
 - Native Claude plugin packaging is not claimed in this release; the skills.sh bootstrap and direct adapter remain supported.
 - Benchmarks, a leaderboard, and proof/launch videos are deferred to a separate later release.

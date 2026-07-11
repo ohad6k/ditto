@@ -38,13 +38,15 @@ Existing classic `you` profiles are staged and cut over through the migration co
 - Two independent read-only reviews, one for spec compliance and one for Python safety/quality, returned `PASS` on commit `328ecc61`; the final evidence record is commit `7acbcc89`.
 - Codex CLI `0.142.5` discovered exactly the four native Ditto skills. Plugin uninstall/reinstall preserved an isolated private `DITTO_HOME` byte-for-byte, and isolated migration cutover/rollback restored the exact legacy state.
 - The permanent frozen bounded calibration remains in `tests/fixtures/bounded-calibration-baseline.json`. Its widest candidate selected `159,919` source tokens, used three workers plus one reducer, and recovered `5/22` frozen requirements, so preview is not the quality default.
-- A deterministic full-history fixture produced a validated zero-worker, zero-reducer cache hit. Full-history mining has not yet been live-dogfooded on the maintainer's actual corpus in the new format; at this release-candidate stage, the full path is fixture-verified only.
+- A real full-history mine ran against a frozen, locally redacted snapshot of the maintainer's actual corpus: `1,968` sessions, `3,284,544` selected source tokens, `147` validated worker reports, `846` validated evidence items, and one strong reducer. The activated profile version is `e61ae342557034ff9a9b` with manifest SHA-256 `7795a1efeea0c1291b0e20afdf10d310e4984c5aeb8a4b66dba87a09a4f99e4a`; work, design, and writing are active with five rules each.
+- The identical frozen-corpus update then planned `0` workers and `0` reducers with all `147` segments cached and report-set SHA-256 `d74195b1f10ea31dfc0cfa787cd5aa1fb2248a18a4797e614e73a9b6fb49eaec`.
+- The unchanged private calibration recovered `12/22` requirements: work `5/10`, design `5/5`, and writing `2/7`. This is better than quick preview's `5/22` but is not a passing complete-profile score.
 - Extraction and redaction happen locally before selected text reaches the user-chosen model. `ditto.py` makes no network calls. The skills.sh bootstrap downloads only the two pinned runtime files before log discovery and verifies both hashes.
 
 ### Known limits
 
-- A real full-history mine on the maintainer's corpus remains a pre-ship approval gate. Unless that approved run completes and this entry is updated with its non-private proof, the full path is fixture-verified only.
+- Full history is the quality default relative to bounded preview, but the first real run still missed `10/22` frozen traits. In particular, several explicit workflow and writing-voice constraints were absent from the fresh profile. Do not claim full mining guarantees complete recall.
+- The run produced exactly `147` successful assigned reports and one reducer, but additional failed or aborted compatibility attempts occurred while correcting Windows sandbox writes, launcher exit-code handling, and an oversize CLI-input ceiling. Ditto cannot report exact provider billing for those attempts.
 - Codex native routing was proven but was not uniformly clean when an older global Ditto profile competed under the host skill-description budget. The release does not claim perfect exclusive routing in that mixed legacy environment.
 - Native Claude plugin packaging is not claimed because the Claude executable was unavailable. Claude Code remains supported through the skills.sh bootstrap and direct adapter.
 - Benchmarks, leaderboard results, and launch videos are deferred to a separate later release.
-

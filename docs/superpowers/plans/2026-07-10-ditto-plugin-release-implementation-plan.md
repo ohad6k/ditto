@@ -3268,7 +3268,7 @@ Expected: every command exits `0`; worktree contains no private profile, run cac
 
 **Ship-approval prerequisite:** Before asking for final ship approval, show the exact real-corpus full-history preflight cost and obtain Ohad's explicit spend approval. Run one real full mine in the new format and record its validation, activation, domain status, selected tokens, worker/reducer passes, cache reuse, and active manifest hash. If Ohad declines that spend, do not imply the full path was live-proven: `CHANGELOG.md`, `README.md`, and `docs/release/plugin-release-draft.md` must state plainly that full-history mining is the quality default but was fixture-verified only before release. No real-corpus full mine may start from this standing plan approval alone.
 
-- [ ] **Step 1: Recheck tag state before choosing the release version**
+- [x] **Step 1: Recheck tag state before choosing the release version**
 
 Run:
 
@@ -3278,7 +3278,7 @@ git tag --sort=-version:refname
 
 Expected: latest `v0.1.2`, so this plan's Plugin release is `v0.2.0`. If a newer tag exists at execution time, stop and revise Task 19 before editing manifests; the remaining hardcoded `0.2.0` commands must not run against changed tag state.
 
-- [ ] **Step 2: Set the release version and pin the npx runtime bytes**
+- [x] **Step 2: Set the release version and pin the npx runtime bytes**
 
 Change Codex `version` from `0.0.0-dev` to `0.2.0`. If Claude passed Workstream 0, change both Claude version fields to `0.2.0`. If Claude did not pass, no Claude manifest may be present or claimed.
 
@@ -3292,15 +3292,15 @@ $promptHash = (Get-FileHash -Algorithm SHA256 -LiteralPath .\MINING_PROMPT.md).H
 
 Use `apply_patch` to set `.agents/skills/ditto/runtime.json` to `version: 0.2.0`, `ref: v0.2.0`, and the two exact lowercase hashes printed above. Do not use `main`, a branch name, a shortened hash, or bytes from a different commit. Run `tests.test_bootstrap` after the edit.
 
-- [ ] **Step 3: Write the Plugin release changelog entry from actual proof**
+- [x] **Step 3: Write the Plugin release changelog entry from actual proof**
 
 Create `CHANGELOG.md` with title `Changelog` and an `0.2.0` entry dated with the actual UTC ship date. The entry contains populated `Changed`, `Why it matters`, `Upgrade`, `Verified`, and `Known limits` sections in that order. Populate every section with shipped behavior and exact verified commands/hashes from Tasks 16-18 plus the Task 19 full-mine gate, including the selected npx bootstrap versus full native-plugin capability boundary. If the real full mine ran, record its exact non-private proof. If Ohad declined it, state that the full path is fixture-verified only. `Known limits` states that the benchmark/leaderboard/videos are a separate later release. Include no score, winner, placeholder, unverified host, or subscription-percentage claim.
 
-- [ ] **Step 4: Write the local GitHub Release draft**
+- [x] **Step 4: Write the local GitHub Release draft**
 
 `docs/release/plugin-release-draft.md` mirrors the changelog facts in user-facing order: one-sentence outcome, the cross-agent `npx skills add ohad6k/ditto@ditto` command, native-plugin install/upgrade commands, bounded-cost behavior, three native domain skills, migration note, verification proof, known limits, and the `Watch` → `Custom` → `Releases` notification path. It links to the exact docs and contains no benchmark teaser with an invented date.
 
-- [ ] **Step 5: Verify release-candidate files and commit them**
+- [x] **Step 5: Verify release-candidate files and commit them**
 
 Run:
 
@@ -3324,7 +3324,7 @@ git add .claude-plugin/plugin.json .claude-plugin/marketplace.json  # only when 
 git commit -m "chore: prepare Ditto v0.2.0 release"
 ```
 
-- [ ] **Step 6: Run or explicitly decline the real-corpus full-mine gate**
+- [x] **Step 6: Run or explicitly decline the real-corpus full-mine gate**
 
 Run no model work until Ohad approves the exact full-history preflight cost shown in this task. If approved, complete and validate the full mine before final local verification and ship approval. If declined, apply the fixture-only disclosure to every release document named in the prerequisite, rerun documentation truth tests, and keep the live-proof table explicit.
 

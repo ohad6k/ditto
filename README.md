@@ -82,6 +82,8 @@ The quick-preview ladder is:
 
 The frozen calibration recovered only 5 of 22 required traits at the widest bounded candidate. Quick preview therefore cannot be described as the quality default unless a future run passes all 22 frozen requirements. The permanent non-private baseline is in `tests/fixtures/bounded-calibration-baseline.json`.
 
+The first real full-history release mine recovered 12 of the same 22 frozen requirements: work `5/10`, design `5/5`, and writing `2/7`. Full history remains the quality default because it materially improves recall over preview, not because it guarantees a complete personal model. The validated pack keeps only supported rules; missing traits require future mining improvements rather than a softened score.
+
 On update, unchanged segment and evidence hashes are reused. An identical update plans zero additional Ditto mining passes. New history plans only affected full-history work plus one reducer.
 
 These are selected source tokens and planned worker/reducer passes, not provider billing events. Ditto cannot measure provider system prompts, tool traffic, orchestration overhead, or a percentage of a proprietary subscription allowance.

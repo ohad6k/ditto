@@ -79,7 +79,7 @@ Host: Codex CLI `0.142.5` on Windows. Development plugin: `ditto@ditto`, install
 - Live current-corpus quick-preview preflight was not zero-call: source churn selected `69,030` tokens with `3` cached segments, `1` uncached segment, `1` planned worker, and `1` planned reducer. No calls were approved or run.
 - The deterministic full-history cache fixture passed with `0` planned workers and `0` planned reducers after validated report and reduction-cache hits.
 - Incremental fixture proofs retained existing segment hashes and isolated only affected new work.
-- Full-history mining has not run live in the new format. Until the Task 19 real-corpus gate runs, the full path is fixture-verified only.
+- The later Task 19 gate ran a real full-history mine from a frozen, locally redacted snapshot of the maintainer's actual corpus. The frozen snapshot prevented the approval message in the active Codex session from continually invalidating its own corpus hash.
 
 ### Migration and host boundaries
 
@@ -91,3 +91,15 @@ Host: Codex CLI `0.142.5` on Windows. Development plugin: `ditto@ditto`, install
 The release diff from `v0.1.2` through `328ecc61` received separate read-only spec-compliance and Python safety/quality reviews. Both reviewers returned `PASS` on the final candidate commit.
 
 Verified findings were fixed test-first across four commits: release safety gates, strict reduction-cache validation, content-derived manifest identity and usable domain invariants, rollback compensation, and exact agreement between zero-call preflight and cached activation. Final local evidence: `127` unit tests passed, the Codex plugin validator passed, the bootstrap skill validator passed, both CLI help surfaces exited `0`, JSON manifests parsed, and `git diff --check` exited `0`.
+
+## Task 19 real full-history gate
+
+- Frozen redacted snapshot: `1,968` sessions across Claude, Codex, and Copilot; SHA-256 `e97777100040d433ac2e839e71eb689e4c201286b9ecd76a790ce2aeefcff648`.
+- Selected source: `3,284,544` tokens across `147` segments.
+- Validated reports: `147/147`; report-set SHA-256 `d74195b1f10ea31dfc0cfa787cd5aa1fb2248a18a4797e614e73a9b6fb49eaec`.
+- Validated evidence: work `487`, design `178`, writing `181`; `846` total. Maximum report size: `7,861` bytes.
+- Reducer: one strong pass over validated reports only. Activated profile version `e61ae342557034ff9a9b`; manifest SHA-256 `7795a1efeea0c1291b0e20afdf10d310e4984c5aeb8a4b66dba87a09a4f99e4a`.
+- Domains: work, design, and writing active with five rules each.
+- Identical update: `147` cached segments, `0` workers, `0` reducers.
+- Unchanged frozen calibration: work `5/10`, design `5/5`, writing `2/7`, total `12/22`. This improves on bounded preview's `5/22` but does not pass the complete-profile gate.
+- Worker routing used `gpt-5.3-codex-spark` at low reasoning for normal segments and `gpt-5.4` at low reasoning only when Spark or the CLI input ceiling could not hold an oversize segment. Additional failed or aborted compatibility attempts occurred during Windows sandbox and launcher correction; exact provider billing is not measurable from Ditto.
