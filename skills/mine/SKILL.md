@@ -8,14 +8,13 @@ description: Use only when the user explicitly asks to run, set up, update, re-m
 Mine only real user-authored `.jsonl` sessions. Never synthesize a profile from rules files, memory, or a typed self-description.
 
 1. Resolve `DITTO_PY` to `ditto.py` two directories above this skill, falling back to `./ditto.py` only in a direct checkout. Confirm Python 3 exists.
-2. Run read-only `python "$DITTO_PY" plugin preflight`. Show valid history, selected source tokens, exact scout and reducer calls, cache reuse, and the separate full-history option.
-3. Run local-only `python "$DITTO_PY" plugin prepare --stage A`. This redacts and freezes the exact ledger, packets, hashes, and paths but makes no model call. Display that exact frozen plan, then wait for approval before starting any model work.
-4. Run one fast scout for each uncached packet. Each scout reads only its assigned packet and the adaptive scout contract in `MINING_PROMPT.md`, writes its assigned JSON report, and runs the exact read-only `plugin validate-scout` command until valid.
-5. Cache every accepted scout with `plugin cache-scout`. Stop on the first rejection.
-6. Run the three domain reducers planned for Stage A: one each for work, design, and writing. Each reducer reads only its named evidence projection, writes one assigned draft, and runs `plugin validate-domain` until valid. Cache each with `plugin cache-domain`.
-7. Run deterministic `plugin assemble --run-id "$RUN_ID"`. It performs no model call. Validate the resulting pack, then use the explicit `plugin activate` command; activation is the only profile-pointer mutation.
-8. Run `plugin status`. Report the active version, domain states, exact source tokens, actual scout/reducer calls, cache reuse, card path, and any targeted next-stage instruction.
+2. Run read-only `python "$DITTO_PY" plugin preflight`. Normal setup and updates use the bounded default candidate. Show valid sessions, post-dedupe source tokens, selected source tokens, cache hits, planned worker calls, planned reducer calls, and the separate explicit deep option.
+3. Run `python "$DITTO_PY" plugin prepare` with the exact displayed candidate or approved deep mode. Retain the exact `run_id`, selected segment/report paths, and `pack_path`.
+4. Run one fast worker for each uncached selected segment. Each reads only its segment and the per-segment contract in `MINING_PROMPT.md`, writes its assigned JSON report, and runs the read-only `plugin validate-report` command until accepted.
+5. Cache each accepted report with `plugin cache-report`; stop on rejection.
+6. Run one strongest-available reducer over only the validated reports and the combined reducer contract. It writes the complete assigned pack and self-validates with `plugin validate-pack`.
+7. Activate only the validated pack with `plugin activate`, then run `plugin status` and render the card. Report active version, domain states, selected source tokens, actual worker/reducer passes, cache reuse, and targeted-deepen instructions.
 
-If Stage A is objectively weak, run `plugin next-stage --run-id "$RUN_ID"` to freeze a separate additional plan from the same corpus. Show its exact additional cost and wait for approval again. Never start Stage B or full-history work silently.
+Targeted or full deepening requires explicit approval of its expanded plan. Installation itself scans no logs and schedules zero mining calls. An identical update schedules zero additional Ditto mining calls, although the host task still has normal interaction overhead.
 
-Plugin installation scans no logs and schedules zero mining calls. Preflight is read-only. Prepare is local-only. Do not claim a percentage of a provider subscription limit; Ditto can report only its own selected source tokens and planned calls.
+Adaptive receipt/scout stages are experimental and excluded from the Plugin release path. Run `--stage A` only when a developer explicitly requests experimental adaptive-recall testing; never select it automatically or use it for release calibration.

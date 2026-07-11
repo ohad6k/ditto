@@ -487,6 +487,8 @@ class ReportCacheTest(unittest.TestCase):
         self.assertIn('"write"', prompt)
         self.assertIn("exact containing `[YYYY-MM-DD]` message header", prompt)
         self.assertIn("plugin validate-report", prompt)
+        self.assertIn("The truth must sting", prompt)
+        self.assertIn("real bottleneck is trust recovery", prompt)
         self.assertNotIn("18/20", prompt)
 
     def test_validate_report_command_is_read_only(self):

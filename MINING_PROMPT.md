@@ -1,8 +1,8 @@
 # Ditto mining contracts
 
-Ditto uses one bounded worker pass per selected segment, followed by one reducer pass over validated reports. Workers never read another segment and the reducer never reads raw session logs.
+The Plugin release uses one bounded worker pass per selected segment, followed by one reducer pass over validated reports. Workers never read another segment and the reducer never reads raw session logs.
 
-## Adaptive packet scout contract
+## Experimental adaptive packet scout contract
 
 Read only the assigned frozen receipt packet. Maximize recall independently for `work`, `design`, and `write`; do not merge rules across packets. Each domain has its own ceiling of 12 evidence items. Return JSON schema `2` with the exact `packet_hash`, all assigned `receipt_ids`, exact `source_tokens`, and an explicit `evidence` or `no-signal` state for every domain.
 
@@ -66,7 +66,7 @@ Rules:
 
 Before returning, run the assigned read-only `python "$DITTO_PY" plugin validate-report --run-id "$RUN_ID" --report "$REPORT_PATH"` command. If it rejects the report, correct the report and run the same validation again inside this worker pass. Return only after it reports `status: valid`. The orchestrator caches the report after the worker exits.
 
-## Adaptive isolated domain reducer contract
+## Experimental adaptive isolated domain reducer contract
 
 Run one reducer for exactly one named domain. Read only that domain's validated evidence projection; never read another domain or raw history. Write one assigned JSON draft using schema `1`, the exact `domain` and `evidence_set_hash`, an `active` or permitted `inactive` status, rules with preserved evidence IDs and scope, discarded conflict records, and coverage counts for evidence items, distinct sessions, strata, and unresolved contradictions.
 

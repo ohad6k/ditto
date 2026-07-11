@@ -125,7 +125,7 @@ def run_plugin_prepare(history, stage):
 def run_plugin_preflight(history, home):
     return subprocess.run(
         [sys.executable, str(ROOT / "ditto.py"), "plugin", "preflight", "--path", str(history.logs),
-         "--ditto-home", str(home)],
+         "--stage", "A", "--ditto-home", str(home)],
         check=True, capture_output=True, text=True,
     )
 
@@ -547,19 +547,49 @@ class AdaptiveStageTest(unittest.TestCase):
 
 
 class DocumentationContractTest(unittest.TestCase):
-    def test_mine_skill_freezes_before_model_approval(self):
+    def test_mine_skill_uses_bounded_release_path_and_labels_adaptive_experimental(self):
         text = (ROOT / "skills" / "mine" / "SKILL.md").read_text(encoding="utf-8")
 
-        self.assertLess(text.index("plugin prepare"), text.index("wait for approval"))
-        self.assertIn("three domain reducers", text)
-        self.assertIn("plugin assemble", text)
+        self.assertIn("bounded", text.lower())
+        self.assertIn("experimental", text.lower())
+        self.assertIn("plugin prepare", text)
+        self.assertNotIn("plugin prepare --stage A", text)
 
-    def test_readme_states_stage_a_exact_ceiling(self):
+    def test_readme_keeps_adaptive_recall_out_of_default_release_path(self):
         text = (ROOT / "README.md").read_text(encoding="utf-8")
 
-        self.assertIn("300K selected source tokens", text)
-        self.assertIn("six scouts and three domain reducers", text)
-        self.assertNotIn("6 × 25K", text)
+        self.assertIn("bounded starter ladder", text)
+        self.assertIn("Experimental adaptive recall", text)
+        self.assertNotIn("Stage A has a hard ceiling", text)
+
+
+class ExperimentalAdaptiveRoutingTest(unittest.TestCase):
+    def run_preflight(self, *extra):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            write_jsonl(root / "logs" / "one.jsonl", [{
+                "timestamp": "2026-01-01T00:00:00Z",
+                "payload": {"type": "message", "role": "user", "content": [{"text": "specific signal"}]},
+            }])
+            completed = subprocess.run(
+                [sys.executable, str(ROOT / "ditto.py"), "plugin", "preflight", "--path",
+                 str(root / "logs"), *extra, "--ditto-home", str(root / "private")],
+                check=True, capture_output=True, text=True,
+            )
+            return json.loads(completed.stdout)
+
+    def test_default_preflight_uses_bounded_candidate(self):
+        plan = self.run_preflight()
+
+        self.assertEqual(ditto.DEFAULT_CANDIDATE_INDEX, plan["candidate_index"])
+        self.assertIn("planned_worker_calls", plan)
+        self.assertNotIn("planned_scout_calls", plan)
+
+    def test_adaptive_stage_requires_explicit_flag(self):
+        plan = self.run_preflight("--stage", "A")
+
+        self.assertEqual("adaptive", plan["mode"])
+        self.assertEqual("A", plan["stage"])
 
 
 class PerformanceTest(unittest.TestCase):

@@ -2376,7 +2376,7 @@ def build_plugin_parser():
         command.add_argument("--no-dedupe", action="store_true")
         command.add_argument("--ditto-home")
         mode = command.add_mutually_exclusive_group()
-        mode.add_argument("--stage", choices=sorted(STAGE_CONFIGS))
+        mode.add_argument("--stage", choices=sorted(STAGE_CONFIGS), help="EXPERIMENTAL adaptive recall stage")
         mode.add_argument("--candidate", type=int, choices=range(len(STARTER_CANDIDATES)), help=argparse.SUPPRESS)
         mode.add_argument("--deep", action="store_true")
         mode.add_argument("--deepen-domain", choices=["work", "design", "write"])
@@ -2868,21 +2868,19 @@ def build_next_stage_plan(ditto_home, run_id):
 def plugin_plan_for_args(args, write=False):
     result = plugin_source_result(args)
     home = resolve_ditto_home(args.ditto_home)
-    if args.candidate is not None and os.environ.get("DITTO_ALLOW_LEGACY_CANDIDATES") != "1":
-        raise ValueError("legacy candidate reproduction is disabled")
     if args.deepen_domain:
         raise ValueError(
             "targeted deepening requires an active profile; run bounded Ditto setup first"
         )
     if args.deep:
         return build_deep_preflight(result, home, write=write)
-    if args.candidate is None:
-        return adaptive_preflight(result, args.stage or "A")
+    if args.stage is not None:
+        return adaptive_preflight(result, args.stage)
     candidate_index = DEFAULT_CANDIDATE_INDEX if args.candidate is None else args.candidate
     return build_preflight(result, home, candidate_index, write=write)
 
 def prepare_plugin_run(args):
-    if args.candidate is None and not args.deep and not args.deepen_domain:
+    if args.stage is not None:
         return prepare_adaptive_run(args)
     home = resolve_ditto_home(args.ditto_home)
     plan = plugin_plan_for_args(args, write=True)
