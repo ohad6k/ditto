@@ -4,7 +4,7 @@ Date: 2026-07-11
 
 ## Verdict
 
-No bounded starter candidate passed the frozen private calibration gate. Candidate 2 was the final evaluated candidate; there is no smallest passing default. The Plugin release is stopped before fresh host probes, publication, tagging, or benchmark work.
+No bounded starter candidate passed the frozen private calibration gate. Candidate 2 was the final evaluated candidate, so there is no smallest passing default. The plugin release is stopped before Task 17 host probes, Task 18 reviews, Task 19 release preparation, publication, tagging, or benchmark work.
 
 The frozen checklist was not changed after candidate output was seen.
 
@@ -19,43 +19,44 @@ The frozen checklist was not changed after candidate output was seen.
 
 | Candidate | Selected source tokens | Cache hits at prepare | Planned workers | Actual worker passes | Planned reducers | Actual reducer passes | Frozen recovery |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | --- |
-| 0 | 70,902 | 0 | 4 | 5 | 1 | 1 | work 2/10, design 0/5, write 0/7 |
-| 1 | 116,387 | 3 | 3 | 3 | 1 | 1 | work 2/10, design 0/5, write 2/7 |
-| 2 | 147,277 | 4 | 4 | 4 | 1 | 2 | work 0/10, design 0/5, write 0/7 |
+| 0 | 59,473 | 3 | 1 | 3 | 1 | 1 | work 2/10, design 0/5, write 0/7 |
+| 1 | 109,245 | 4 | 2 | 2 | 1 | 1 | work 2/10, design 0/5, write 0/7 |
+| 2 | 159,919 | 5 | 3 | 3 | 1 | 1 | work 2/10, design 2/5, write 1/7 |
 
-Candidate 0 used one corrective worker after the first report failed strict receipt validation. Candidate 2 used one corrective reducer after the first reducer hit the host timeout with an invalid draft. These passes are included in the actual counts.
+Candidate 0 needed two replacement host attempts because the first two worker environments were read-only. Candidate 1's first worker report was filtered locally and fail-closed: only evidence with valid verbatim receipts was retained, with no additional model pass. Candidate 2 used exactly the approved three workers and one reducer, with no retry.
 
-Total calibration model passes: `16` (`12` worker passes and `4` reducer passes). Successful validated reports were cached and reused; no worker was repeated after its report entered the cache.
+Total calibration model passes: `11` (`8` worker passes and `3` reducer passes). Separately counted host-task interactions: `11`. Local preflight, preparation, validation, caching, activation, and checklist comparison were not counted as model passes or host-task interactions.
 
 ## Final validated pack
 
-- Profile version: `17d9cbe650b51ce64600`
-- Active profile manifest SHA-256: `0b786fd798829cb41b32c68bab7aa669089cacad2bdab4df71ae603e4978804d`
-- Report-set SHA-256: `2a291fe73f49cd0076b07670997e57b0a380166d3c976de4b4599dce88578403`
-- Work domain: active, but `0/10` frozen requirements recovered
-- Design domain: inactive, `0/5`
-- Write domain: inactive, `0/7`
+- Frozen run: `20260711T154238Z-7258a239`
+- Profile version: `dc2507ed1e0f123ea46f`
+- Active profile manifest SHA-256: `c425ca9c8319d069552f5b73f0ecdff3611974dbe74e6ad606d3a947b889af1f`
+- Report-set SHA-256: `427a4a12a121a32355970834a9702e260c35baa08c1e47881c7bf5594ecbee8d`
+- Work domain: active, `2/10` frozen requirements recovered
+- Design domain: active, `2/5` frozen requirements recovered
+- Write domain: active, `1/7` frozen requirements recovered
 
-The final pack is structurally and evidentially valid. It is not representative enough to satisfy the product-quality contract.
+The final pack is structurally and evidentially valid. Recovering `5/22` requirements does not satisfy the product-quality contract.
 
 ## Host-task probes and human verdicts
 
 Fresh installed-plugin host tasks: `0`.
 
 - Work verdict: not run; the frozen checklist failed first.
-- Design verdict: not run; the domain was inactive and the frozen checklist failed first.
-- Write verdict: not run; the domain was inactive and the frozen checklist failed first.
+- Design verdict: not run; the frozen checklist failed first.
+- Write verdict: not run; the frozen checklist failed first.
 
-This preserves the gate order and avoids spending three host interactions on a candidate that already failed objective recall.
+This preserves the gate order and avoids spending host interactions on a candidate that already failed objective recall.
 
 ## Findings
 
-- The original `4x25K -> 6x20K -> 8x20K` ladder was not monotonic: smaller segmentation excluded 20K-25K sessions and invalidated all earlier cache keys. Dogfood changed the ladder to one immutable 25K segmentation expanded from four to six to eight selected segments under the unchanged 160K-token ceiling.
-- Live source churn changed one selected segment between candidate-2 preflight and preparation. Cost was re-disclosed and approved before the extra worker ran.
-- Read-only report and pack validators now let a worker or reducer correct its own output inside the same model pass. This was added after a real invalid receipt-date failure exposed avoidable retry cost.
-- Wider bounded sampling activated all three domains at candidate 1, but the result still missed most frozen requirements and included a contextual design preference that conflicted with the frozen taste profile.
-- Candidate 2 correctly omitted unsupported design and writing profiles, but recovered none of the frozen must-recover requirements.
+- Live source churn changed candidate 2 from two planned workers at preflight to three at preparation. The revised cost was disclosed and approved before model work.
+- Candidate 1's selected source and validated reports contained design and writing material, but the reducer could not form supported active design and write profiles. Its failure was not merely a work-only selection.
+- Candidate 2 activated all three domains but still recovered only `5/22` frozen requirements. Partial thematic overlaps were not counted as passes.
+- Every worker and reducer output was validated. Invalid non-verbatim evidence was dropped fail-closed, and the private checklist was not loosened or edited.
+- Extraction and redaction happened locally. The selected redacted text was processed by the user-chosen cloud model; `ditto.py` made no network calls, and worker tool network access was disabled while corpus content was present.
 
 ## Release consequence
 
-Do not set `DEFAULT_CANDIDATE_INDEX` to candidate 0, 1, or 2 based on this dogfood. Do not proceed to Task 17, publish the plugin release, run the benchmark, or claim bounded starter mining is sufficient. The architecture needs a revised recall strategy and a newly approved calibration plan while preserving the frozen evidence and cost-honesty requirements.
+Do not set `DEFAULT_CANDIDATE_INDEX` to candidate 0, 1, or 2 based on this dogfood. Do not proceed to Tasks 17-19 or claim bounded starter mining is sufficient. Adaptive recall remains experimental and outside the default release path. The next release decision requires an explicitly approved fallback, without changing this frozen result.

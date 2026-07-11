@@ -7,7 +7,8 @@ keeps ONLY the words you typed, redacts secrets + personal info, and writes one
 clean corpus + chunks. You then point a coding agent at the chunks with
 MINING_PROMPT.md to produce your `you.md`.
 
-100% local. Your logs never leave your machine. No network calls. Stdlib only.
+Extraction and redaction happen locally, and ditto.py makes no network calls.
+Selected redacted text is processed by the model provider you choose. Stdlib only.
 
 Usage:
     python ditto.py                     # auto-detect Codex + Claude + Copilot logs
