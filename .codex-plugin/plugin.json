@@ -1,6 +1,6 @@
 {
   "name": "ditto",
-  "version": "0.0.0-dev",
+  "version": "0.2.0",
   "description": "Mine real AI coding sessions into a bounded, evidence-backed personal layer.",
   "author": {"name": "Ohad"},
   "homepage": "https://github.com/ohad6k/ditto",

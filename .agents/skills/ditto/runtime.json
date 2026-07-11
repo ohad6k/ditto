@@ -1,9 +1,9 @@
 {
   "schema_version": "1",
-  "version": "0.0.0-dev",
-  "ref": null,
+  "version": "0.2.0",
+  "ref": "v0.2.0",
   "files": {
-    "ditto.py": {"sha256": null},
-    "MINING_PROMPT.md": {"sha256": null}
+    "ditto.py": {"sha256": "d4811576f65c3f6e72689b49941c4a5e405b3fbc293f56c2600d303d5ab8fa90"},
+    "MINING_PROMPT.md": {"sha256": "cc073f337ad6ad956bf14d60bbf6bc9d5a14d9b7f46d1be5fb2f13d62a9f4377"}
   }
 }
