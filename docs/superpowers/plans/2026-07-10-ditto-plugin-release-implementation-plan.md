@@ -3127,9 +3127,13 @@ Expected: negative mine does not load `ditto:mine`; combined loads design and wr
 
 - [ ] **Step 5: Prove identical update is zero-call**
 
-Run `update ditto` without changing logs. Capture the preflight and final status.
+Approved Task 17 evidence route after the full-default fallback:
 
-Expected: `planned_worker_calls: 0`, `planned_reducer_calls: 0`, same active profile version, and `profile already current` behavior. Describe this as zero additional Ditto mining calls, not zero host-task tokens.
+- Run the quick-preview preflight against the unchanged real corpus and existing candidate caches. This is the live zero-call proof for quick preview.
+- Run the deterministic full-history cache fixture that validates every cached report, computes the report-set hash, sees the cached reduction, and returns zero planned workers/reducers. This is fixture proof only; do not describe it as a live full-history dogfood run.
+- Record plainly that full-history mining has not yet run live in the new format. Task 19 owns the real-corpus full-mine gate and cost approval.
+
+Expected: each approved proof returns `planned_worker_calls: 0` and `planned_reducer_calls: 0`. Describe this as zero additional Ditto mining calls, not zero host-task tokens, and keep live preview evidence separate from fixture-only full-history evidence.
 
 - [ ] **Step 6: Prove one incremental session plans only uncached work**
 
@@ -3262,6 +3266,8 @@ Expected: every command exits `0`; worktree contains no private profile, run cac
 - Create: `docs/release/plugin-release-draft.md`
 - Modify: `README.md` only if final install commands differ from the verified tagged flow
 
+**Ship-approval prerequisite:** Before asking for final ship approval, show the exact real-corpus full-history preflight cost and obtain Ohad's explicit spend approval. Run one real full mine in the new format and record its validation, activation, domain status, selected tokens, worker/reducer passes, cache reuse, and active manifest hash. If Ohad declines that spend, do not imply the full path was live-proven: `CHANGELOG.md`, `README.md`, and `docs/release/plugin-release-draft.md` must state plainly that full-history mining is the quality default but was fixture-verified only before release. No real-corpus full mine may start from this standing plan approval alone.
+
 - [ ] **Step 1: Recheck tag state before choosing the release version**
 
 Run:
@@ -3288,7 +3294,7 @@ Use `apply_patch` to set `.agents/skills/ditto/runtime.json` to `version: 0.2.0`
 
 - [ ] **Step 3: Write the Plugin release changelog entry from actual proof**
 
-Create `CHANGELOG.md` with title `Changelog` and an `0.2.0` entry dated with the actual UTC ship date. The entry contains populated `Changed`, `Why it matters`, `Upgrade`, `Verified`, and `Known limits` sections in that order. Populate every section with shipped behavior and exact verified commands/hashes from Tasks 16-18, including the selected npx bootstrap versus full native-plugin capability boundary. `Known limits` states that the benchmark/leaderboard/videos are a separate later release. Include no score, winner, placeholder, unverified host, or subscription-percentage claim.
+Create `CHANGELOG.md` with title `Changelog` and an `0.2.0` entry dated with the actual UTC ship date. The entry contains populated `Changed`, `Why it matters`, `Upgrade`, `Verified`, and `Known limits` sections in that order. Populate every section with shipped behavior and exact verified commands/hashes from Tasks 16-18 plus the Task 19 full-mine gate, including the selected npx bootstrap versus full native-plugin capability boundary. If the real full mine ran, record its exact non-private proof. If Ohad declined it, state that the full path is fixture-verified only. `Known limits` states that the benchmark/leaderboard/videos are a separate later release. Include no score, winner, placeholder, unverified host, or subscription-percentage claim.
 
 - [ ] **Step 4: Write the local GitHub Release draft**
 
@@ -3318,11 +3324,15 @@ git add .claude-plugin/plugin.json .claude-plugin/marketplace.json  # only when 
 git commit -m "chore: prepare Ditto v0.2.0 release"
 ```
 
-- [ ] **Step 6: Use `superpowers:finishing-a-development-branch` and stop before external writes**
+- [ ] **Step 6: Run or explicitly decline the real-corpus full-mine gate**
+
+Run no model work until Ohad approves the exact full-history preflight cost shown in this task. If approved, complete and validate the full mine before final local verification and ship approval. If declined, apply the fixture-only disclosure to every release document named in the prerequisite, rerun documentation truth tests, and keep the live-proof table explicit.
+
+- [ ] **Step 7: Use `superpowers:finishing-a-development-branch` and stop before external writes**
 
 Present the verified branch/commit, test count, validator output, live host proof, changelog, release draft, planned tag `v0.2.0`, and exact push/release commands. Ask Ohad for final ship approval. Do not merge, tag, push, create a GitHub Release, publish marketplace content, or post videos before that approval.
 
-- [ ] **Step 7: After explicit ship approval, integrate and publish the exact verified commit**
+- [ ] **Step 8: After explicit ship approval, integrate and publish the exact verified commit**
 
 Only after approval and after the verified commit is on `main`:
 
