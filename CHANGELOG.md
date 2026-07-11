@@ -9,7 +9,7 @@
 - Added deterministic segment, report, domain-draft, and reduction caches with corrupt-cache quarantine and zero-call reuse only when the cached profile is fully valid and activatable.
 - Added atomic profile activation, isolated migration/cutover/rollback, and separate work, design, and writing profile routing.
 - Kept adaptive recall experimental and outside the default Plugin release path.
-- Added the cross-agent `npx skills add ohad6k/ditto@ditto` bootstrap. Its `v0.2.0` runtime pins `ditto.py` to SHA-256 `d4811576f65c3f6e72689b49941c4a5e405b3fbc293f56c2600d303d5ab8fa90` and `MINING_PROMPT.md` to SHA-256 `cc073f337ad6ad956bf14d60bbf6bc9d5a14d9b7f46d1be5fb2f13d62a9f4377`.
+- Added the cross-agent `npx skills add ohad6k/ditto@ditto` bootstrap. Its `v0.2.0` runtime pins `ditto.py` to SHA-256 `82f6d15d5e535fa24b495b97bb9ac1b8dbb1b61c6c62786b49d2dc5698c7cd77` and `MINING_PROMPT.md` to SHA-256 `633a48bc0eb743cd6f13bf0f6783fcfb2653df4a353b6a303fb0d213c2b068f6`.
 
 ### Why it matters
 
