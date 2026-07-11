@@ -26,11 +26,52 @@ That's why it reads raw session logs, not your `CLAUDE.md` or rules file.
 
 ## A real run
 
-Same model, same bare HTML file, same prompt: **"make this landing page look good."** Both agents were allowed to iterate on their own screenshots. The only difference: the right one loaded a profile Ditto mined from the author's real history.
+I asked an agent to help me launch this repo. One line: **"help me post ditto on reddit."** Same model, once cold, once with my Ditto profile loaded.
+
+<table><tr><td>
+
+**🡒 agent**
+
+Here's how I'd play it.
+
+**Subreddits:** r/ClaudeAI and r/ChatGPTCoding are your core audience. r/LocalLLaMA fits the local angle. r/cursor, r/SideProject, r/opensource for reach. Don't blast all at once — post to one, tune the title, repost over a few days.
+
+**Title:** I built a local tool that reads your AI coding logs and writes a "you.md" your agents read before every task
+
+**Body:**
+> Every fresh agent session starts from zero — it doesn't know how you work, so you re-explain yourself every time. So I built **ditto**: it reads your history, mines how you decide and talk, and writes a `you.md` your agents read before every task.
+> - runs locally, your logs never leave your machine
+> - open source: [link]
+
+</td></tr></table>
+
+<table><tr><td>
+
+**🡒 agent + ditto**
+
+the insight first: the mining number is your whole post. "i read 1,656 of my own sessions" is a confession, not a pitch, and nobody scrolls past a confession. lead with the mirror, not the mechanism. the tool is secondary.
+
+one sub, not five — pick the one that lives in their session logs, they'll get it instantly. the repo link goes in your first comment, not the body.
+
+**title:** I had 20 AI agents read 8 months of my claude sessions and build a model of how I think. it was unsettling how accurate it was
+
+**body:** i work with claude and codex every day. 8 months, solo. every session gets logged and i never looked back at them. last night it hit me those logs are the most honest record of how i actually work that exists anywhere. i don't perform in them, i just work. so i mined them. [...]
+
+then the move: post it, drop the repo as your own first comment within a minute, and answer every "how" with the mining approach, not features. the comments are where it converts.
+
+</td></tr></table>
+
+I posted what the profile-loaded agent wrote, where it said to post it:
+
+<p align="center"><img src="assets/reddit-proof.png" width="460" alt="The post the Ditto-loaded agent wrote: 168 upvotes, 26 comments, 88K views"></p>
+
+**168 upvotes, 26 comments, 88K views** — from an account with no followers. The cold agent's plan was reasonable. The loaded agent's plan knew its user's voice, and it worked.
+
+The same profile drives design judgment. Same model, same bare HTML file, same prompt — "make this landing page look good" — both allowed to iterate on their own screenshots:
 
 <p align="center"><img src="assets/real-run.png" alt="Same agent, same prompt: the cold agent produced a generic template; the agent with a Ditto profile produced a cinematic poster-grade landing page"></p>
 
-The cold agent stopped and reported "this meets my bar." The profile-loaded agent kept rejecting its own work until the page would survive its user's judgment. Ditto doesn't make the model smarter — it changes what the model accepts.
+The cold agent stopped and reported "this meets my bar." The loaded agent kept rejecting its own work until the page would survive its user's judgment. Ditto doesn't make the model smarter — it changes what the model accepts.
 
 ## What it finds
 
