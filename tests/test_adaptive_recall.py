@@ -547,18 +547,20 @@ class AdaptiveStageTest(unittest.TestCase):
 
 
 class DocumentationContractTest(unittest.TestCase):
-    def test_mine_skill_uses_bounded_release_path_and_labels_adaptive_experimental(self):
+    def test_mine_skill_uses_full_default_and_labels_preview_and_adaptive_honestly(self):
         text = (ROOT / "skills" / "mine" / "SKILL.md").read_text(encoding="utf-8")
 
-        self.assertIn("bounded", text.lower())
+        self.assertIn("full-history quality default", text.lower())
+        self.assertIn("quick preview creates a starter profile", text.lower())
         self.assertIn("experimental", text.lower())
         self.assertIn("plugin prepare", text)
         self.assertNotIn("plugin prepare --stage A", text)
 
-    def test_readme_keeps_adaptive_recall_out_of_default_release_path(self):
+    def test_readme_keeps_adaptive_recall_out_of_quality_default_release_path(self):
         text = (ROOT / "README.md").read_text(encoding="utf-8")
 
-        self.assertIn("bounded starter ladder", text)
+        self.assertIn("quick-preview ladder", text)
+        self.assertIn("full-history quality default", text.lower())
         self.assertIn("Experimental adaptive recall", text)
         self.assertNotIn("Stage A has a hard ceiling", text)
 
@@ -578,10 +580,11 @@ class ExperimentalAdaptiveRoutingTest(unittest.TestCase):
             )
             return json.loads(completed.stdout)
 
-    def test_default_preflight_uses_bounded_candidate(self):
+    def test_default_preflight_uses_full_history_not_adaptive(self):
         plan = self.run_preflight()
 
-        self.assertEqual(ditto.DEFAULT_CANDIDATE_INDEX, plan["candidate_index"])
+        self.assertEqual("full", plan["mode"])
+        self.assertIsNone(plan["candidate_index"])
         self.assertIn("planned_worker_calls", plan)
         self.assertNotIn("planned_scout_calls", plan)
 

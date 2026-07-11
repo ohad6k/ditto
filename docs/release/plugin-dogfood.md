@@ -4,7 +4,7 @@ Date: 2026-07-11
 
 ## Verdict
 
-No bounded starter candidate passed the frozen private calibration gate. Candidate 2 was the final evaluated candidate, so there is no smallest passing default. The plugin release is stopped before Task 17 host probes, Task 18 reviews, Task 19 release preparation, publication, tagging, or benchmark work.
+No bounded starter candidate passed the frozen private calibration gate. Candidate 2 was the final evaluated candidate, so there is no smallest passing bounded default. Calibration stopped before live host probes. The approved release fallback keeps full-history mining as the quality default and permits bounded mining only as an explicitly labeled quick preview.
 
 The frozen checklist was not changed after candidate output was seen.
 
@@ -59,4 +59,4 @@ This preserves the gate order and avoids spending host interactions on a candida
 
 ## Release consequence
 
-Do not set `DEFAULT_CANDIDATE_INDEX` to candidate 0, 1, or 2 based on this dogfood. Do not proceed to Tasks 17-19 or claim bounded starter mining is sufficient. Adaptive recall remains experimental and outside the default release path. The next release decision requires an explicitly approved fallback, without changing this frozen result.
+Do not claim candidate 0, 1, or 2 is sufficient for a full profile. Full-history mining is the quality default. Bounded mining may ship only as a quick preview with the exact limitation that it creates a starter profile from selected history, not the full profile. Any future attempt to make bounded mining the quality default must retain this baseline and pass all `22/22` requirements against the same frozen checklist. Adaptive recall remains experimental and outside the release path.

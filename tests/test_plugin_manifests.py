@@ -67,6 +67,30 @@ class PluginManifestTest(unittest.TestCase):
 
 
 class DocumentationTruthTest(unittest.TestCase):
+    def test_failed_frozen_calibration_permanently_guards_the_quality_default(self):
+        calibration = json.loads(
+            (ROOT / "tests" / "fixtures" / "bounded-calibration-baseline.json").read_text(encoding="utf-8")
+        )
+        self.assertEqual(
+            "9778cb1eb2fcdbd7aafed01600fc7a1ceaf59f99943d54b692b0aaff9efaab09",
+            calibration["frozen_checklist_sha256"],
+        )
+        self.assertEqual(22, sum(calibration["required"].values()))
+        self.assertEqual(5, sum(calibration["baseline"]["recovered"].values()))
+        if ditto.QUALITY_DEFAULT_MODE == "bounded":
+            passing = calibration["passing_bounded_run"]
+            self.assertIsNotNone(passing, "bounded cannot be the quality default without a new frozen-gate run")
+            self.assertEqual(calibration["required"], passing["recovered"])
+        else:
+            self.assertEqual("full", ditto.QUALITY_DEFAULT_MODE)
+
+    def test_every_public_mining_surface_calls_preview_a_starter_profile(self):
+        notice = "Quick preview creates a starter profile from selected history, not the full profile."
+        for relative in ("README.md", "skills/mine/SKILL.md", ".agents/skills/ditto/SKILL.md"):
+            text = (ROOT / relative).read_text(encoding="utf-8")
+            self.assertIn(notice, text, relative)
+            self.assertIn("full-history quality default", text.lower(), relative)
+
     def test_public_docs_separate_local_extractor_from_model_processing(self):
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
         security = (ROOT / "SECURITY.md").read_text(encoding="utf-8")

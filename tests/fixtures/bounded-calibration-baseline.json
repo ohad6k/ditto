@@ -1,0 +1,19 @@
+{
+  "schema_version": "1",
+  "frozen_checklist_sha256": "9778cb1eb2fcdbd7aafed01600fc7a1ceaf59f99943d54b692b0aaff9efaab09",
+  "required": {
+    "work": 10,
+    "design": 5,
+    "write": 7
+  },
+  "baseline": {
+    "run_id": "20260711T154238Z-7258a239",
+    "candidate_index": 2,
+    "recovered": {
+      "work": 2,
+      "design": 2,
+      "write": 1
+    }
+  },
+  "passing_bounded_run": null
+}

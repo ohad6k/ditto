@@ -57,6 +57,11 @@ STARTER_CANDIDATES = (
 STARTER_MAX_SOURCE_TOKENS = 160_000
 STARTER_MAX_MODEL_CALLS = 9
 DEFAULT_CANDIDATE_INDEX = 0
+QUALITY_DEFAULT_MODE = "full"
+QUICK_PREVIEW_NOTICE = (
+    "Quick preview creates a starter profile from selected history, not the full profile."
+)
+FULL_PROFILE_NOTICE = "Full-history quality default; approval is required before model work."
 DEEP_SEGMENT_TOKENS = 20_000
 MAX_REPORT_BYTES = 8_192
 MAX_EVIDENCE_PER_REPORT = 12
@@ -1768,6 +1773,10 @@ def build_preflight(result, ditto_home, candidate_index, write=False):
         for segment in selected
     }
     return {
+        "mode": "quick_preview",
+        "profile_scope": "starter_profile",
+        "quality_default": False,
+        "notice": QUICK_PREVIEW_NOTICE,
         "candidate_index": candidate_index,
         "valid_sessions": result["sessions"],
         "post_dedupe_source_tokens": result["chars"] // 4,
@@ -1799,11 +1808,33 @@ def build_deep_preflight(result, ditto_home, write=False):
     if result["sessions"] and not selected:
         raise ValueError("no valid segment remained for deep mode")
     hashes = [segment["segment_hash"] for segment in selected]
-    hits = {
-        value for value in hashes if os.path.isfile(report_cache_path(ditto_home, value))
-    }
-    worker_calls, reducer_calls = planned_call_counts(hashes, hits, False)
+    hits, report_paths = set(), []
+    for segment in selected:
+        path = report_cache_path(ditto_home, segment["segment_hash"])
+        if load_cached_report(ditto_home, segment, quarantine=write) is not None:
+            hits.add(segment["segment_hash"])
+            report_paths.append(path)
+    report_set_hash = (
+        compute_report_set_hash(report_paths)
+        if selected and len(report_paths) == len(selected)
+        else None
+    )
+    reduction_cache_hit = bool(
+        report_set_hash
+        and os.path.isdir(
+            os.path.join(
+                private_paths(ditto_home)["reductions"],
+                REDUCER_SCHEMA_VERSION,
+                report_set_hash,
+            )
+        )
+    )
+    worker_calls, reducer_calls = planned_call_counts(hashes, hits, reduction_cache_hit)
     return {
+        "mode": "full",
+        "profile_scope": "full_profile",
+        "quality_default": True,
+        "notice": FULL_PROFILE_NOTICE,
         "candidate_index": None,
         "valid_sessions": result["sessions"],
         "post_dedupe_source_tokens": result["chars"] // 4,
@@ -1820,7 +1851,7 @@ def build_deep_preflight(result, ditto_home, write=False):
             for segment in selected if segment.get("oversize")
             for version in segment["session_versions"]
         ],
-        "report_set_hash": None,
+        "report_set_hash": report_set_hash,
         "adequate_strata": True,
         "deep_mode": {"available": True, "automatic": False, "selected": True},
     }
@@ -2378,6 +2409,7 @@ def build_plugin_parser():
         command.add_argument("--ditto-home")
         mode = command.add_mutually_exclusive_group()
         mode.add_argument("--stage", choices=sorted(STAGE_CONFIGS), help="EXPERIMENTAL adaptive recall stage")
+        mode.add_argument("--preview", action="store_true", help="create a bounded starter profile, not the full profile")
         mode.add_argument("--candidate", type=int, choices=range(len(STARTER_CANDIDATES)), help=argparse.SUPPRESS)
         mode.add_argument("--deep", action="store_true")
         mode.add_argument("--deepen-domain", choices=["work", "design", "write"])
@@ -2871,14 +2903,14 @@ def plugin_plan_for_args(args, write=False):
     home = resolve_ditto_home(args.ditto_home)
     if args.deepen_domain:
         raise ValueError(
-            "targeted deepening requires an active profile; run bounded Ditto setup first"
+            "targeted deepening requires an active profile; run the full Ditto setup first"
         )
-    if args.deep:
-        return build_deep_preflight(result, home, write=write)
     if args.stage is not None:
         return adaptive_preflight(result, args.stage)
-    candidate_index = DEFAULT_CANDIDATE_INDEX if args.candidate is None else args.candidate
-    return build_preflight(result, home, candidate_index, write=write)
+    if args.preview or args.candidate is not None:
+        candidate_index = DEFAULT_CANDIDATE_INDEX if args.candidate is None else args.candidate
+        return build_preflight(result, home, candidate_index, write=write)
+    return build_deep_preflight(result, home, write=write)
 
 def prepare_plugin_run(args):
     if args.stage is not None:
@@ -2932,7 +2964,10 @@ def prepare_plugin_run(args):
         "run_id": run_id,
         "run_dir": run_dir,
         "plan_hash": plan_hash,
-        "mode": "deep" if args.deep else "starter",
+        "mode": plan["mode"],
+        "profile_scope": plan["profile_scope"],
+        "quality_default": plan["quality_default"],
+        "notice": plan["notice"],
         "candidate_index": plan["candidate_index"],
         "target_domain": args.deepen_domain,
         "selected_source_tokens": plan["selected_source_tokens"],

@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Ship the first Ditto Plugin release with bounded, cached mining; durable private profiles; `ditto:mine`, `ditto:work`, `ditto:design`, and `ditto:write`; a preserved cross-agent npx bootstrap; safe legacy migration; and an independently publishable GitHub Release.
+**Goal:** Ship the first Ditto Plugin release with full-history mining as the quality default, bounded cached mining as an explicitly labeled quick preview, durable private profiles, `ditto:mine`, `ditto:work`, `ditto:design`, and `ditto:write`, a preserved cross-agent npx bootstrap, safe legacy migration, and an independently publishable GitHub Release.
 
-**Architecture:** Keep `ditto.py` as the canonical stdlib-only, single-file mining runtime. Add a backward-compatible `python ditto.py plugin` command family that owns deterministic extraction, stable segments, caches, report validation, profile activation, migration, and loader lookup; static plugin skills orchestrate model work but never store private profiles inside plugin caches. Keep the existing skills.sh `ditto` bootstrap outside native plugin discovery and give it a small hash-verifying installer for the exact release runtime. This plan stops after the Plugin release (Workstreams 0-8); benchmark Workstreams 9-10 remain a separate later plan.
+**Architecture:** Keep `ditto.py` as the canonical stdlib-only, single-file mining runtime. Add a backward-compatible `python ditto.py plugin` command family that owns deterministic extraction, stable segments, caches, report validation, profile activation, migration, and loader lookup; static plugin skills orchestrate model work but never store private profiles inside plugin caches. The no-flag plugin flow plans the full-history quality profile and waits for cost approval before model work; `--preview` selects a bounded starter profile and states that limitation in every surface. Keep the existing skills.sh `ditto` bootstrap outside native plugin discovery and give it a small hash-verifying installer for the exact release runtime. This plan stops after the Plugin release (Workstreams 0-8); benchmark Workstreams 9-10 remain a separate later plan.
 
 **Tech Stack:** Python 3 stdlib, `unittest`, JSON/Markdown skill files, skills.sh CLI, Codex and conditional Claude plugin manifests, local filesystem state under `DITTO_HOME`, Git/GitHub release tooling.
 
@@ -81,7 +81,8 @@ STARTER_CANDIDATES = (
 )
 STARTER_MAX_SOURCE_TOKENS = 160_000
 STARTER_MAX_MODEL_CALLS = 9
-DEFAULT_CANDIDATE_INDEX = 0  # changed only if frozen dogfood requires candidate 1 or 2
+DEFAULT_CANDIDATE_INDEX = 0  # quick-preview candidate; never the quality default without a 22/22 gate pass
+QUALITY_DEFAULT_MODE = "full"
 DEEP_SEGMENT_TOKENS = 20_000
 MAX_REPORT_BYTES = 8_192
 MAX_EVIDENCE_PER_REPORT = 12
@@ -91,8 +92,8 @@ MAX_QUOTE_CHARS = 200
 The internal plugin CLI is:
 
 ```text
-python ditto.py plugin preflight    [source args] [--candidate 0|1|2 | --deep | --deepen-domain work|design|write] [--ditto-home PATH]
-python ditto.py plugin prepare      [source args] [--candidate 0|1|2 | --deep | --deepen-domain work|design|write] [--ditto-home PATH]
+python ditto.py plugin preflight    [source args] [--preview | --candidate 0|1|2 | --deep | --deepen-domain work|design|write] [--ditto-home PATH]
+python ditto.py plugin prepare      [source args] [--preview | --candidate 0|1|2 | --deep | --deepen-domain work|design|write] [--ditto-home PATH]
 python ditto.py plugin cache-report --run-id ID --report FILE [--ditto-home PATH]
 python ditto.py plugin activate     --run-id ID (--pack DIR | --cached) [--ditto-home PATH]
 python ditto.py plugin status       [--ditto-home PATH]
@@ -3024,6 +3025,59 @@ git commit -m "test: lock the bounded Ditto starter profile"
 ```
 
 If candidate 0 passed and neither runtime nor tests changed, stage only `docs/release/plugin-dogfood.md`.
+
+### Task 16A: Make full mining the quality default and bounded mining an honest quick preview
+
+**Decision:** Candidate 2 recovered only `5/22` frozen requirements. Full-history mining remains the quality default. Bounded mining ships only as an explicitly labeled quick preview that creates a starter profile, not the full profile. The frozen calibration identity and result remain a permanent public regression fixture; bounded mining cannot be called the default unless a future run passes all `22/22` frozen requirements.
+
+This task supersedes every earlier bounded-default instruction in Tasks 1-16. Earlier text remains historical implementation context, not the release behavior after this checkpoint.
+
+**Files:**
+- Modify: `ditto.py`
+- Modify: `README.md`
+- Modify: `skills/mine/SKILL.md`
+- Modify: `.agents/skills/ditto/SKILL.md`
+- Modify: `tests/test_plugin_runtime.py`
+- Modify: `tests/test_plugin_manifests.py`
+- Create: `tests/fixtures/bounded-calibration-baseline.json`
+- Modify: `docs/release/plugin-dogfood.md`
+
+- [x] **Step 1: Add failing contract tests and the non-private calibration fixture**
+
+The fixture records only checklist hash, required/recovered counts, the candidate-2 run ID, and a nullable `passing_bounded_run`; it contains no private requirement text or receipts. Tests require no-flag `preflight` to return `mode: full`, `profile_scope: full_profile`, and `quality_default: true`; explicit `--preview` and hidden `--candidate` plans return `mode: quick_preview`, `profile_scope: starter_profile`, `quality_default: false`, and the exact notice `Quick preview creates a starter profile from selected history, not the full profile.` Tests also fail if public README/skill/CLI language calls bounded mining a default without fixture evidence of `22/22` recovery.
+
+- [x] **Step 2: Run focused tests and verify RED**
+
+```powershell
+python -m unittest tests.test_plugin_runtime.PreflightTest tests.test_plugin_manifests.DocumentationTruthTest -v
+```
+
+Expected: failures because no-flag preflight still selects candidate 0, `--preview` does not exist, and public surfaces still call bounded mining the default.
+
+- [x] **Step 3: Implement the minimal mode contract**
+
+Add `--preview` to the mutually exclusive mode group. No-flag and legacy explicit `--deep` both build the full-history plan; `--preview` uses `DEFAULT_CANDIDATE_INDEX`; hidden `--candidate` remains calibration-only and is also labeled quick preview. Both preflight builders emit the mode, scope, eligibility boolean, and an exact honest notice. `prepare` copies the selected plan mode instead of inferring it from `args.deep`.
+
+Full-history preflight must validate report cache entries, compute `report_set_hash`, and check the reduction cache so an identical full update can still plan zero additional workers and reducers.
+
+- [x] **Step 4: Make README and both mining skills explicit**
+
+The normal `run ditto` flow runs the full-history read-only preflight, shows exact selected tokens/calls/cache reuse, and waits for approval before any model work. `run ditto quick preview` maps to `--preview` and must say, without euphemism, that it samples selected history and creates a starter profile rather than the full profile. Remove every claim that bounded mining is the normal/default setup.
+
+- [x] **Step 5: Preserve the frozen result and record the approved fallback**
+
+Keep `docs/release/plugin-dogfood.md` and the regression fixture permanent. Change only the release consequence: the failed candidate result is unchanged, full mining is the quality default, and quick preview is permitted with the mandatory limitation label.
+
+- [x] **Step 6: Verify and checkpoint**
+
+```powershell
+python -m unittest discover -s tests -v
+python C:\Users\ohad1\.codex\skills\.system\plugin-creator\scripts\validate_plugin.py .
+python C:\Users\ohad1\.codex\skills\.system\skill-creator\scripts\quick_validate.py .agents\skills\ditto
+git diff --check
+```
+
+Commit only the listed Task 16A files with `feat: make full Ditto mining the quality default`, then resume Task 17. Do not rerun calibration, adaptive recall, the benchmark, or video work.
 
 ### Task 17: Prove live plugin activation, routing, updates, and safe migration
 

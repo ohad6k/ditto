@@ -226,6 +226,61 @@ class SegmentStoreTest(unittest.TestCase):
 
 
 class PreflightTest(unittest.TestCase):
+    def test_no_flag_preflight_is_the_full_history_quality_default(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            logs = root / "logs"
+            write_jsonl(logs / "one.jsonl", [{
+                "timestamp": "2026-01-01T00:00:00Z",
+                "payload": {
+                    "type": "message",
+                    "role": "user",
+                    "content": [{"text": "specific working preference"}],
+                },
+            }])
+            result = subprocess.run(
+                [sys.executable, str(DITTO), "plugin", "preflight", "--path", str(logs)],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            plan = json.loads(result.stdout)
+            self.assertEqual("full", plan["mode"])
+            self.assertEqual("full_profile", plan["profile_scope"])
+            self.assertTrue(plan["quality_default"])
+            self.assertIsNone(plan["candidate_index"])
+
+    def test_preview_is_explicitly_labeled_as_a_starter_profile(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            logs = root / "logs"
+            write_jsonl(logs / "one.jsonl", [{
+                "timestamp": "2026-01-01T00:00:00Z",
+                "payload": {
+                    "type": "message",
+                    "role": "user",
+                    "content": [{"text": "specific working preference"}],
+                },
+            }])
+            result = subprocess.run(
+                [
+                    sys.executable, str(DITTO), "plugin", "preflight",
+                    "--path", str(logs), "--preview",
+                ],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            plan = json.loads(result.stdout)
+            self.assertEqual("quick_preview", plan["mode"])
+            self.assertEqual("starter_profile", plan["profile_scope"])
+            self.assertFalse(plan["quality_default"])
+            self.assertEqual(ditto.DEFAULT_CANDIDATE_INDEX, plan["candidate_index"])
+            self.assertEqual(
+                "Quick preview creates a starter profile from selected history, not the full profile.",
+                plan["notice"],
+            )
+
     def test_candidate_ladder_reuses_one_segmentation_and_only_expands_selection(self):
         configs = [ditto.candidate_config(index) for index in range(3)]
         self.assertEqual({config["segment_tokens"] for config in configs}, {25_000})
@@ -316,6 +371,28 @@ class PreflightTest(unittest.TestCase):
 
 
 class UpdatePlanningTest(unittest.TestCase):
+    def test_full_history_preflight_is_zero_call_when_reports_and_reduction_are_cached(self):
+        segment = {
+            "segment_hash": "a" * 64,
+            "active": True,
+            "source": "codex",
+            "first_date": "2026-01-01",
+            "last_date": "2026-01-01",
+            "source_tokens": 10,
+            "session_versions": [],
+        }
+        result = {"records": [], "sessions": 1, "chars": 40}
+        with tempfile.TemporaryDirectory() as tmp, \
+                mock.patch.object(ditto, "sync_segments", return_value={"segments": [segment]}), \
+                mock.patch.object(ditto, "load_cached_report", return_value={}), \
+                mock.patch.object(ditto, "compute_report_set_hash", return_value="b" * 64), \
+                mock.patch.object(ditto.os.path, "isdir", return_value=True):
+            plan = ditto.build_deep_preflight(result, str(Path(tmp) / "private"))
+
+        self.assertEqual("b" * 64, plan["report_set_hash"])
+        self.assertEqual(0, plan["planned_worker_calls"])
+        self.assertEqual(0, plan["planned_reducer_calls"])
+
     def test_update_selection_retains_history_and_marks_only_new_work(self):
         active = [
             {"segment_hash": "a" * 64, "active": True, "source": "codex", "first_date": "2026-01-01", "source_tokens": 20000},
@@ -336,12 +413,14 @@ class UpdatePlanningTest(unittest.TestCase):
         self.assertEqual((0, 0), ditto.planned_call_counts(hashes, set(hashes), reduction_cache_hit=True))
         self.assertEqual((1, 1), ditto.planned_call_counts(hashes, {hashes[0]}, reduction_cache_hit=False))
 
-    def test_deep_mode_is_separate_and_never_automatic(self):
+    def test_full_mode_is_default_and_preview_is_explicit(self):
         parser = ditto.build_plugin_parser()
-        starter = parser.parse_args(["preflight"])
+        full = parser.parse_args(["preflight"])
+        preview = parser.parse_args(["preflight", "--preview"])
         deep = parser.parse_args(["preflight", "--deep"])
         targeted = parser.parse_args(["preflight", "--deepen-domain", "design"])
-        self.assertFalse(starter.deep)
+        self.assertFalse(full.preview)
+        self.assertTrue(preview.preview)
         self.assertTrue(deep.deep)
         self.assertEqual("design", targeted.deepen_domain)
 

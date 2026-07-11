@@ -29,7 +29,7 @@ Then tell your agent:
 run ditto
 ```
 
-That installs the bounded bootstrap and core working profile across supported skills.sh agents. It does not install native namespaced routing.
+That installs the bootstrap and creates a read-only full-history mining plan. Your agent must show the cost and wait for approval before model work. It does not install native namespaced routing.
 
 ### Native Codex plugin
 
@@ -50,16 +50,29 @@ Ditto first prints a read-only plan:
 
 ```json
 {
-  "valid_sessions": 1656,
-  "post_dedupe_source_tokens": 1950000,
-  "candidate_index": 0,
-  "selected_source_tokens": 100000,
-  "planned_worker_calls": 4,
-  "planned_reducer_calls": 1
+  "valid_sessions": "--",
+  "post_dedupe_source_tokens": "--",
+  "mode": "full",
+  "profile_scope": "full_profile",
+  "quality_default": true,
+  "candidate_index": null,
+  "selected_source_tokens": "--",
+  "planned_worker_calls": "--",
+  "planned_reducer_calls": "--"
 }
 ```
 
-The bounded starter ladder is:
+The full-history quality default reads all eligible history. Ditto shows the exact plan first and waits for approval before any worker or reducer runs. Cached reports are reused, so the displayed remaining cost can fall over time.
+
+If you explicitly want a cheaper first look, ask for `run ditto quick preview` or use `--preview`:
+
+```bash
+python ditto.py plugin preflight --preview
+```
+
+Quick preview creates a starter profile from selected history, not the full profile.
+
+The quick-preview ladder is:
 
 | Candidate | New source text | Maximum planned passes |
 |---|---:|---:|
@@ -67,15 +80,15 @@ The bounded starter ladder is:
 | 6 × 25K | up to 150K tokens | up to 6 workers + 1 reducer |
 | 8 × 25K | 160K-token hard cap | up to 8 workers + 1 reducer |
 
-Ditto uses the smallest candidate that passes the frozen private calibration. It never silently falls back to full history. Deep mode is explicit, separately planned, and requires approval.
+The frozen calibration recovered only 5 of 22 required traits at the widest bounded candidate. Quick preview therefore cannot be described as the quality default unless a future run passes all 22 frozen requirements. The permanent non-private baseline is in `tests/fixtures/bounded-calibration-baseline.json`.
 
-On update, unchanged segment and evidence hashes are reused. An identical update plans zero additional Ditto mining passes. New history plans only the affected bounded work plus one reducer.
+On update, unchanged segment and evidence hashes are reused. An identical update plans zero additional Ditto mining passes. New history plans only affected full-history work plus one reducer.
 
 These are selected source tokens and planned worker/reducer passes, not provider billing events. Ditto cannot measure provider system prompts, tool traffic, orchestration overhead, or a percentage of a proprietary subscription allowance.
 
 ### Experimental adaptive recall
 
-The receipt-salience and scout pipeline remains available to developers through explicit `--stage A`, but it is experimental and is not used by the Plugin release, default setup, updates, or calibration.
+The receipt-salience and scout pipeline remains available to developers through explicit `--stage A`, but it is experimental and is not used by the Plugin release, quality-default setup, updates, or calibration.
 
 ## What makes the result trustworthy
 
