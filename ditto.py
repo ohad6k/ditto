@@ -1836,8 +1836,12 @@ def reduction_cache_is_valid(ditto_home, report_set_hash):
         ditto_home, "cache", "reductions", REDUCER_SCHEMA_VERSION, report_set_hash
     )
     try:
-        validate_version_directory(path, report_set_hash)
-        return True
+        cached_manifest, _ = validate_version_directory(path, report_set_hash)
+        version_path = safe_private_child(
+            ditto_home, "profiles", "default", "versions", cached_manifest["profile_version"]
+        )
+        version_manifest, _ = validate_version_directory(version_path, report_set_hash)
+        return version_manifest == cached_manifest
     except (OSError, ValueError, TypeError, AttributeError, json.JSONDecodeError):
         return False
 

@@ -1,5 +1,6 @@
 import importlib.util
 import json
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -301,6 +302,21 @@ class AtomicProfileStoreTest(unittest.TestCase):
             unsigned["profile_version"] = ""
             manifest["profile_version"] = ditto.sha256_text(ditto.canonical_json(unsigned))[:20]
             manifest_path.write_text(ditto.canonical_json(manifest) + "\n", encoding="utf-8")
+
+            self.assertFalse(ditto.reduction_cache_is_valid(home, report_set_hash))
+
+    def test_reduction_cache_requires_its_immutable_version_directory(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            home = str(Path(tmp) / "private")
+            report_set_hash = "6" * 64
+            pack = make_valid_pack(Path(tmp) / "pack", report_set_hash)
+            activated = ditto.activate_profile_pack(
+                home, pack, evidence_fixture(), run_plan_fixture(report_set_hash)
+            )
+            version_dir = Path(
+                home, "profiles", "default", "versions", activated["profile_version"]
+            )
+            shutil.rmtree(version_dir)
 
             self.assertFalse(ditto.reduction_cache_is_valid(home, report_set_hash))
 
