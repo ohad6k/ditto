@@ -24,8 +24,12 @@ Usage:
 import argparse, base64, glob, hashlib, json, os, re, shutil, stat, sys, tempfile, time, unicodedata, uuid
 
 HOME = os.path.expanduser("~")
+CODEX_HOME = os.path.expanduser(os.environ.get("CODEX_HOME", os.path.join(HOME, ".codex")))
 SOURCES = {
-    "codex":   [os.path.join(HOME, ".codex", "sessions")],
+    "codex":   [
+        os.path.join(CODEX_HOME, "sessions"),
+        os.path.join(CODEX_HOME, "archived_sessions"),
+    ],
     "claude":  [os.path.join(HOME, ".claude", "projects")],
     "copilot": [os.path.join(HOME, ".copilot", "session-state")],
 }
