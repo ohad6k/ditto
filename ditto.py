@@ -129,6 +129,11 @@ INJECTED_CONTEXT_PREFIXES = (
     "<recommended_plugins",
     "<summary>",
 )
+CODEX_CONTROL_ENVELOPE = re.compile(
+    r"<(?P<tag>subagent_notification|codex_internal_context|skill|codex_delegation)"
+    r"(?:\s[^>]*)?>.*</(?P=tag)>",
+    re.DOTALL,
+)
 USER_LINE_MARKERS = (
     '"role":"user"',
     '"role": "user"',
@@ -153,6 +158,7 @@ def user_messages(path):
                     o = json.loads(line)
                 except Exception:
                     continue
+                codex_record = o.get("type") == "response_item"
                 # Copilot CLI: {type:'user.message', data:{content, source}, timestamp}
                 if o.get("type") == "user.message":
                     data = o.get("data", {})
@@ -176,7 +182,8 @@ def user_messages(path):
                         texts = []
                 for t in texts:
                     t = (t or "").strip()
-                    if not t or is_injected_context(t):
+                    if (not t or is_injected_context(t) or
+                            (codex_record and CODEX_CONTROL_ENVELOPE.fullmatch(t))):
                         continue
                     if is_pasted_log(t):
                         continue
