@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.3.2 - 2026-07-13
+
+### Fixed
+
+- Redaction now catches credentials in the forms people actually paste to an agent: `the wifi password is hunter2`, `psk …`, `wifi key …` — guarded so prose about passwords (`the password is wrong`) survives, and `pwd` is not a keyword so shell commands stay intact. The phone pattern no longer swallows dates, part numbers, and version strings (874 false redactions on one real corpus); it requires an international `+CC` prefix or a national trunk `0` (parenthesized area codes included), verified against Israeli, Australian, UK, German, and US international formats. Bare domestic formats with neither marker (`415-555-2671`) are no longer matched — the old pattern caught them only by the same over-matching that ate dates. From PR #9 by @terencedubois7-cmd, with review corrections (Israeli mobile coverage, parenthesized formats, `boarding pass` false positive). **If you ran Ditto before this release, grep your existing `ditto-out/` for anything sensitive before sharing it.**
+- Root-level generated lens files (`you-appendix.md`, `you-thinking.md`, `you-designer.md`, `you-writer.md`) are gitignored so a `git add -A` inside a repo clone can never publish them.
+- Claude Code mining now keeps only turns a human actually typed. Subagent transcripts (85% of files on one real history), tool results, harness meta records, model-written compact summaries, task notifications, command XML, and `[Request interrupted` turns are dropped; on the verified corpus that removes 78% of mined characters, all machine text that was deflating real traits' receipt counts. From PR #8 by @terencedubois7-cmd, with one fact-check correction: Claude Desktop stamps `promptSource: "sdk"` on human-typed prompts, so the filter keys on `origin.kind` and only treats sdk + headless `sdk-cli` entrypoint as machine.
+- Codex mining now also reads `~/.codex/archived_sessions` (a second store the extractor never saw) and honors `CODEX_HOME`. Codex control envelopes (`subagent_notification`, `codex_internal_context`, `codex_delegation`, `turn_aborted`, `heartbeat`) are stripped out of role:user turns — 41% of role:user characters on one real 12GB corpus — and `<image>` attachment markers no longer leak local file paths into the corpus. From PR #10 by @atramenta-gargalizene, adjusted after fact-checking a real history (bare `<skill>` stays unfiltered, envelope stripping keeps surrounding human text).
+- `EXTRACTION_SCHEMA_VERSION` bumps `1` -> `2`: segments cached under the old extraction rules are invalidated and re-mined instead of silently reused.
+- The `v0.3.2` bootstrap runtime pins `ditto.py` to SHA-256 `c9811ce7d2413b7bb57f938c17090465244453dec40f7659138c5fffcd673cb5`; `MINING_PROMPT.md` is unchanged.
+
+### Why it matters
+
+All three fixes come from contributors who ran Ditto on real histories and looked at what it actually read and wrote. The corpus is the product: machine text in it deflates every real trait, and one leaked credential in it is one too many.
+
 ## 0.3.1 - 2026-07-13
 
 ### Changed
