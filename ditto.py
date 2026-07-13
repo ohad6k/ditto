@@ -97,16 +97,21 @@ REDACTIONS = [
     (re.compile(r"[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}"), "[EMAIL]"),
     (re.compile(r"\b(?:\d{1,3}\.){3}\d{1,3}\b"),         "[IP]"),
     # Phone: an explicit international +CC prefix, or a national trunk 0 plus a
-    # valid area/mobile digit. Anchored so it cannot eat dates (2026-06-14),
-    # versions (v0.8.0), part numbers (n4500) or URL fragments, while trailing
-    # sentence punctuation still matches ("call +972 52-123-4567.").
-    (re.compile(r"(?<![\w.\-/])(?:\+\d{1,3}[\s\-]?\d(?:[\s\-]?\d){7,9}"
-                r"|0[2-9](?:[\s\-]?\d){7,8})(?![\w/]|[.\-]\d)"), "[PHONE]"),
+    # valid area/mobile digit, with optional parenthesized area codes. Anchored
+    # so it cannot eat dates (2026-06-14), versions (v0.8.0), part numbers
+    # (n4500) or URL fragments, while trailing sentence punctuation still
+    # matches ("call +972 52-123-4567."). Bare domestic formats with neither
+    # marker (415-555-2671) are intentionally not matched: the old pattern
+    # caught them only by the same over-matching that ate dates.
+    (re.compile(r"(?<![\w.\-/])(?:\+\d{1,3}[\s\-]?(?:\(\d{1,4}\)[\s\-]?)?\d(?:[\s\-]?\d){6,10}"
+                r"|\(?0[2-9]\d{0,2}\)?(?:[\s\-]?\d){6,9})(?![\w/]|[.\-]\d)"), "[PHONE]"),
     (re.compile(r"(?i)(api[_-]?key|secret|token|password|passwd)\s*[:=]\s*\S+"), r"\1=[REDACTED]"),
     # `password is hunter2`, `psk hunter2`, `wifi key hunter2` -- the bare and
     # `is` forms the [:=] rule above misses entirely. The pass- stem requires a
-    # suffix so "boarding pass QF12345" stays untouched.
-    (re.compile(r"(?i)\b(pass(?:word|wd|phrase)|pwd|psk|passkey|wifi\s+key)\b\s*(?:is\s+|=\s*|:\s*)?['\"]?([^\s'\",;]{6,})"),
+    # suffix so "boarding pass QF12345" stays untouched, and `pwd` is not a
+    # keyword: in a coding corpus it is the shell command, and `pwd C:/Users/x`
+    # would be eaten.
+    (re.compile(r"(?i)\b(pass(?:word|wd|phrase)|psk|passkey|wifi\s+key)\b\s*(?:is\s+|=\s*|:\s*)?['\"]?([^\s'\",;]{6,})"),
      _credential_repl),
 ]
 

@@ -119,7 +119,7 @@ class DittoCliTest(unittest.TestCase):
 
         for prose in ("the password is wrong", "password reset email",
                       "my token store", "passwd prompt appeared",
-                      "boarding pass QF12345"):
+                      "boarding pass QF12345", "pwd C:/Users/me/project1"):
             self.assertNotIn("[REDACTED]", ditto.redact(prose), prose)
 
     def test_phone_redaction_does_not_eat_dates_versions_or_part_numbers(self):
@@ -136,7 +136,9 @@ class DittoCliTest(unittest.TestCase):
         for phone in ("07 5477 4500", "+61 400 123 456", "0400123456",
                       "052-1234567", "0521234567", "03-1234567",
                       "+972 52-123-4567", "+14155552671",
-                      "reach me at +972 52-123-4567."):
+                      "reach me at +972 52-123-4567.",
+                      "(02) 9876 5432", "(03) 123-4567", "+1 (415) 555-2671",
+                      "07700 900123", "+49 151 12345678"):
             self.assertIn("[PHONE]", ditto.redact(phone), phone)
 
     def test_install_codex_writes_skill_and_refuses_overwrite(self):
