@@ -2,7 +2,7 @@
 
 OpenClaw and Hermes Agent read the same skill format Ditto writes. Your mined profile is discovered by both without an adapter or any format change.
 
-Verified 2026-07-13 on Windows with OpenClaw 2026.6.11 and Hermes Agent 0.18.2: the profile skill shows `✓ ready` in `openclaw skills list` and `enabled` in `hermes skills list`. A full live-session run is not part of this verification yet.
+Verified 2026-07-13 on Windows with OpenClaw 2026.6.11 and Hermes Agent 0.18.2: the profile skill shows `✓ ready` in `openclaw skills list` and `enabled` in `hermes skills list`. Also verified live in OpenClaw (gpt-5.5 agent turns): with the profile seeded into the workspace `USER.md`, the same one-line prompt produces a visibly profile-shaped answer versus a generic one on a cold install. In that live test, the skill alone was NOT reliably read in a one-shot turn — seed `USER.md` and keep the skill for depth.
 
 ## Why seed them
 
@@ -38,7 +38,14 @@ Expect a `✓ ready` row named `ditto` with source `openclaw-workspace`.
 
 OpenClaw also scans the shared `~/.agents/skills` directory, so if your profile already lives there it is picked up with no copying. Keep the profile in one location so a single `ditto` skill resolves.
 
-Deeper seed (optional, from the OpenClaw bootstrapping docs, not exercised here): the workspace `USER.md` is OpenClaw's standing picture of you. You can paste your profile's core laws there before first run and start with `openclaw onboard --skip-bootstrap` so the first-run ritual does not overwrite what you seeded.
+Then seed the workspace `USER.md` — this is the step that changes behavior. `USER.md` is OpenClaw's standing picture of you and is injected every session, so the profile actually loads instead of waiting for the agent to decide to read a skill:
+
+```bash
+# take the profile body (below the frontmatter) into the workspace USER.md
+tail -n +5 ~/.claude/skills/ditto/SKILL.md > ~/.openclaw/workspace/USER.md
+```
+
+If you have not onboarded yet, start with `openclaw onboard --skip-bootstrap` so the first-run ritual does not overwrite what you seeded. Live-verified result: the same prompt that gets a generic answer on a cold install gets an answer shaped by your mined laws and taste with `USER.md` seeded.
 
 ## Hermes Agent
 
