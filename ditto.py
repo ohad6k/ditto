@@ -24,15 +24,19 @@ Usage:
 import argparse, base64, glob, hashlib, json, os, re, shutil, stat, sys, tempfile, time, unicodedata, uuid
 
 HOME = os.path.expanduser("~")
+CODEX_HOME = os.path.expanduser(os.environ.get("CODEX_HOME", os.path.join(HOME, ".codex")))
 SOURCES = {
-    "codex":   [os.path.join(HOME, ".codex", "sessions")],
+    "codex":   [
+        os.path.join(CODEX_HOME, "sessions"),
+        os.path.join(CODEX_HOME, "archived_sessions"),
+    ],
     "claude":  [os.path.join(HOME, ".claude", "projects")],
     "copilot": [os.path.join(HOME, ".copilot", "session-state")],
 }
 DITTO_START = "<!-- ditto profile:start -->"
 DITTO_END = "<!-- ditto profile:end -->"
 
-EXTRACTION_SCHEMA_VERSION = "1"
+EXTRACTION_SCHEMA_VERSION = "2"
 SEGMENT_SCHEMA_VERSION = "1"
 REPORT_SCHEMA_VERSION = "2"
 PROMPT_SCHEMA_VERSION = "2"
@@ -154,6 +158,23 @@ INJECTED_CONTEXT_PREFIXES = (
     "<launch-selected-element",
     "[Request interrupted",
 )
+
+# Codex writes harness traffic into role:user records, wrapped in control
+# envelopes with matching closing tags. Strip complete envelopes and keep any
+# human text around them; a message that was only envelopes drops out. Bare
+# <skill> is deliberately NOT listed: it appears attribute-less and rarely, and
+# is indistinguishable from a human pasting a <skill> XML block.
+CODEX_CONTROL_ENVELOPE = re.compile(
+    r"<(?P<tag>subagent_notification|codex_internal_context|codex_delegation|"
+    r"turn_aborted|heartbeat)"
+    r"(?:\s[^>]*)?>.*?</(?P=tag)>",
+    re.DOTALL,
+)
+# Image attachments split across records as `<image name=".." path="..">` and a
+# following `</image>`; the attributes embed local file paths. Strip the
+# markers, keep the human text around them. ('>' is illegal in Windows file
+# names, so [^>]* is safe for the attribute span.)
+CODEX_IMAGE_MARKER = re.compile(r"</?image\b[^>]*>?")
 USER_LINE_MARKERS = (
     '"role":"user"',
     '"role": "user"',
@@ -200,6 +221,7 @@ def user_messages(path):
                     o = json.loads(line)
                 except Exception:
                     continue
+                codex_record = o.get("type") == "response_item"
                 if o.get("type") == "user" and not is_human_turn(o):
                     continue
                 # Copilot CLI: {type:'user.message', data:{content, source}, timestamp}
@@ -225,6 +247,9 @@ def user_messages(path):
                         texts = []
                 for t in texts:
                     t = (t or "").strip()
+                    if codex_record and t:
+                        t = CODEX_CONTROL_ENVELOPE.sub("", t)
+                        t = CODEX_IMAGE_MARKER.sub("", t).strip()
                     if not t or is_injected_context(t):
                         continue
                     if is_pasted_log(t):

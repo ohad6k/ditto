@@ -205,7 +205,7 @@ class SegmentStoreTest(unittest.TestCase):
             home = str(Path(tmp) / "private")
             records = [fake_record("a", "one"), fake_record("b", "two")]
             first = ditto.sync_segments(records, home, target_tokens=10)
-            with mock.patch.object(ditto, "EXTRACTION_SCHEMA_VERSION", "2"):
+            with mock.patch.object(ditto, "EXTRACTION_SCHEMA_VERSION", "999-test"):
                 second = ditto.sync_segments(records, home, target_tokens=10)
             first_hashes = {item["segment_hash"] for item in first["segments"] if item["active"]}
             second_hashes = {item["segment_hash"] for item in second["segments"] if item["active"]}
