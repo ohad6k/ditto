@@ -245,6 +245,7 @@ python ditto.py --install you.md --target claude
 python ditto.py --install you.md --target cursor --repo .
 python ditto.py --install you.md --target agents --repo .
 python ditto.py --install you.md --target gemini --repo .
+python ditto.py --install you.md --target opencode
 ```
 
 ## Support matrix
@@ -256,6 +257,7 @@ python ditto.py --install you.md --target gemini --repo .
 | Claude Code skills.sh/direct adapter | Supported |
 | Claude native plugin | Not claimed; host unavailable during validation |
 | Cursor / Gemini adapters | Supported through explicit install commands |
+| OpenCode | Global-rules adapter verified in a live session (`--target opencode`); project `AGENTS.md` and `~/.claude/skills` also read natively |
 | OpenClaw / Hermes Agent | Profile skill discovery verified locally; [guide](docs/OPENCLAW_HERMES.md) |
 
 ## Updating and notifications

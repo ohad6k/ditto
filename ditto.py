@@ -2827,6 +2827,10 @@ def install_destination(target, repo_dir, home_dir):
         return os.path.join(repo_dir, "AGENTS.md")
     if target == "gemini":
         return os.path.join(repo_dir, "GEMINI.md")
+    if target == "opencode":
+        # OpenCode's global rules file, loaded in every session on every OS
+        # (XDG rooted at the home dir, so the same path holds on Windows).
+        return os.path.join(home_dir, ".config", "opencode", "AGENTS.md")
     raise ValueError(f"unknown target: {target}")
 
 def install_profile(profile_path, target, repo_dir, home_dir, yes=False, dry_run=False):
@@ -2851,7 +2855,7 @@ def install_profile(profile_path, target, repo_dir, home_dir, yes=False, dry_run
     print(f"destination: {dest}")
 
     if dry_run:
-        if target in ("agents", "gemini"):
+        if target in ("agents", "gemini", "opencode"):
             print("dry run: would append or update a marked ditto block")
         else:
             print("dry run: would write profile file")
@@ -2859,7 +2863,7 @@ def install_profile(profile_path, target, repo_dir, home_dir, yes=False, dry_run
 
     os.makedirs(os.path.dirname(dest), exist_ok=True)
 
-    if target in ("agents", "gemini"):
+    if target in ("agents", "gemini", "opencode"):
         existing = ""
         if os.path.exists(dest):
             with open(dest, "r", encoding="utf-8", errors="replace", newline="") as fh:
@@ -3695,7 +3699,7 @@ def legacy_main():
     ap.add_argument("--no-open", action="store_true", help="don't open card.html in the browser")
     ap.add_argument("--still", action="store_true", help="print the card without the reveal animation")
     ap.add_argument("--install", metavar="PROFILE", help="install an existing generated you.md profile")
-    ap.add_argument("--target", choices=["claude", "codex", "cursor", "agents", "gemini"], help="where to install --install")
+    ap.add_argument("--target", choices=["claude", "codex", "cursor", "agents", "gemini", "opencode"], help="where to install --install")
     ap.add_argument("--repo", default=".", help="repo path for cursor/AGENTS.md/GEMINI.md installs")
     ap.add_argument("--yes", action="store_true", help="overwrite/replace an existing install")
     ap.add_argument("--home", default=HOME, help=argparse.SUPPRESS)

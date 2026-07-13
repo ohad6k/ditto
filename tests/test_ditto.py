@@ -222,6 +222,37 @@ class DittoCliTest(unittest.TestCase):
             self.assertIn("- done means live", installed)
             self.assertNotIn("name: you", installed)
 
+    def test_install_opencode_writes_global_rules_block(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            home = root / "home"
+            home.mkdir()
+            profile = root / "you.md"
+            profile.write_text(
+                "---\nname: you\ndescription: test profile\n---\n\n# profile\n\n- done means live\n",
+                encoding="utf-8",
+            )
+            cmd = [sys.executable, str(DITTO), "--install", str(profile),
+                   "--target", "opencode", "--home", str(home)]
+
+            subprocess.run(cmd, check=True, capture_output=True, text=True)
+            dest = home / ".config" / "opencode" / "AGENTS.md"
+            installed = dest.read_text(encoding="utf-8")
+            self.assertIn("<!-- ditto profile:start -->", installed)
+            self.assertIn("- done means live", installed)
+            self.assertNotIn("name: you", installed)
+
+            # a second install without --yes refuses to replace the block
+            second = subprocess.run(cmd, capture_output=True, text=True)
+            self.assertNotEqual(0, second.returncode)
+
+            # --yes replaces the block and keeps unrelated content
+            dest.write_text("# my own rules\n\n" + installed, encoding="utf-8")
+            subprocess.run(cmd + ["--yes"], check=True, capture_output=True, text=True)
+            replaced = dest.read_text(encoding="utf-8")
+            self.assertIn("# my own rules", replaced)
+            self.assertEqual(1, replaced.count("<!-- ditto profile:start -->"))
+
     def test_install_cursor_writes_mdc_frontmatter(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

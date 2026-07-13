@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.3 - 2026-07-13
+
+### Added
+
+- OpenCode adapter: `python ditto.py --install you.md --target opencode` writes the marked profile block into OpenCode's global rules file (`~/.config/opencode/AGENTS.md`, same path on Windows), which loads in every session. Verified live against OpenCode 1.17.19: a real turn quoted the profile as its loaded instructions and described the user from it. OpenCode also reads project `AGENTS.md` (existing `--target agents`) and discovers `~/.claude/skills` natively, so the Claude skill install works there too. Requested by a user on Reddit within the hour.
+- The `v0.3.3` bootstrap runtime pins `ditto.py` to SHA-256 `a1bdc4efb96113a8699e57b70ccf5af30223d58b190430e8b4d229726958296f`; `MINING_PROMPT.md` is unchanged.
+
 ## 0.3.2 - 2026-07-13
 
 ### Fixed
