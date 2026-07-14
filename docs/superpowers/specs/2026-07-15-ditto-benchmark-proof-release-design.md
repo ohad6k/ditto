@@ -10,7 +10,7 @@
 
 **Frozen starting point:** Ditto plugin `v0.3.7` at `5f4008b0c0df40dcadb92c8fd1ba4dcf3aee40d0`
 
-## Review changelog (A1-A9)
+## Review changelog (A1-A11)
 
 - **A1:** Sections 6.3, 8.3, 8.4, and 8.5 now treat writing voice as structurally de-blindable. Writing uses pre-registered mechanism checks; any public preference verdict comes only from reviewers unfamiliar with the operator.
 - **A2:** New Section 8.4 defines the independent reviewer role, disqualifies Ohad from blind preference judging, and makes consent and blinding evidence mandatory in Section 11.
@@ -22,6 +22,7 @@
 - **A8 (superseded by A10):** Section 18 originally kept the top-down traffic estimate as a non-binding scenario before the additional distribution review removed it entirely.
 - **A9:** Section 9 retains exact captured labels, allows attrition, and forbids substitution or backfilling of unavailable systems.
 - **A10:** Section 18 was rebuilt from fixed operator channel constraints and live research captured on 2026-07-15. The top-down 17% conversion and 4,900-visitor scenario is removed. The new plan uses dated per-channel evidence, marks unsupported reach and star conversion unknown, assigns execution ownership, stages channel-native copy/assets, gives a conditional dated calendar, sets Hacker News planned traffic to zero, and keeps every external action behind a separate approval.
+- **A11:** A live launch-readiness audit on 2026-07-15 separated ClawHub downloads, installs, PyPI packages, GitHub clones, and stars instead of treating them as one adoption number. It also found that the public Discord invite expires before the proposed launch window and that GitHub `v0.3.8` is newer than PyPI `0.3.6`; Section 18 now fails closed on both release-surface and community-link drift.
 
 ## 1. Outcome
 
@@ -416,6 +417,12 @@ Research was refreshed on **2026-07-15**. Private provider evidence comes from G
 | Product Hunt | Product Hunt's [official posting guide](https://help.producthunt.com/en/articles/479557-how-to-post-a-product) says launches start at 12:01 a.m. platform time, a first comment should open the discussion, makers can self-hunt, hunter followers do not receive email, and maker followers are notified only if the launch reaches the homepage. Public 2026 founder receipts report about [20 visitors at #64](https://www.reddit.com/r/ProductHunters/comments/1uehbaw/we_ranked_64_on_product_hunt_and_got_0_signups/), [369 visitors at #10](https://www.reddit.com/r/SideProject/comments/1uadf33/i_ranked_10_on_product_hunt_with_a_solo_chrome/), and [638 visitors at #2](https://www.reddit.com/r/ProductHuntLaunches/comments/1upmr2s/we_hit_2_on_product_hunt_yesterday_here_is_what/). A live third-party census reported `586` featured versus `20,771` unfeatured launches in the prior 30 days on [Product Hunt Pulse](https://hunted.space/product-hunt-pulse). | **20-638 qualified site visits is a scenario band, not a Ditto forecast.** Position, featuring, audience, and product fit dominate the result; an unfeatured launch may sit near the low end or below it. | **Unknown for GitHub stars/downloads.** The cited cases measure visitors, signups, or installs for different products. Their conversion rates do not transfer to Ditto. | Run one proof-backed launch only. Record actual Product Hunt referrer visits and outcomes without projecting rank. |
 | Hacker News | Human operator receipt: the account is flagged/effectively banned. GitHub Traffic showed `1` HN unique referrer in the prior launch window, but no approved submission produced it. | **0 planned.** | **0 planned.** | No submission, automation, or projection. Respond once only if a third party submits organically. |
 
+Marketplace and package counters are a separate evidence class from channel reach:
+
+- The public [ClawHub API receipt](https://clawhub.ai/api/v1/skills/ditto-profile) returned `42` cumulative downloads, `0` installs, `1` ClawHub star, and a clean moderation verdict on 2026-07-15. The earlier `41` was a real value of that counter before it incremented, but the API exposes no unique-person or successful-use denominator. Report it only as **42 ClawHub download requests**, never as 42 users or installations.
+- The official [PyPI project record](https://pypi.org/pypi/ditto-cli/json) still returned `0.3.6` while the public [GitHub release](https://github.com/ohad6k/ditto/releases/tag/v0.3.8) was `v0.3.8`. PyPI's project JSON reports download fields as `-1`, so it does not validate a download total. This version drift must be resolved or named explicitly before any copy implies that every install surface serves the current release.
+- GitHub Traffic reported `965` clones from `371` unique cloners over its 14-day window. Those are Git clone events, not GitHub release downloads, package installs, active users, or retained users. The repository had `179` stars at the same audit point, with `15` timestamped stars in the preceding 24 hours; that is an observed baseline, not a channel forecast.
+
 There is **no aggregate visitor or star forecast**. Product Hunt is the only channel with a sourced prospective visit scenario, and the other channels remain unknown; summing one scenario with unknowns would create fake precision. The former `17%` repository-wide visitor-to-star ratio and `4,900` visitor line are removed because repository-wide uniques mix channels, repeat exposure, and self-selected launch traffic while GitHub does not attribute stars to referrers.
 
 Before execution, each channel receives a measurement receipt with: publication timestamp; exact URL; platform impressions/views; platform engagements; GitHub referrer uniques; site proof-page uniques when available; clones; release-asset downloads when available; Discord joins when attributable; and the repository star delta during the window labelled **temporal, not causal**. If the platform or provider does not expose a field, it remains `unknown`.
@@ -426,6 +433,7 @@ The agent creates one local, non-public, gitignored staging root outside both th
 
 - `evidence.json`: the approved public aggregate record and its SHA-256;
 - `claims.json`: exact permitted substitutions for `{VALID_BLIND_PAIRS}`, `{DITTO_WINS}`, `{COLD_WINS}`, `{TIES}`, `{DITTO_HARD_FAILURES}`, `{COLD_HARD_FAILURES}`, `{INVALIDATIONS}`, `{DITTO_REF}`, `{EVIDENCE_URL}`, and `{VIDEO_URL}`;
+- `release-surfaces.json`: point-in-time versions and clean-install receipts for GitHub release/tag, native plugin manifests, the skills bootstrap, PyPI, MCP Registry, Glama, ClawHub, and every install command used in public copy;
 - `x/`: rendered 280-character posts, the short proof clip, captions, schedule screenshot, and link check;
 - `reddit/`: separate r/ClaudeSkills and r/ClaudeAI Markdown drafts, rule snapshots, flairs, preview screenshots, and a no-duplicate-copy diff;
 - `youtube/`: final video, thumbnail, title, description, chapters, captions, transcript, end-screen plan, and checksum manifest;
@@ -442,6 +450,8 @@ GitHub is the conversion and inspection surface, not a traffic forecast.
 **Agent executes after a separate repository-change approval:** prepare the benchmark release branch, release notes, README proof block, static evidence pages, checksums, and link verification. **Ohad manually fires:** merge the approved PR and publish the separate benchmark GitHub release because those are public repository actions. The agent may execute them only if Ohad later gives exact publish authorization.
 
 The proof hub must be live before any distribution item. It opens with the frozen comparison question, raw win/tie/loss denominators, hard failures, exclusions, and `small-n, directional only`; every clip and post links to the same evidence URL.
+
+The benchmark may remain frozen at `v0.3.7` while the product advances, but every public install path must name what it actually serves. Before staging, the agent records the current GitHub, plugin, PyPI, registry, and marketplace versions and runs the exact public install commands in clean temporary homes. A mismatch is allowed only when the copy states it precisely and the intended path still passes; otherwise distribution stops. No channel may use `latest`, `current`, or `v0.3.8` as interchangeable labels while PyPI still resolves `0.3.6`.
 
 ### 18.5 Reddit: two manual, native posts
 
@@ -669,8 +679,10 @@ Launch checklist:
 - [ ] at least two 1270x760 gallery images show mechanism, paired proof, limitations, and install path;
 - [ ] full public YouTube URL loads and is not private;
 - [ ] description is at most 260 characters and every number resolves from `claims.json`;
+- [ ] every displayed install command resolves to the intended release and has a clean smoke receipt in `release-surfaces.json`; the GitHub `v0.3.8` / PyPI `0.3.6` drift is resolved or disclosed before approval;
 - [ ] first comment, FAQ replies, privacy answer, prior-art answer, and negative-result answer are staged;
 - [ ] audience mobilization is limited to the approved X/YouTube/Reddit sequence and one evidence-first notice to the existing Discord; no unsolicited DM, vote request, coordinated upvote, or promised endorsement is used;
+- [ ] the Discord link remains valid through the `+7 days` measurement window. The current invite expires at `2026-08-07 12:37 UTC`, before the proposed launch; Ohad must manually create or select a durable invite after separate approval, or Discord is removed from the launch. The agent validates and stages the link but does not create or send invites autonomously;
 - [ ] launch date/time is verified in the Product Hunt dashboard and captured in the approval receipt;
 - [ ] no hunter-email, rank, homepage, traffic, upvote, signup, or star projection appears in copy;
 - [ ] launch-day owner sheet covers moderation, support, real replies, evidence corrections, and stop conditions;
@@ -718,10 +730,21 @@ Stop the remaining sequence and ask for review when any of these occurs:
 - X scheduling uses an unapproved client or the rendered post differs from the preview;
 - Product Hunt detects a duplicate/collision, wrong product, wrong date, or incomplete maker state;
 - YouTube publishes the wrong visibility, captions, thumbnail, or evidence URL;
+- an install command resolves a different release than the approved copy, or any required marketplace/package surface fails its clean smoke;
+- the Discord invite is expired, expiring inside the measurement window, or replaced without link validation;
 - a post attracts a substantive methodological correction that changes the claim;
 - any platform action would require credentials, vote coordination, unsolicited bulk messaging, or ban-evasion behavior.
 
 No more bulk awesome-list pull requests are part of this milestone. Existing high-value submissions are maintained only when maintainers respond, with one factual reply and no promotional bump. Existing creator email threads may receive at most one evidence-linked follow-up after the ship gate if the recipient previously engaged or the thread is still contextually active; no traffic is projected and no new bulk list is created.
+
+The 2026-07-15 submission audit found `22` open Ditto listing PRs and two merged external listings. It produced no new human-maintainer request requiring a reply:
+
+- [agentic-awesome-skills #842](https://github.com/sickn33/agentic-awesome-skills/pull/842) has all four checks passing, both Codex review threads resolved, and a final review reporting no major issue. Its remaining blocked state is maintainer review, so no further comment is staged.
+- [awesome-copilot #2296](https://github.com/github/awesome-copilot/issues/2296) now has both intake gates passing and the `ready-for-review` label. The separate contributor-reputation flag reports `Credential audit: NONE`; it is a maintainer trust review, not a failed Ditto install. Do not rerun or comment again without a maintainer request.
+- [awesome-mcp-servers #10103](https://github.com/punkpeye/awesome-mcp-servers/pull/10103) is clean after the Glama/introspection receipt already posted. It waits without another bump.
+- [awesome-agent-skills #348](https://github.com/heilcheng/awesome-agent-skills/pull/348) has a Vercel deployment authorization failure tied to the maintainer's team. The agent must not authorize, request access to, or repeatedly comment on another maintainer's deployment surface.
+
+The agent checks this inventory read-only for new human requests. A bot summary, ranking delay, `review required`, or maintainer-side deployment gate does not by itself justify a follow-up.
 
 ## 19. Exit criteria
 
