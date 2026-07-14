@@ -1,3 +1,4 @@
+<!-- mcp-name: io.github.ohad6k/ditto -->
 <p align="center"><img src="assets/ditto.png" width="360" alt="Ditto"></p>
 
 <h1 align="center">Ditto</h1>

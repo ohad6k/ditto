@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.6 - 2026-07-14
+
+### Added
+
+- Official MCP Registry metadata: an `mcp-name: io.github.ohad6k/ditto` marker in the README lets the registry verify the published `ditto-cli` PyPI package, and a `server.json` describes the stdio MCP server (run with `uvx ditto-cli mcp`). No runtime behavior changed from 0.3.5.
+- The `v0.3.6` bootstrap runtime pins `ditto.py` to SHA-256 `2428e5acc7dc5f87cd87182ce946705a7c4ec0dd7f2f221b3d61f9ceec5c49b2`; `MINING_PROMPT.md` is unchanged.
+
 ## 0.3.5 - 2026-07-14
 
 ### Added

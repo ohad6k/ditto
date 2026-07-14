@@ -30,3 +30,6 @@ videos/
 dist/
 build/
 *.egg-info/
+
+# mcp registry publisher binary (downloaded, not committed)
+mcp-publisher.exe

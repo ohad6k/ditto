@@ -1,0 +1,27 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.ohad6k/ditto",
+  "description": "Mine your local AI coding session logs into a profile your agent loads before every task.",
+  "repository": {
+    "url": "https://github.com/ohad6k/ditto",
+    "source": "github"
+  },
+  "version": "0.3.6",
+  "packages": [
+    {
+      "registryType": "pypi",
+      "identifier": "ditto-cli",
+      "version": "0.3.6",
+      "transport": {
+        "type": "stdio"
+      },
+      "runtimeHint": "uvx",
+      "packageArguments": [
+        {
+          "type": "positional",
+          "value": "mcp"
+        }
+      ]
+    }
+  ]
+}
