@@ -149,7 +149,30 @@ codex plugin add ditto@ditto --json
 
 The plugin-install command itself scans no logs, writes no private profile state, and schedules zero mining model calls. Asking an agent to install, run, or update Ditto still consumes that host interaction plus its normal system and tool overhead.
 
-Native Claude plugin packaging is not claimed in this release because it was not testable in the release environment. Claude Code remains supported through the selected skills.sh bootstrap and direct profile adapter.
+### Native Claude Code plugin
+
+The Claude Code plugin exposes the same four skills. Install it from inside Claude Code:
+
+```text
+/plugin marketplace add ohad6k/ditto
+/plugin install ditto@ditto
+```
+
+## MCP server
+
+Ditto also ships a Model Context Protocol (MCP) server, so any MCP client — Claude Desktop, Cursor, and other agents — can load your profile before a task. The server implements MCP over stdio and exposes one tool, `load_ditto_profile`, which returns your mined work, design, or writing profile over the Model Context Protocol.
+
+Run it from the published package with `uvx ditto-cli mcp`, or from a checkout with `python ditto.py mcp`, and point an MCP client at it:
+
+```json
+{
+  "mcpServers": {
+    "ditto": { "command": "uvx", "args": ["ditto-cli", "mcp"] }
+  }
+}
+```
+
+The MCP server is stdlib-only and serves the profile you already mined locally; it makes no network calls of its own.
 
 ## What happens when you run it
 
