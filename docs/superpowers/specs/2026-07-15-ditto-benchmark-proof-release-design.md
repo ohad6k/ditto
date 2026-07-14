@@ -1,6 +1,6 @@
 # Ditto Benchmark/Proof Release Design
 
-**Status:** Revised after additional Ohad Step 8 distribution review; proposed for final approval
+**Status:** Revised after Ohad's Step 8 distribution review and public-channel grind audit; proposed for final approval
 
 **Date:** 2026-07-15
 
@@ -10,7 +10,7 @@
 
 **Frozen starting point:** Ditto plugin `v0.3.7` at `5f4008b0c0df40dcadb92c8fd1ba4dcf3aee40d0`
 
-## Review changelog (A1-A12)
+## Review changelog (A1-A13)
 
 - **A1:** Sections 6.3, 8.3, 8.4, and 8.5 now treat writing voice as structurally de-blindable. Writing uses pre-registered mechanism checks; any public preference verdict comes only from reviewers unfamiliar with the operator.
 - **A2:** New Section 8.4 defines the independent reviewer role, disqualifies Ohad from blind preference judging, and makes consent and blinding evidence mandatory in Section 11.
@@ -24,6 +24,7 @@
 - **A10:** Section 18 was rebuilt from fixed operator channel constraints and live research captured on 2026-07-15. The top-down 17% conversion and 4,900-visitor scenario is removed. The new plan uses dated per-channel evidence, marks unsupported reach and star conversion unknown, assigns execution ownership, stages channel-native copy/assets, gives a conditional dated calendar, sets Hacker News planned traffic to zero, and keeps every external action behind a separate approval.
 - **A11:** A live launch-readiness audit on 2026-07-15 separated ClawHub downloads, installs, PyPI packages, GitHub clones, and stars instead of treating them as one adoption number. It also found that the public Discord invite is broken and that GitHub `v0.3.8` is newer than PyPI `0.3.6`; Section 18 now fails closed on both release-surface and community-link drift.
 - **A12:** A read-only release review on 2026-07-15 confirmed that `v0.3.8` still pins MCP `server.json` to PyPI `0.3.6`, has no PyPI publish workflow, and has no repository-secret or local-credential evidence for an approved upload path. Section 18 now separates the repository changes, PyPI dashboard/trusted-publisher action, credential boundary, and provider receipt required to align those surfaces.
+- **A13:** Section 18 now includes a dated audit of Ohad's actual Reddit, X, YouTube, GitHub, and Discord grind; treats the `1,000`-star goal as a milestone rather than a forecast; prevents release/post volume from becoming the strategy; and connects proof-backed distribution to separate product, community, creator, and first-revenue gates. It stages those gates without posting, outreach, pricing, payment, or product implementation.
 
 ## 1. Outcome
 
@@ -397,7 +398,29 @@ Distribution and proof are one system. No channel fires until Section 17 passes 
 
 This section is a plan and staging contract only. It authorizes research and local preparation, not posting, scheduling, outreach, dashboard changes, or launch execution. A later approval must identify the exact final artifacts and actions to fire.
 
-### 18.1 Fixed operator constraints and ownership rule
+### 18.1 Coupled growth objective and anti-spam release policy
+
+The operating objective is not "more posts" or "more versions." It is a coupled system in which a stronger product creates inspectable proof, proof earns qualified discovery, users create feedback and examples, and those outcomes inform both the next product decision and an honest paid offer.
+
+| Loop | Intended outcome | Evidence that advances the loop | Gate that prevents theater |
+|---|---|---|---|
+| Product and proof | Make Ditto more useful and more differentiated without regressing its miner, profiles, defaults, privacy boundary, or host behavior. | Clean activation receipts, benchmark hard failures, user-reported outcomes, issue/feedback evidence, and repeat use where it can be observed with consent. | No feature or release is prioritized merely because it creates another announcement. Antigravity remains outside this branch and untouched. |
+| Distribution and adoption | Reach the right agent builders and turn attention into successful trials rather than raw counters. | Channel-native views, GitHub referrer uniques, clean installs, consented successful-mine reports, clones, and version-aligned package receipts kept as separate measures. | No counter is relabelled as users, no unsupported conversion rate is inferred, and no identical cross-post spray is used. |
+| Community and word of mouth | Move from an audience around Ohad to users helping users, sharing sanitized outcomes, and contributing adapters or fixes. | Unique external issue authors, substantive discussions, merged external pull requests, opt-in showcases, attributable Discord joins, and repeat contributors. | No raw logs, private profiles, forced contribution, fake testimonial, mass invite, coordinated vote, or unsolicited bulk DM. |
+| Revenue learning | Test whether a narrow, privacy-safe paid outcome is valuable before building a broad commercial layer. | Qualified inbound applications, an explicitly accepted scope and price, paid pilots, completed outcomes, and repeat/expansion interest. | No MRR forecast, fake waitlist, invented price, paid-plan claim, or payment request before the offer and payment path receive separate approval. |
+
+The `1,000`-star goal is a discovery milestone, not a promised date, traffic forecast, product-quality proxy, or revenue forecast. The aspiration to reach the class of widely discussed agent projects such as OpenClaw or Hermes is an internal ambition only. Public copy never says Ditto is "the next" either product and never borrows their scale as evidence for Ditto.
+
+Release and promotion discipline is fixed:
+
+- a version bump never exists only to create a post;
+- small compatible improvements are bundled into a meaningful, user-visible release with one proof-backed narrative;
+- default maximum is one **promoted release narrative per seven days**. A security, privacy, data-loss, or compatibility fix may ship sooner, but it does not receive a separate promotional cycle unless users must act urgently;
+- X receives at most one planned Ditto promotional post per calendar day; Reddit follows its stricter seven-day and two-post limits below; Product Hunt receives one launch; YouTube receives one new proof video rather than repeated trailers;
+- every new public beat must add a distinct reason to care: measured proof, a user outcome, a meaningful capability, a reproducible workflow, or an honest lesson. Rewording the `1,656 sessions / 3M tokens` origin story is not a new beat;
+- helpful replies to real questions are allowed, but replies, issue comments, emails, releases, and marketplace submissions are never manufactured to resurface Ditto.
+
+### 18.2 Fixed operator constraints and ownership rule
 
 - **Hacker News:** Ohad's account is flagged or effectively banned. Planned HN reach, visits, and stars are all `0`. Ditto never auto-submits. HN becomes observable bonus traffic only if an unaffiliated third party submits organically.
 - **Reddit:** prior spam friction and a promotional-spam warning are hard constraints. Use two native posts at most, one subreddit at a time, seven days apart, with different titles and bodies. Never cross-post identical copy, auto-post, comment-bump, mass-DM, or ask for coordinated votes.
@@ -406,9 +429,21 @@ This section is a plan and staging contract only. It authorizes research and loc
 - **YouTube:** use one durable, search-oriented two-condition proof video. Publishing time is chosen to give the other channels a stable proof URL, not because of an unsupported algorithm hack.
 - **Agent ownership:** the agent owns research, copy, asset production, link validation, evidence substitution, calendars, local staging, preview screenshots, and approved X scheduling. Ohad performs the final manual action only where account trust, community rules, or ban risk make automation unsafe. The reason for each manual boundary is stated below.
 
-### 18.2 Dated evidence ledger and bottom-up forecast
+### 18.3 Dated operator grind audit and bottom-up forecast
 
 Research was refreshed on **2026-07-15**. Private provider evidence comes from GitHub Traffic API reads available to the repository owner; public mechanics and benchmarks are linked directly.
+
+The plan begins from what Ohad has already shipped, not from an assumption that he has not tried hard enough:
+
+| Surface | Observed grind on 2026-07-15 | What it changes |
+|---|---|---|
+| Reddit | The public [u/BiosRios profile](https://www.reddit.com/user/BiosRios/) showed `2,347` karma and `210` contributions. Its [submitted-post RSS](https://www.reddit.com/user/BiosRios/submitted/.rss) records **seven Ditto submissions from July 8 through July 14 across seven subreddits**. The titles repeatedly use the same Claude-skill or `1,656 sessions / 3M tokens` origin, and the r/selfhosted submission is recorded as removed. The first r/ClaudeSkills receipt still records the real breakout of `102K` views, `200` upvotes, and `32` comments. | The Reddit launch story is saturated and the account has moderation risk. Pause Ditto promotion there until the proof package is live; then use only the two new proof-led drafts below. No more subreddit expansion is part of this milestone. |
+| X | The public [@BiosRiosz profile](https://x.com/BiosRiosz) exposed `703` lifetime posts, `47` followers, and `120` following; its bio link resolved to the Ditto GitHub repository. Specific Ditto impression history was not publicly available. GitHub Traffic recorded `24` `t.co` unique referrers. | Effort is already high while the distribution base is small. Use one pinned proof artifact and a short number-first series; do not increase raw posting volume or repeat star-only calls to action. |
+| YouTube | The public [BiosRios channel](https://www.youtube.com/@BiosRiosCS0) had `61` subscribers and five uploads dated June 26 through July 12. The two Ditto uploads were the [45-second trailer](https://www.youtube.com/watch?v=8ERF_YZGpPE) at `16` views, `3` likes, and `1` comment, and the [8:27 walkthrough](https://www.youtube.com/watch?v=Ic8jAx_2RWk) at `82` views, `4` likes, and `2` comments. Both repeat the origin story and a star CTA; both descriptions contain the older Discord invite that failed the live invite API check. | Do not make another origin trailer. Keep the existing videos as historical content, stage corrected descriptions, and make the next upload the distinct two-condition evidence carrier below. |
+| GitHub | The public [ohad6k/ditto repository](https://github.com/ohad6k/ditto) showed `179` stars, `16` forks, `7` open issues, and `2` watchers. `docs/FEEDBACK.md` contains independent feedback, including a user who ran roughly 120 sessions and identified voice registers as the strongest wedge and an existing defect. | Optimize for activation, evidence, and contribution as well as stars. The next product story comes from what a user can now do better, not another counter screenshot. |
+| Discord | Ohad reported a four-person server. The invite linked from the live README and the older invite in both Ditto YouTube descriptions failed the Discord invite API check. The member count is founder-reported and does not enter any forecast. | Repair or remove the invite before launch, then use Discord for support and user-to-user help. Do not market it as an established community yet. |
+
+This audit is a stop against duplicate effort. Before any staged post is approved, `operator-ledger.csv` records the prior URL, date, channel, hook, asset, CTA, moderation outcome, public engagement fields, and GitHub referrer window. A new artifact fails review if it is materially the same story with only a new title.
 
 | Channel | Dated evidence | Reach / qualified-visit planning value | Star, install, or download conversion | Decision |
 |---|---|---|---|---|
@@ -428,7 +463,7 @@ There is **no aggregate visitor or star forecast**. Product Hunt is the only cha
 
 Before execution, each channel receives a measurement receipt with: publication timestamp; exact URL; platform impressions/views; platform engagements; GitHub referrer uniques; site proof-page uniques when available; clones; release-asset downloads when available; Discord joins when attributable; and the repository star delta during the window labelled **temporal, not causal**. If the platform or provider does not expose a field, it remains `unknown`.
 
-### 18.3 Evidence substitution and asset staging contract
+### 18.4 Evidence substitution and asset staging contract
 
 The agent creates one local, non-public, gitignored staging root outside both the repository and the private benchmark run root, ending in `distribution/ditto-proof-v1-2026-08/`. It contains:
 
@@ -441,10 +476,13 @@ The agent creates one local, non-public, gitignored staging root outside both th
 - `product-hunt/`: icon, gallery assets, video URL, product copy, maker comment, topics, pricing state, launch checklist, response sheet, and preview screenshots;
 - `github/`: benchmark release notes, README proof block, website proof block, and link map;
 - `measurements/`: empty per-channel receipt templates filled only from observed provider data after firing.
+- `operator-ledger.csv`: the dated prior-post audit used to block duplicate hooks, assets, CTAs, and subreddit spray;
+- `community/`: repaired-link receipt, Discord welcome/support copy, contributor ladder, consent language for showcases, and three proof-first creator-collaboration drafts that remain unsent;
+- `revenue/`: a non-public founding-pilot offer brief, privacy boundary, application questions, qualification rubric, pricing-decision sheet, scope template, and payment-path checklist. It contains no live price or checkout until separately approved.
 
 The brace-delimited values above are immutable evidence substitutions, not authoring placeholders. Every text artifact fails staging if it contains an unresolved claim token, unsupported number, hidden private path, profile text, receipt text, universal claim, significance language, fake testimonial, or result not present in `evidence.json`. Asset checks validate sizes, duration, captions, links, alt text, and SHA-256. The existing talking-head video can be linked as background, but it cannot substitute for the new two-condition proof video.
 
-### 18.4 GitHub proof hub
+### 18.5 GitHub proof hub
 
 GitHub is the conversion and inspection surface, not a traffic forecast.
 
@@ -456,7 +494,7 @@ The benchmark may remain frozen at `v0.3.7` while the product advances, but ever
 
 PyPI alignment is a separate approved release action, not an implied consequence of the GitHub tag. The recommended durable route is a SHA-pinned GitHub Actions publish workflow plus [PyPI Trusted Publishing](https://docs.pypi.org/trusted-publishers/adding-a-publisher/) scoped to `ohad6k/ditto`, the exact workflow filename, and a protected publishing environment. That route requires both a reviewed repository change and a human PyPI dashboard receipt. A one-off local upload is an explicit fallback only; credentials stay in the local keyring/environment or an interactive provider prompt and are never pasted into chat, committed, logged, or written into the staging package. After either route, the agent verifies the public PyPI JSON, exact wheel/sdist hashes, a clean pinned `uvx --from ditto-cli==0.3.8 ditto-cli mcp` initialization whose `serverInfo.version` is `0.3.8`, and updated `server.json` before distribution can claim alignment.
 
-### 18.5 Reddit: two manual, native posts
+### 18.6 Reddit: two manual, native posts
 
 **Mechanics and safety evidence.** Reddit's [spam guidance](https://support.reddithelp.com/hc/en-us/articles/360043504051-Spam) says to post authentic content in communities where the user has a personal interest, be thoughtful when contributions primarily link to a business, and follow community-specific rules. The current [r/ClaudeSkills rules](https://www.reddit.com/r/ClaudeSkills/about/rules.json) require relevant detail, a repository/download link for self-made skills, free/open-source disclosure, flair, and explicitly forbid posting the same thing across many subreddits. The current [r/ClaudeAI rules](https://www.reddit.com/r/ClaudeAI/about/rules.json) allow maker showcases only with minimal promotion, a free-to-try product, and OP karma above 50; they also ban vote manipulation and require sourced comparative benchmarks. [r/ChatGPTCoding](https://www.reddit.com/r/ChatGPTCoding/about/rules.json) restricts self-promotion to a designated thread or sponsorship/modmail, so it receives no planned feed post without written moderator approval.
 
@@ -467,19 +505,17 @@ PyPI alignment is a separate approved release action, not an implied consequence
 Title:
 
 ```text
-I thought my agents needed better prompts. The embarrassing part was that I had already written 3M tokens of the answer.
+My first Ditto post got 102K views. I still could not prove it made the agent better.
 ```
 
 Body:
 
 ```text
-I kept trying to explain the same things to coding agents: what done means, what UI I reject, when I need live proof, and how I write when I am not trying to sound polished.
+The first time I posted Ditto here, the origin story did better than I expected. The post reached 102K views. That was useful distribution, but it was not evidence that the profile improved the work.
 
-Then I counted the history I was ignoring: 1,656 sessions across 9 months, roughly 3M tokens of prompts I had already typed.
+So I stopped treating views and stars as the result. I froze Ditto at {DITTO_REF} and ran the same systems under two conditions: clean-host cold start, and the same setup with Ditto loaded from my 1,656-session profile.
 
-I built Ditto to mine only my messages from those local sessions and turn repeated, evidenced patterns into a profile the agent loads before work. It is free and open source.
-
-The first launch post did well, but that was not proof the profile improved the work. So I froze Ditto at {DITTO_REF} and ran the same systems cold and with Ditto across {VALID_BLIND_PAIRS} valid blind pairs.
+Ditto is still free and open source. The difference in this post is that the tasks, outputs, losses, hashes, and limitations are inspectable instead of asking you to trust a launch clip.
 
 Blind result: Ditto {DITTO_WINS}, cold {COLD_WINS}, ties {TIES}.
 Hard failures: Ditto {DITTO_HARD_FAILURES}, cold {COLD_HARD_FAILURES}.
@@ -499,15 +535,13 @@ Required asset: one native image or short clip showing the cold and Ditto output
 Title:
 
 ```text
-I tested the same coding agents cold vs with a mined working profile across {VALID_BLIND_PAIRS} valid blind pairs
+I published the losses and hard failures from a cold-vs-Ditto agent benchmark
 ```
 
 Body:
 
 ```text
-I use Claude Code and Codex every day, and I realized my local history already contained the working rules I kept re-explaining.
-
-I mined only the messages I typed from 1,656 sessions, then froze the resulting Ditto profile and compared the same complete systems under two conditions: clean-host cold start and the same host with Ditto loaded.
+I had already posted the Ditto origin story, so this is the part I could not honestly claim then: a frozen comparison of the same complete systems under two conditions, clean-host cold start and the same host with a mined Ditto profile loaded.
 
 The public result was {DITTO_WINS} Ditto preferences, {COLD_WINS} cold preferences, and {TIES} ties across {VALID_BLIND_PAIRS} valid blind pairs. Hard failures were {DITTO_HARD_FAILURES} with Ditto and {COLD_HARD_FAILURES} cold.
 
@@ -522,11 +556,13 @@ I am posting the evidence because comparative claims should be inspectable. If y
 
 Required asset: the combined proof clip with captions and the evidence URL visible in the last frame. No vote request, repost request, star request, urgency language, or repeated title/body from r/ClaudeSkills.
 
-### 18.6 X: approved number-first scheduled series
+### 18.7 X: approved number-first scheduled series
 
 **Mechanics and evidence.** X's [official recommendation description](https://help.x.com/en/rules-and-policies/recommendations) says For You recommendations can reach non-followers and use many interaction, network, interest, and media signals without one statically dominant signal. X's [official posting guide](https://help.x.com/en/using-x/how-to-post) supports 280-character posts, video, drafts, and native scheduling. These mechanics justify short video-backed posts and safe scheduling; they do not justify a reach forecast.
 
 **Ownership.** The agent renders the final posts, validates 280-character limits and evidence substitutions, attaches the approved clip, and **executes native X scheduling only after Ohad approves the exact previews and an authenticated scheduling path is verified**. If that path is unavailable, the status changes to `manual-required`; the agent does not improvise credentials or a third-party bot.
+
+Post 1 is the only candidate for the pinned proof artifact. Pinning is not a scheduler action: the agent stages the exact recommendation, and **Ohad manually pins it** after confirming the public URL. No post in the series asks only for a star, follow, repost, or comment keyword.
 
 Post 1, scale plus test:
 
@@ -586,11 +622,13 @@ Evidence: {EVIDENCE_URL}
 
 Attach: native 20-35 second trailer for the YouTube proof video.
 
-### 18.7 YouTube: evergreen two-condition proof carrier
+### 18.8 YouTube: evergreen two-condition proof carrier
 
 **Mechanics and evidence.** YouTube's [official recommendation guide](https://support.google.com/youtube/answer/16533387?hl=en) says recommendations follow viewer personalization and content performance, including whether viewers click, continue watching, and report satisfaction. It explicitly says long-term performance is not known to depend on publish time and recommends quality over frequency. Therefore this plan optimizes the title, thumbnail, opening, retention, chapters, captions, and evidence trail, not a magic posting hour.
 
 **Ownership.** The agent writes the script, creates the edit decision list, produces captions, stages the final file and thumbnail, validates links and claims, and prepares the upload metadata. **Ohad manually clicks Publish** because the YouTube account is identity-bound and no approved publishing automation exists. The agent may fill an authenticated upload form without publishing only after a later explicit staging approval.
+
+The same staging package includes description-only corrections for the two existing Ditto videos: remove the dead Discord invite or replace it with the newly validated durable invite, keep their historical view claims frozen to what the videos actually said, and do not delete, re-upload, or manufacture a new version of either video. Ohad manually saves those description edits after exact preview approval.
 
 Title:
 
@@ -634,7 +672,7 @@ Open-source repo: https://github.com/ohad6k/ditto
 
 Required assets: final 16:9 video; 1280x720 thumbnail; embedded and uploaded captions; clean transcript; chapters; evidence URL in description, pinned comment, and final frame; one 20-35 second trailer; three family clips; and a local checksum manifest. The pinned comment repeats the limitations and asks for control/evidence feedback, not stars.
 
-### 18.8 Product Hunt: one proof-backed timed spike
+### 18.9 Product Hunt: one proof-backed timed spike
 
 **Mechanics and collision risk.** The official Product Hunt guide sets the image sizes, YouTube-only gallery video, first-comment expectation, 260-character description, scheduling flow, and self-hunt mechanics. Live search on 2026-07-15 found multiple unrelated products already named Ditto, including an established product-copy tool. The draft must use the disambiguated product name **Ditto for AI Agents**, verify the final slug and trademark/confusion risk, and link directly to the correct proof landing page.
 
@@ -677,7 +715,7 @@ Launch checklist:
 - [ ] proof URL, GitHub benchmark release, and YouTube video are live and cross-linked;
 - [ ] name/slug collision check passes for `Ditto for AI Agents`;
 - [ ] Ohad's personal Product Hunt account has completed onboarding and is added as hunter/maker;
-- [ ] pricing is `Free` unless a verified paid plan exists by launch day;
+- [ ] the open-source product pricing is `Free`. A separately approved founder-assisted pilot may be described only as an optional service with a live scope, price, privacy boundary, and payment path; it never turns the core product into a falsely verified paid plan;
 - [ ] 240x240 icon is legible at small size and under the platform limit;
 - [ ] at least two 1270x760 gallery images show mechanism, paired proof, limitations, and install path;
 - [ ] full public YouTube URL loads and is not private;
@@ -691,7 +729,7 @@ Launch checklist:
 - [ ] launch-day owner sheet covers moderation, support, real replies, evidence corrections, and stop conditions;
 - [ ] Ohad reviews the final preview and performs the single manual Schedule/Launch action.
 
-### 18.9 Hacker News: zero planned traffic, organic-response only
+### 18.10 Hacker News: zero planned traffic, organic-response only
 
 There is no HN submission draft, launch slot, automated action, or traffic estimate. The agent may monitor GitHub referrers after launch without touching HN. If an unaffiliated third party creates a thread, the agent stages one factual maintainer disclosure and Ohad may post it manually once; neither adds bump comments.
 
@@ -703,7 +741,7 @@ Maintainer here. The narrow claim is a frozen clean-host comparison, not a model
 
 Any organic HN visits are reported after the fact as third-party traffic, never as planned or caused by this launch workstream.
 
-### 18.10 Conditional dated calendar
+### 18.11 Conditional dated calendar
 
 The first eligible launch window is **2026-08-10 through 2026-08-19**. It is not a benchmark deadline. At **2026-08-07 12:00 Asia/Jerusalem**, if Section 17 has not passed or any final artifact lacks approval, every item becomes `not-fired` and the whole calendar rolls to the next Tuesday-based window. No partial launch leaks before the proof hub is ready.
 
@@ -721,7 +759,7 @@ The first eligible launch window is **2026-08-10 through 2026-08-19**. It is not
 
 Product Hunt's dashboard is authoritative for its launch boundary. The `10:01` target assumes Pacific daylight time relative to Israel; the agent must replace it with the exact dashboard-confirmed Israel time in the final approval receipt. YouTube's date is ordered before Product Hunt to create a stable gallery/evidence URL, not to claim a recommendation advantage.
 
-### 18.11 Measurement, corrections, and stop rules
+### 18.12 Measurement, corrections, and stop rules
 
 The agent captures provider receipts at `+1 hour`, `+24 hours`, `+72 hours`, and `+7 days` for every fired channel that exposes them. Reports keep raw denominators and distinguish platform views, GitHub unique referrals, site visits, clones, downloads, Discord joins, and star delta. No star delta is attributed to one channel when windows overlap.
 
@@ -748,6 +786,51 @@ The 2026-07-15 submission audit found `22` open Ditto listing PRs and two merged
 - [awesome-agent-skills #348](https://github.com/heilcheng/awesome-agent-skills/pull/348) has a Vercel deployment authorization failure tied to the maintainer's team. The agent must not authorize, request access to, or repeatedly comment on another maintainer's deployment surface.
 
 The agent checks this inventory read-only for new human requests. A bot summary, ranking delay, `review required`, or maintainer-side deployment gate does not by itself justify a follow-up.
+
+### 18.13 Post-proof product, community, creator, and revenue gates
+
+This subsection is continuity planning only. It does not add code, issues, a paid plan, a form, a checkout, email, creator outreach, or Discord activity to the benchmark release. Each gate requires a separate design and exact execution approval after the proof milestone has trustworthy evidence.
+
+**Gate 1: repair activation before buying or manufacturing more attention.** GitHub/PyPI/registry version drift, broken Discord links, clean-install failures, and unclear first-run instructions block wider distribution. The agent stages the fixes and clean receipts; Ohad approves repository/provider actions. A visitor should not encounter a newer GitHub story and an older package or a dead community door.
+
+**Gate 2: product priorities come from the unique wedge and observed failures.** The current feedback record makes voice/register mining the clearest differentiated wedge, while work-profile rules overlap with existing memory setups for at least two users. The priority order after Proof v1 is:
+
+1. preserve and verify the miner, receipts, bounded passes, local-first boundary, and work/design/write routing;
+2. make the voice-register result easy to reach, inspect, correct, and use in a real writing task;
+3. reduce time to first successful mine and explain exactly why each surviving rule exists;
+4. use Proof v1 hard failures and real support friction to choose fixes;
+5. open workflow mining, profile drift, counterweight profiles, graph output, or team features only through separate designs backed by repeated demand.
+
+This order protects the product from becoming a pile of hype integrations. OpenClaw and Hermes are reference points for clarity, usefulness, extension, and community energy, not a feature checklist. Antigravity remains owned by its separate workstream and is never copied into this branch.
+
+**Gate 3: turn current users into a small real community.** The first community loop uses existing GitHub surfaces before creating more channels:
+
+- issue `#1` is the opt-in showcase path for sanitized findings, never raw logs or full private profiles;
+- issue `#3` is the contributor path for source adapters, with claimed work, fixtures, and review boundaries;
+- issue `#7` remains the substantive prior-art and product-direction discussion;
+- the contributor-guide issue becomes the onboarding path for safe issues and pull requests;
+- Discord starts as support for actual users. The agent stages welcome, install-help, showcase, and contributor channels plus response templates; Ohad manually applies server changes only after the durable invite and moderation boundary are approved.
+
+The agent may stage replies and spotlight drafts from real, consented outcomes. Ohad manually approves any public attribution. A person is never called a user because they downloaded, cloned, starred, joined, or appeared in a log counter.
+
+**Gate 4: earn creator and template coverage instead of spraying directories.** After a person has actually run Ditto or has an existing relevant workflow, the agent may stage at most three one-to-one collaboration briefs. Each brief gives first: a reproducible Ditto workflow, a custom integration example, technical help, or a co-authored evidence asset. It asks for an honest tutorial or template only if the creator finds it useful. No bulk list, fake familiarity, review script, undisclosed payment, lifetime-deal promise, or traffic projection is allowed. Emails remain unsent until Ohad approves the exact recipient, context, copy, and send action.
+
+**Gate 5: first-revenue experiment, recommended path.** The fastest aligned test is a capped **founding design-partner pilot**, not a speculative hosted platform. The proposed outcome is founder-assisted Ditto setup and profile calibration while the participant runs Ditto locally; no raw logs, complete profiles, or receipts are uploaded to Ohad. The pilot is capped at three accepted participants so support remains real and the product learns from each case.
+
+The agent owns the non-public offer draft, application, qualification rubric, local-only privacy explanation, scope, success checklist, and follow-up drafts. **Ohad must approve the exact outcome, price, refund/cancellation terms, payment provider, participant, and send/publish action** because those create commercial and legal commitments. Until that happens, Product Hunt and public copy describe Ditto as free open source and do not claim a paid plan.
+
+Inbound proof-page interest is the first acquisition path. Contextual outreach may be considered only for people who already engaged with Ditto or publicly described the exact problem; it follows the same one-recipient approval boundary and never becomes a cold-email campaign. GitHub Sponsors or paid support can be evaluated as secondary options, but neither is represented as the main revenue engine without observed demand.
+
+The post-proof scorecard keeps four columns separate:
+
+| Objective | Observed measures | Not accepted as proof |
+|---|---|---|
+| Discovery | Stars, unique referrers, proof-page visitors, platform views | A star deadline inferred from a viral precedent |
+| Adoption | Clean-install successes, consented successful mines, repeat updates, support resolution | Clones or ClawHub download requests relabelled as active users |
+| Community | Unique external issue authors, merged external PRs, opt-in showcases, attributable joins, repeat contributors | Discord member total alone or coordinated engagement |
+| Revenue | Qualified applications, accepted paid pilots, completed outcomes, repeat/expansion interest, refunds | MRR, conversion, or willingness-to-pay invented before a live offer |
+
+The milestone can pursue `1,000` stars aggressively only by improving these four systems together. If stars rise while activation, community, or paid learning stays flat, the plan records that honestly and shifts effort to the failing loop instead of increasing post frequency.
 
 ## 19. Exit criteria
 
