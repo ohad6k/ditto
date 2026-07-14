@@ -1,5 +1,6 @@
 {
   "name": "ditto",
+  "description": "Ditto: mine your local AI coding session logs into a personal profile your agent loads before every task.",
   "owner": {"name": "Ohad"},
   "plugins": [
     {
