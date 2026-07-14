@@ -978,7 +978,7 @@ Expected: all tests pass; no test contacts the network.
 Run:
 
 ```powershell
-python "$HOME\.codex\skills\.system\plugin-creator\scripts\validate_plugin.py" "D:\worktrees\ditto-plugin-release"
+python "$HOME\.codex\skills\.system\plugin-creator\scripts\validate_plugin.py" "%WORKTREE%"
 ```
 
 Expected: `Plugin validation passed`.

@@ -244,7 +244,7 @@ Run:
 ```powershell
 codex --version
 python -m json.tool .agents\plugins\marketplace.json > $null
-python C:\Users\ohad1\.codex\skills\.system\plugin-creator\scripts\validate_plugin.py .
+python %USERPROFILE%\.codex\skills\.system\plugin-creator\scripts\validate_plugin.py .
 ```
 
 Expected: both exit `0`; the validator reports a valid `ditto` plugin.
@@ -348,7 +348,7 @@ Delete `skills/spike/SKILL.md` but retain `skills/.gitkeep`. In `docs/release/pl
 Run:
 
 ```powershell
-python C:\Users\ohad1\.codex\skills\.system\plugin-creator\scripts\validate_plugin.py .
+python %USERPROFILE%\.codex\skills\.system\plugin-creator\scripts\validate_plugin.py .
 python -m unittest discover -s tests -v
 ```
 
@@ -2372,7 +2372,7 @@ Run:
 
 ```powershell
 python -m json.tool .agents\plugins\marketplace.json > $null
-python C:\Users\ohad1\.codex\skills\.system\plugin-creator\scripts\validate_plugin.py .
+python %USERPROFILE%\.codex\skills\.system\plugin-creator\scripts\validate_plugin.py .
 codex plugin list --marketplace ditto --json
 ```
 
@@ -2906,7 +2906,7 @@ Move workflow mining, drift, elicitation, hosted sync, and additional native hos
 Run:
 
 ```powershell
-python C:\Users\ohad1\.codex\skills\.system\skill-creator\scripts\quick_validate.py .agents\skills\ditto
+python %USERPROFILE%\.codex\skills\.system\skill-creator\scripts\quick_validate.py .agents\skills\ditto
 python -m unittest tests.test_bootstrap tests.test_plugin_manifests.DocumentationTruthTest tests.test_plugin_manifests.PluginManifestTest -v
 python ditto.py --help
 python ditto.py plugin --help
@@ -3072,8 +3072,8 @@ Keep `docs/release/plugin-dogfood.md` and the regression fixture permanent. Chan
 
 ```powershell
 python -m unittest discover -s tests -v
-python C:\Users\ohad1\.codex\skills\.system\plugin-creator\scripts\validate_plugin.py .
-python C:\Users\ohad1\.codex\skills\.system\skill-creator\scripts\quick_validate.py .agents\skills\ditto
+python %USERPROFILE%\.codex\skills\.system\plugin-creator\scripts\validate_plugin.py .
+python %USERPROFILE%\.codex\skills\.system\skill-creator\scripts\quick_validate.py .agents\skills\ditto
 git diff --check
 ```
 
@@ -3091,7 +3091,7 @@ Run:
 
 ```powershell
 codex plugin remove ditto@ditto --json
-python C:\Users\ohad1\.codex\skills\.system\plugin-creator\scripts\update_plugin_cachebuster.py .
+python %USERPROFILE%\.codex\skills\.system\plugin-creator\scripts\update_plugin_cachebuster.py .
 codex plugin add ditto@ditto --json
 codex plugin list --marketplace ditto --json
 ```
@@ -3212,7 +3212,7 @@ Run:
 git diff --stat v0.1.2...HEAD
 git diff --name-only v0.1.2...HEAD
 python -m unittest discover -s tests -v
-python C:\Users\ohad1\.codex\skills\.system\plugin-creator\scripts\validate_plugin.py .
+python %USERPROFILE%\.codex\skills\.system\plugin-creator\scripts\validate_plugin.py .
 ```
 
 Expected: tests and validator exit `0`; changed files remain inside this plan.
@@ -3245,8 +3245,8 @@ Expected: both reviewers return PASS with no actionable finding. Reviewer report
 
 ```powershell
 python -m unittest discover -s tests -v
-python C:\Users\ohad1\.codex\skills\.system\plugin-creator\scripts\validate_plugin.py .
-python C:\Users\ohad1\.codex\skills\.system\skill-creator\scripts\quick_validate.py .agents\skills\ditto
+python %USERPROFILE%\.codex\skills\.system\plugin-creator\scripts\validate_plugin.py .
+python %USERPROFILE%\.codex\skills\.system\skill-creator\scripts\quick_validate.py .agents\skills\ditto
 python ditto.py --help
 python ditto.py plugin --help
 git diff --check
@@ -3306,8 +3306,8 @@ Run:
 
 ```powershell
 python -m unittest discover -s tests -v
-python C:\Users\ohad1\.codex\skills\.system\plugin-creator\scripts\validate_plugin.py .
-python C:\Users\ohad1\.codex\skills\.system\skill-creator\scripts\quick_validate.py .agents\skills\ditto
+python %USERPROFILE%\.codex\skills\.system\plugin-creator\scripts\validate_plugin.py .
+python %USERPROFILE%\.codex\skills\.system\skill-creator\scripts\quick_validate.py .agents\skills\ditto
 python -m json.tool .codex-plugin\plugin.json > $null
 python -m json.tool .agents\skills\ditto\runtime.json > $null
 git diff --check

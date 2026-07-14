@@ -33,3 +33,7 @@ build/
 
 # mcp registry publisher binary (downloaded, not committed)
 mcp-publisher.exe
+
+# local editor / dev tooling
+.claude/
+nul
