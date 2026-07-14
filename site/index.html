@@ -1,0 +1,745 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ditto | Mine your AI coding sessions into a you.md profile</title>
+<meta name="description" content="Ditto mines your real Claude Code, Codex, Cursor and Copilot sessions into a you.md your agent reads before every task. Mined from 1,656 sessions. Open source.">
+<link rel="icon" type="image/png" href="assets/ditto.png">
+
+<meta property="og:title" content="Ditto | Mine your AI coding sessions into a you.md profile">
+<meta property="og:description" content="Your AI agents act like they just met you. Ditto mines your real sessions into a you.md they read first. Open source.">
+<meta property="og:image" content="https://raw.githubusercontent.com/ohad6k/ditto/main/assets/ditto.png">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Ditto | Mine your AI coding sessions into a you.md profile">
+<meta name="twitter:description" content="Your AI agents act like they just met you. Ditto mines your real sessions into a you.md they read first. Open source.">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/ohad6k/ditto/main/assets/ditto.png">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<style>
+:root{
+  --paper:#f2eee1;
+  --paper-2:#f7f4ea;
+  --ink:#161309;
+  --ink-2:#3b382c;
+  --ink-soft:#3d3a2f;
+  --ink-faint:#6f6a58;
+  --ink-dim:#8f8a76;
+  --cream-dim:#cfc9b4;
+  --rule:#c9c3ad;
+  --red:#a83b23;
+  --gold:#e8c15a;
+  --serif:"Playfair Display",Georgia,serif;
+  --text:"Source Serif 4",Georgia,serif;
+  --mono:"IBM Plex Mono",ui-monospace,monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
+body{
+  background:var(--paper);
+  color:var(--ink);
+  font-family:var(--text);
+  font-size:17px;
+  line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
+}
+/* ghost-log canvas sits under everything */
+#ghost{position:fixed;inset:0;z-index:1;pointer-events:none}
+/* paper grain above the canvas, below content */
+body::before{
+  content:"";position:fixed;inset:0;pointer-events:none;z-index:2;opacity:.5;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .05 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+a{color:inherit}
+img{max-width:100%;display:block}
+.wrap{max-width:1120px;margin:0 auto;padding:0 32px;position:relative;z-index:3}
+
+/* ---------- type utilities ---------- */
+.label{
+  font-family:var(--mono);font-size:11px;font-weight:500;
+  letter-spacing:.32em;text-transform:uppercase;color:var(--ink-faint);
+}
+.label .red{color:var(--red)}
+
+/* ---------- nav ---------- */
+nav{
+  position:relative;z-index:4;
+  display:flex;justify-content:space-between;align-items:center;
+  max-width:1120px;margin:0 auto;padding:26px 32px;
+}
+.wordmark{
+  font-family:var(--mono);font-weight:500;font-size:14px;
+  letter-spacing:.5em;text-decoration:none;
+}
+.nav-links{display:flex;gap:28px;align-items:center}
+.nav-links a{
+  font-family:var(--mono);font-size:12px;letter-spacing:.14em;
+  text-transform:uppercase;text-decoration:none;color:var(--ink-soft);
+  border-bottom:1px solid transparent;padding-bottom:2px;
+  transition:color .2s ease,border-color .2s ease;
+}
+.nav-links a:hover{border-bottom-color:var(--red);color:var(--ink)}
+
+/* ---------- hero ---------- */
+.hero{position:relative;padding:40px 0 0}
+.hero .wrap{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr);align-items:center;gap:0}
+.hero-copy{position:relative;z-index:5;padding:56px 0 72px}
+.plate{display:flex;align-items:center;gap:14px;margin-bottom:34px}
+.plate .tick{width:34px;height:1px;background:var(--red);transform-origin:left}
+h1{
+  font-family:var(--serif);font-weight:600;
+  font-size:clamp(44px,6.2vw,78px);
+  line-height:1.02;letter-spacing:-.015em;
+  margin-bottom:28px;
+}
+h1 .fix{white-space:nowrap}
+h1 .fix i{font-style:italic;color:var(--red)}
+.hero-sub{
+  font-size:19px;max-width:46ch;color:var(--ink-soft);margin-bottom:40px;
+}
+.hero-sub b{font-weight:600;color:var(--ink)}
+.hero-art{position:relative;align-self:stretch;min-height:520px}
+.hero-art .art{
+  position:absolute;right:-20px;top:50%;transform:translateY(-50%);
+  width:min(500px,41vw);
+  perspective:900px;
+}
+.hero-art img{
+  mix-blend-mode:multiply;filter:contrast(1.02);width:100%;
+  will-change:transform;
+}
+/* soft ink wash grounding the portrait */
+.hero-art::before{
+  content:"";position:absolute;right:-16%;top:2%;width:120%;height:100%;
+  background:radial-gradient(closest-side,rgba(22,19,9,.075),transparent 72%);
+}
+
+/* ---------- entrance choreography ---------- */
+.rise{opacity:0;transform:translateY(26px)}
+body.loaded .rise{
+  animation:rise 1s cubic-bezier(.22,.9,.3,1) forwards;
+}
+body.loaded .rise.d1{animation-delay:.12s}
+body.loaded .rise.d2{animation-delay:.26s}
+body.loaded .rise.d3{animation-delay:.42s}
+@keyframes rise{to{opacity:1;transform:none}}
+.hero-art img{opacity:0}
+body.loaded .hero-art img{animation:art-in 1.6s cubic-bezier(.22,.9,.3,1) .2s forwards}
+@keyframes art-in{
+  from{opacity:0;transform:scale(1.04) translateY(10px)}
+  to{opacity:1;transform:none}
+}
+body.loaded .plate .tick{animation:tick 1s cubic-bezier(.7,0,.2,1) .1s both}
+@keyframes tick{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@media (prefers-reduced-motion: reduce){
+  .rise{opacity:1 !important;transform:none !important;animation:none !important}
+  .hero-art img{opacity:1 !important;animation:none !important}
+  .plate .tick{animation:none !important}
+}
+
+/* ---------- CTA block ---------- */
+.cta-row{display:flex;flex-wrap:wrap;gap:14px;align-items:stretch}
+.btn-star{
+  display:inline-flex;align-items:center;gap:12px;
+  background:var(--ink);color:var(--paper-2);text-decoration:none;
+  font-family:var(--mono);font-size:14px;letter-spacing:.06em;
+  padding:16px 26px;border:1px solid var(--ink);
+  position:relative;overflow:hidden;
+  transition:color .25s ease;
+}
+.btn-star::after{
+  content:"";position:absolute;inset:0;background:var(--paper-2);
+  transform:scaleX(0);transform-origin:right;z-index:0;
+  transition:transform .3s cubic-bezier(.7,0,.2,1);
+}
+.btn-star:hover::after{transform:scaleX(1);transform-origin:left}
+.btn-star:hover{color:var(--ink)}
+.btn-star > *{position:relative;z-index:1}
+.btn-star .star{color:var(--gold)}
+.btn-star:hover .star{color:var(--red)}
+.btn-star .count{
+  border-left:1px solid rgba(242,238,225,.3);padding-left:12px;
+}
+.btn-star:hover .count{border-left-color:rgba(22,19,9,.3)}
+.cmd{
+  display:inline-flex;align-items:center;gap:16px;
+  border:1px solid var(--ink);padding:15px 18px 15px 22px;
+  font-family:var(--mono);font-size:14px;letter-spacing:.02em;
+  background:var(--paper-2);cursor:pointer;
+  transition:background .2s ease;
+}
+.cmd:hover{background:#efe9d8}
+.cmd .dollar{color:var(--red)}
+.cmd button{
+  all:unset;cursor:pointer;font-family:var(--mono);font-size:10px;
+  letter-spacing:.24em;text-transform:uppercase;color:var(--ink-faint);
+  border-left:1px solid var(--rule);padding-left:16px;
+  transition:color .2s ease;
+}
+.cmd:hover button{color:var(--red)}
+
+/* ---------- stat strip ---------- */
+.stats{border-top:1px solid var(--ink);border-bottom:1px solid var(--ink);position:relative;z-index:3;background:var(--paper)}
+.stats .wrap{display:grid;grid-template-columns:repeat(3,1fr)}
+.stat{padding:30px 24px;text-align:center;position:relative}
+.stat + .stat::before{content:"";position:absolute;left:0;top:22%;height:56%;width:1px;background:var(--rule)}
+.stat .n{font-family:var(--serif);font-weight:700;font-size:40px;line-height:1;margin-bottom:8px;font-variant-numeric:tabular-nums}
+.stat .k{font-family:var(--mono);font-size:10px;letter-spacing:.3em;text-transform:uppercase;color:var(--ink-faint)}
+
+/* ---------- sections ---------- */
+section{padding:104px 0;position:relative;z-index:3}
+.sec-head{display:flex;align-items:baseline;gap:20px;margin-bottom:56px}
+.sec-head .num{
+  font-family:var(--serif);font-style:italic;font-size:20px;color:var(--red);
+  min-width:44px;
+}
+h2{
+  font-family:var(--serif);font-weight:600;font-size:clamp(30px,3.6vw,46px);
+  letter-spacing:-.01em;line-height:1.08;
+}
+
+/* not memory */
+.split{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid var(--ink)}
+.split > div{padding:44px 44px 48px}
+.split .left{border-right:1px solid var(--ink);background:var(--paper)}
+.split .right{background:var(--paper-2)}
+.split h3{font-family:var(--serif);font-size:26px;font-weight:600;margin:14px 0 16px}
+.split p{color:var(--ink-soft);max-width:42ch}
+.split ul{list-style:none;margin-top:22px}
+.split li{
+  padding:10px 0;border-top:1px dotted var(--rule);
+  font-size:16px;color:var(--ink-soft);
+}
+.split .right li::before{content:"— ";color:var(--red)}
+.split .left li{color:var(--ink-faint)}
+
+/* laws */
+.laws{border:1px solid var(--ink);background:var(--paper-2)}
+.laws-head{
+  padding:18px 32px;border-bottom:1px solid var(--ink);
+  display:flex;justify-content:space-between;align-items:center;gap:12px;
+}
+.law{
+  display:grid;grid-template-columns:90px 1fr 84px;align-items:center;gap:20px;
+  padding:24px 32px;border-top:1px dotted var(--rule);
+}
+.law:first-of-type{border-top:0}
+.law .lex{font-family:var(--mono);font-size:12px;letter-spacing:.2em;color:var(--ink-faint)}
+.law .t{font-family:var(--text);font-size:19px}
+.law .t b{font-weight:600}
+.law .score{
+  justify-self:end;font-family:var(--mono);font-size:13px;
+  border:1px solid var(--ink);padding:5px 10px;
+}
+/* stamp-in for scores */
+.reveal.in .score{animation:stamp .5s cubic-bezier(.34,1.4,.44,1) both}
+.reveal.in .law:nth-child(2) .score{animation-delay:.25s}
+.reveal.in .law:nth-child(3) .score{animation-delay:.45s}
+.reveal.in .law:nth-child(4) .score{animation-delay:.65s}
+@keyframes stamp{
+  from{opacity:0;transform:scale(1.7) rotate(-6deg)}
+  60%{opacity:1;transform:scale(.94) rotate(1deg)}
+  to{opacity:1;transform:none}
+}
+@media (prefers-reduced-motion: reduce){
+  .reveal.in .score{animation:none}
+}
+.uncomfortable{
+  margin:26px 32px 32px;border:1px solid var(--rule);padding:28px 32px;text-align:center;
+  background:repeating-linear-gradient(0deg,transparent,transparent 26px,rgba(22,19,9,.035) 27px);
+}
+.uncomfortable .label{margin-bottom:12px;display:block}
+.uncomfortable q{font-family:var(--serif);font-style:italic;font-size:22px;line-height:1.4;quotes:"\201C" "\201D"}
+.yours-note{
+  margin-top:22px;font-family:var(--mono);font-size:12px;letter-spacing:.06em;color:var(--ink-faint);text-align:center;
+}
+.yours-note b{color:var(--red);font-weight:500}
+
+/* how (dark plate) */
+.how{background:var(--ink);color:var(--paper-2)}
+.how .sec-head .num{color:var(--gold)}
+.how h2{color:var(--paper-2)}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:0;border:1px solid var(--ink-2)}
+.step{padding:40px 36px 44px;border-right:1px solid var(--ink-2)}
+.step:last-child{border-right:0}
+.step .num{font-family:var(--serif);font-style:italic;font-size:44px;color:var(--gold);line-height:1;margin-bottom:20px}
+.step h3{font-family:var(--serif);font-size:23px;font-weight:600;margin-bottom:12px;color:var(--paper-2)}
+.step p{color:var(--cream-dim);font-size:16px}
+.step code{font-family:var(--mono);font-size:14px;background:#2a2718;padding:1px 6px;color:var(--gold)}
+.privacy{margin-top:26px;font-size:16px;color:var(--cream-dim);max-width:72ch}
+.privacy b{font-weight:600;color:var(--paper-2)}
+
+/* works with — slow marquee */
+.works{border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);padding:24px 0;overflow:hidden;position:relative;z-index:3;background:var(--paper)}
+.works .lane{display:flex;width:max-content;animation:lane 28s linear infinite}
+.works .set{display:flex;align-items:center}
+.works span{
+  font-family:var(--mono);font-size:12px;letter-spacing:.22em;text-transform:uppercase;
+  color:var(--ink-faint);padding:0 34px;white-space:nowrap;
+}
+.works .dot{color:var(--red);padding:0}
+@keyframes lane{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+@media (prefers-reduced-motion: reduce){
+  .works .lane{animation:none;width:auto;flex-wrap:wrap;justify-content:center}
+  .works .set:last-child{display:none}
+}
+
+/* final */
+.final{text-align:center;padding:130px 0 96px;position:relative}
+.final .engrave{
+  width:190px;margin:0 auto 36px;mix-blend-mode:multiply;opacity:.92;
+}
+.final h2{font-size:clamp(38px,5vw,64px);margin-bottom:18px}
+.final .sub{color:var(--ink-soft);font-size:19px;margin-bottom:44px}
+.final .cta-row{justify-content:center}
+.barcode{
+  margin:72px auto 0;width:180px;height:34px;
+  background:repeating-linear-gradient(90deg,var(--ink) 0 2px,transparent 2px 5px,var(--ink) 5px 9px,transparent 9px 11px,var(--ink) 11px 12px,transparent 12px 16px);
+  opacity:.85;
+}
+footer{padding:28px 0 44px;position:relative;z-index:3}
+footer .wrap{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:14px}
+footer span,footer a{
+  font-family:var(--mono);font-size:11px;letter-spacing:.2em;text-transform:uppercase;
+  color:var(--ink-faint);text-decoration:none;
+}
+footer a:hover{color:var(--red)}
+
+/* reveal on scroll */
+.reveal{opacity:0;transform:translateY(22px);transition:opacity .8s cubic-bezier(.22,.9,.3,1),transform .8s cubic-bezier(.22,.9,.3,1)}
+.reveal.in{opacity:1;transform:none}
+
+/* staggered children inside revealed blocks */
+.split.reveal .left,.split.reveal .right,
+.steps.reveal .step{
+  opacity:0;transform:translateY(20px);
+  transition:opacity .7s cubic-bezier(.22,.9,.3,1),transform .7s cubic-bezier(.22,.9,.3,1);
+}
+.split.reveal.in .left{opacity:1;transform:none;transition-delay:.1s}
+.split.reveal.in .right{opacity:1;transform:none;transition-delay:.28s}
+.steps.reveal.in .step{opacity:1;transform:none}
+.steps.reveal.in .step:nth-child(1){transition-delay:.1s}
+.steps.reveal.in .step:nth-child(2){transition-delay:.28s}
+.steps.reveal.in .step:nth-child(3){transition-delay:.46s}
+
+/* hover life */
+.law{transition:background .25s ease}
+.law:hover{background:#f0ebd7}
+.law:hover .lex{color:var(--red)}
+.split > div{transition:background .3s ease}
+.split .right:hover{background:#fbf8ee}
+.split .left:hover{background:#f4f0e4}
+.step{transition:background .3s ease}
+.step:hover{background:#1e1b10}
+.step .num{transition:transform .3s cubic-bezier(.22,.9,.3,1)}
+.step:hover .num{transform:translateX(6px)}
+
+/* scroll progress hairline */
+#progress{
+  position:fixed;top:0;left:0;right:0;height:2px;z-index:9;
+  background:var(--red);transform:scaleX(0);transform-origin:left;
+  pointer-events:none;
+}
+
+@media (prefers-reduced-motion: reduce){
+  .reveal,.split.reveal .left,.split.reveal .right,.steps.reveal .step{opacity:1;transform:none;transition:none}
+}
+
+/* ---------- responsive ---------- */
+@media (max-width: 960px){
+  .hero .wrap{grid-template-columns:1fr}
+  .hero-copy{padding:24px 0 40px}
+  .hero-art{min-height:0;order:-1;height:340px;margin-top:-10px}
+  .hero-art .art{right:50%;transform:translate(50%,-50%);top:50%;width:min(420px,88vw)}
+  .hero-art::before{right:0;width:100%}
+  .split{grid-template-columns:1fr}
+  .split .left{border-right:0;border-bottom:1px solid var(--ink)}
+  .steps{grid-template-columns:1fr}
+  .step{border-right:0;border-bottom:1px solid var(--ink-2)}
+  .step:last-child{border-bottom:0}
+  .law{grid-template-columns:64px 1fr;grid-template-rows:auto auto;align-items:start}
+  .law .lex{padding-top:5px}
+  .law .score{grid-column:2;justify-self:start}
+  section{padding:72px 0}
+}
+@media (max-width: 560px){
+  .wrap{padding:0 20px}
+  nav{padding:20px}
+  .stats .wrap{grid-template-columns:1fr}
+  .stat + .stat::before{display:none}
+  .stat{border-top:1px dotted var(--rule)}
+  .cta-row{flex-direction:column;align-items:stretch}
+  .btn-star,.cmd{justify-content:center}
+  .cmd{font-size:12.5px;gap:10px;padding:14px 12px 14px 14px}
+}
+</style>
+</head>
+<body>
+
+<canvas id="ghost" aria-hidden="true"></canvas>
+<div id="progress" aria-hidden="true"></div>
+
+<nav>
+  <a class="wordmark" href="#">DITTO</a>
+  <div class="nav-links">
+    <a href="https://github.com/ohad6k/ditto">GitHub</a>
+    <a href="https://discord.gg/QMnYtVcxk2">Discord</a>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="hero-copy">
+      <div class="plate rise"><span class="tick"></span><span class="label">Mined from real sessions · not written by hand</span></div>
+      <h1 class="rise d1">Your AI agents act like they just met you. <span class="fix"><i>Ditto fixes that.</i></span></h1>
+      <p class="hero-sub rise d2">It mines your real <b>Claude Code, Codex, Cursor and Copilot</b> sessions into a <b>you.md</b> your agent reads before every task. Not what you told it. What your work already proved.</p>
+      <div class="cta-row rise d3">
+        <a class="btn-star" href="https://github.com/ohad6k/ditto">
+          <span class="star">★</span> <span>Star on GitHub</span> <span class="count" id="star-count"></span>
+        </a>
+        <span class="cmd" title="Copy install command">
+          <span><span class="dollar">$</span> npx skills add ohad6k/ditto</span>
+          <button aria-label="Copy command">Copy</button>
+        </span>
+      </div>
+    </div>
+    <div class="hero-art">
+      <div class="art" id="hero-art">
+        <img src="assets/ditto.png" alt="Ditto engraving: a human and a machine head back to back" fetchpriority="high">
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="stats">
+  <div class="wrap">
+    <div class="stat"><div class="n" data-count="1656" data-format="comma">0</div><div class="k">Sessions mined</div></div>
+    <div class="stat"><div class="n" data-count="30" data-format="m">0.0M</div><div class="k">Tokens of just me</div></div>
+    <div class="stat"><div class="n" data-count="9">0</div><div class="k">Months of history</div></div>
+  </div>
+</div>
+
+<section id="not-memory">
+  <div class="wrap">
+    <div class="sec-head reveal"><span class="num">I.</span><h2>Not memory.</h2></div>
+    <div class="split reveal">
+      <div class="left">
+        <span class="label">Memory</span>
+        <h3>What you told the model</h3>
+        <p>Your CLAUDE.md, your rules file, the preferences you remembered to write down on a good day.</p>
+        <ul>
+          <li>Written once, goes stale</li>
+          <li>Only the rules you noticed</li>
+          <li>How you think you work</li>
+        </ul>
+      </div>
+      <div class="right">
+        <span class="label red">Ditto</span>
+        <h3>What your work proved</h3>
+        <p>Mined from the raw session logs: every rejection, every "that's not done", every time you asked for proof.</p>
+        <ul>
+          <li>What you reject on sight</li>
+          <li>What "done" actually means to you</li>
+          <li>How you talk when you're really working</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="laws">
+  <div class="wrap">
+    <div class="sec-head reveal"><span class="num">II.</span><h2>The rules nobody wrote down.</h2></div>
+    <div class="laws reveal">
+      <div class="laws-head">
+        <span class="label">Laws · ranked by how many of the 20 mining agents found each</span>
+        <span class="label red">17/20 consensus</span>
+      </div>
+      <div class="law">
+        <span class="lex">LEX I</span>
+        <span class="t"><b>Done means it runs live.</b> Never trust "done" off a code edit.</span>
+        <span class="score">17/20</span>
+      </div>
+      <div class="law">
+        <span class="lex">LEX II</span>
+        <span class="t"><b>Fix the one thing.</b> Rewriting what isn't broken gets rejected.</span>
+        <span class="score">15/20</span>
+      </div>
+      <div class="law">
+        <span class="lex">LEX III</span>
+        <span class="t"><b>No walls of text.</b> Short, concrete, no hype.</span>
+        <span class="score">14/20</span>
+      </div>
+      <div class="uncomfortable">
+        <span class="label">The uncomfortable one</span>
+        <q>asks for proof more the closer a task gets to shipping, and never on day one</q>
+      </div>
+    </div>
+    <p class="yours-note reveal">This is one person's mine. <b>Yours is pulled from your own logs and will read nothing like it.</b></p>
+  </div>
+</section>
+
+<section class="how" id="how">
+  <div class="wrap">
+    <div class="sec-head reveal"><span class="num">III.</span><h2>How the mine works.</h2></div>
+    <div class="steps reveal">
+      <div class="step">
+        <div class="num">1</div>
+        <h3>Reads your history</h3>
+        <p>Pulls every message you typed from your local Claude Code, Codex, Cursor, Copilot CLI and OpenCode logs. Strips tool output, pasted errors, file dumps. Keeps only your words.</p>
+      </div>
+      <div class="step">
+        <div class="num">2</div>
+        <h3>Mines the patterns</h3>
+        <p>Agents read each slice of your history and pull the repeated traits: how you define done, what you reject, when you ask for proof, how you actually talk.</p>
+      </div>
+      <div class="step">
+        <div class="num">3</div>
+        <h3>Writes <code>you.md</code></h3>
+        <p>The repeated traits merge into one profile, with dated receipts from real sessions. Installs as a skill, so your agent reads it before every task.</p>
+      </div>
+    </div>
+    <p class="privacy reveal"><b>Ditto reads your private session logs, so it is built to never move them.</b> Everything runs on your machine, secrets are redacted before a single line is written, and the profile stays in a local file you can open, edit, or delete.</p>
+  </div>
+</section>
+
+<div class="works" aria-label="Works with Claude Code, Codex, Cursor, Copilot CLI and OpenCode">
+  <div class="lane">
+    <div class="set">
+      <span>Claude Code</span><span class="dot">·</span>
+      <span>Codex</span><span class="dot">·</span>
+      <span>Cursor</span><span class="dot">·</span>
+      <span>Copilot CLI</span><span class="dot">·</span>
+      <span>OpenCode</span><span class="dot">·</span>
+    </div>
+    <div class="set" aria-hidden="true">
+      <span>Claude Code</span><span class="dot">·</span>
+      <span>Codex</span><span class="dot">·</span>
+      <span>Cursor</span><span class="dot">·</span>
+      <span>Copilot CLI</span><span class="dot">·</span>
+      <span>OpenCode</span><span class="dot">·</span>
+    </div>
+  </div>
+</div>
+
+<section class="final">
+  <div class="wrap">
+    <img class="engrave reveal" src="assets/ditto.png" alt="">
+    <h2 class="reveal">Stop starting from zero.</h2>
+    <p class="sub reveal">One command. Your logs become the profile your agent reads first.</p>
+    <div class="cta-row reveal">
+      <a class="btn-star" href="https://github.com/ohad6k/ditto">
+        <span class="star">★</span> <span>Star on GitHub</span> <span class="count" id="star-count-2"></span>
+      </a>
+      <span class="cmd" title="Copy install command">
+        <span><span class="dollar">$</span> npx skills add ohad6k/ditto</span>
+        <button aria-label="Copy command">Copy</button>
+      </span>
+    </div>
+    <div class="barcode reveal" aria-hidden="true"></div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <span>Ditto · MIT · built from my own logs</span>
+    <span>
+      <a href="https://github.com/ohad6k/ditto">GitHub</a> &nbsp;·&nbsp;
+      <a href="https://discord.gg/QMnYtVcxk2">Discord</a>
+    </span>
+  </div>
+</footer>
+
+<script>
+const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+// entrance choreography
+window.addEventListener("load", () => document.body.classList.add("loaded"));
+// fallback if load stalls on slow font fetch
+setTimeout(() => document.body.classList.add("loaded"), 1200);
+
+// live star count; if the API fails the button just says "Star on GitHub"
+fetch("https://api.github.com/repos/ohad6k/ditto")
+  .then(r => r.ok ? r.json() : null)
+  .then(d => {
+    if (!d || typeof d.stargazers_count !== "number") return;
+    const n = d.stargazers_count.toLocaleString("en-US");
+    document.querySelectorAll("#star-count, #star-count-2").forEach(el => el.textContent = n);
+  })
+  .catch(() => {});
+
+// copy command: whole chip is clickable, selection fallback if clipboard is blocked
+const CMD = "npx skills add ohad6k/ditto";
+document.querySelectorAll(".cmd").forEach(chip => {
+  const btn = chip.querySelector("button");
+  chip.addEventListener("click", e => {
+    e.preventDefault();
+    const done = ok => {
+      btn.textContent = ok ? "Copied" : "Select + C";
+      setTimeout(() => btn.textContent = "Copy", 1400);
+    };
+    navigator.clipboard.writeText(CMD).then(() => done(true)).catch(() => {
+      const range = document.createRange();
+      range.selectNodeContents(chip.querySelector("span"));
+      const sel = window.getSelection();
+      sel.removeAllRanges(); sel.addRange(range);
+      done(document.execCommand && document.execCommand("copy"));
+    });
+  });
+});
+
+// reveal on scroll
+const io = new IntersectionObserver(entries => {
+  entries.forEach(en => { if (en.isIntersecting){ en.target.classList.add("in"); io.unobserve(en.target); } });
+}, { threshold: .12 });
+document.querySelectorAll(".reveal").forEach(el => io.observe(el));
+
+// stat count-up
+function countUp(el){
+  const target = parseInt(el.dataset.count, 10);
+  const fmt = el.dataset.format;
+  const dur = 1400, t0 = performance.now();
+  const render = v => {
+    if (fmt === "comma") el.textContent = Math.round(v).toLocaleString("en-US");
+    else if (fmt === "m") el.textContent = (v / 10).toFixed(1) + "M";
+    else el.textContent = Math.round(v);
+  };
+  if (reduced){ render(target); return; }
+  (function tick(now){
+    const p = Math.min((now - t0) / dur, 1);
+    render(target * (1 - Math.pow(1 - p, 3)));
+    if (p < 1) requestAnimationFrame(tick);
+  })(t0);
+}
+const statIo = new IntersectionObserver(entries => {
+  entries.forEach(en => { if (en.isIntersecting){ countUp(en.target); statIo.unobserve(en.target); } });
+}, { threshold: .6 });
+document.querySelectorAll(".stat .n").forEach(el => statIo.observe(el));
+
+// hero engraving parallax: mouse drift + scroll, lerped for weight
+const art = document.querySelector("#hero-art img");
+if (art){
+  // release the entrance animation's forwards-fill so parallax can own transform
+  art.addEventListener("animationend", () => {
+    art.style.opacity = "1";
+    art.style.animation = "none";
+  }, { once: true });
+}
+if (art && !reduced && matchMedia("(pointer:fine)").matches && innerWidth > 960){
+  let mx = 0, my = 0, tx = 0, ty = 0;
+  addEventListener("mousemove", e => {
+    mx = (e.clientX / innerWidth - .5) * 14;
+    my = (e.clientY / innerHeight - .5) * 10;
+  }, { passive: true });
+  (function step(){
+    tx += (mx - tx) * .06; ty += (my - ty) * .06;
+    const sy = Math.min(scrollY, 800) * .045;
+    const bob = Math.sin(performance.now() / 1400) * 5;
+    art.style.transform =
+      `translate(${tx}px, ${ty - sy + bob}px) rotateY(${(tx * .42).toFixed(2)}deg) rotateX(${(-ty * .38).toFixed(2)}deg)`;
+    requestAnimationFrame(step);
+  })();
+}
+
+// scroll progress hairline
+const prog = document.getElementById("progress");
+let progTick = false;
+const paintProg = () => {
+  const max = document.documentElement.scrollHeight - innerHeight;
+  prog.style.transform = `scaleX(${max > 0 ? scrollY / max : 0})`;
+  progTick = false;
+};
+addEventListener("scroll", () => {
+  if (!progTick){ progTick = true; requestAnimationFrame(paintProg); }
+}, { passive: true });
+
+// ghost log lines: faint fragments of a mined history drifting under the page
+(function(){
+  if (reduced) return;
+  const cv = document.getElementById("ghost");
+  const ctx = cv.getContext("2d");
+  const FRAGS = [
+    "$ npx skills add ohad6k/ditto",
+    "done means it runs live",
+    "fix the one thing",
+    "show me, don't tell me",
+    "session 0412 · 02:14",
+    "rejected: wall of text",
+    "you.md",
+    "LEX I · 17/20",
+    "prove it first",
+    "keeps only your words",
+    "1,656 sessions",
+    "not done yet",
+    "what your work proved",
+    "session 1093 · 23:47",
+    "no fake data",
+    "redacted before writing"
+  ];
+  let W, H, dpr, parts = [];
+  // deterministic-ish PRNG so density stays stable
+  let s = 42;
+  const rnd = () => (s = (s * 16807) % 2147483647) / 2147483647;
+  function size(){
+    dpr = Math.min(devicePixelRatio || 1, 1.5);
+    W = innerWidth; H = innerHeight;
+    cv.width = W * dpr; cv.height = H * dpr;
+    cv.style.width = W + "px"; cv.style.height = H + "px";
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.font = "11px 'IBM Plex Mono', monospace";
+  }
+  function spawn(i, fresh){
+    const depth = .4 + rnd() * .6;
+    parts[i] = {
+      text: FRAGS[Math.floor(rnd() * FRAGS.length)],
+      x: rnd() * W,
+      y: fresh ? H + 20 + rnd() * 80 : rnd() * H,
+      v: (0.06 + rnd() * .12) * depth,
+      depth,
+      o: 0,
+      life: 0,
+      maxLife: 1400 + rnd() * 1200
+    };
+  }
+  const N = Math.min(26, Math.floor(innerWidth / 55));
+  for (let i = 0; i < N; i++) spawn(i, false);
+  size();
+  addEventListener("resize", size, { passive: true });
+  let running = true;
+  document.addEventListener("visibilitychange", () => {
+    running = !document.hidden;
+    if (running) requestAnimationFrame(frame);
+  });
+  window.__ghost = {
+    pause(){ running = false; },
+    resume(){ if (!running){ running = true; requestAnimationFrame(frame); } }
+  };
+  function frame(){
+    if (!running) return;
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = "#161309";
+    for (let i = 0; i < parts.length; i++){
+      const p = parts[i];
+      p.y -= p.v;
+      p.life++;
+      const fadeIn = Math.min(p.life / 120, 1);
+      const fadeOut = Math.min((p.maxLife - p.life) / 160, 1);
+      p.o = .052 * p.depth * Math.min(fadeIn, fadeOut);
+      if (p.life > p.maxLife || p.y < -20){ spawn(i, true); continue; }
+      ctx.globalAlpha = Math.max(p.o, 0);
+      ctx.fillText(p.text, p.x, p.y);
+    }
+    ctx.globalAlpha = 1;
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
