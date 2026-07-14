@@ -24,3 +24,9 @@ __pycache__/
 # local working files, never part of the release
 .superpowers/
 videos/
+.tools/
+
+# python packaging build artifacts
+dist/
+build/
+*.egg-info/

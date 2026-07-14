@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ditto-cli"
+dynamic = ["version"]
+description = "Mine your local AI coding session logs into a personal profile your agent loads before every task."
+readme = "README.md"
+requires-python = ">=3.8"
+license = { text = "MIT" }
+authors = [{ name = "Ohad" }]
+keywords = ["personalization", "skills", "session-mining", "agents", "mcp", "claude-code", "codex"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Environment :: Console",
+  "Topic :: Software Development",
+]
+
+[project.urls]
+Homepage = "https://github.com/ohad6k/ditto"
+Repository = "https://github.com/ohad6k/ditto"
+
+[project.scripts]
+ditto = "ditto:main"
+ditto-cli = "ditto:main"
+
+[tool.setuptools]
+py-modules = ["ditto"]
+
+[tool.setuptools.dynamic]
+version = { attr = "ditto.DITTO_VERSION" }
