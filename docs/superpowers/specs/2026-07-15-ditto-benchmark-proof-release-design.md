@@ -1,6 +1,6 @@
 # Ditto Benchmark/Proof Release Design
 
-**Status:** Proposed for Ohad review
+**Status:** Revised after Ohad Step 8 review; proposed for final approval
 
 **Date:** 2026-07-15
 
@@ -9,6 +9,18 @@
 **Implementation branch:** `codex/ditto-benchmark-proof-release`
 
 **Frozen starting point:** Ditto plugin `v0.3.7` at `5f4008b0c0df40dcadb92c8fd1ba4dcf3aee40d0`
+
+## Review changelog (A1-A9)
+
+- **A1:** Sections 6.3, 8.3, 8.4, and 8.5 now treat writing voice as structurally de-blindable. Writing uses pre-registered mechanism checks; any public preference verdict comes only from reviewers unfamiliar with the operator.
+- **A2:** New Section 8.4 defines the independent reviewer role, disqualifies Ohad from blind preference judging, and makes consent and blinding evidence mandatory in Section 11.
+- **A3:** Sections 8.1, 8.2, and 11 freeze host-native persistent personalization as absent in both v1 arms and record that state per cell. Claims are explicitly limited to a clean-host cold-start comparison.
+- **A4:** Section 6 now requires a primary and held-out variant per family, and Section 9 requires two trials per variant. The later 14-system qualifier is explicitly non-v1 and non-evidentiary.
+- **A5:** Section 8.5 pre-commits to raw denominators, Wilson 95% intervals where defined, and the label "small-n, directional only," with no significance claims.
+- **A6:** Sections 7, 8.5, and 16 restrict profile-derived rubric adherence to mechanism validation; it cannot be published as a standalone proof of value.
+- **A7:** Section 9 replaces the 132-execution default with the named **Ditto Proof v1** edition: 24 paired comparisons and 48 isolated cell executions. The 14-system roster is deferred to a separately approved Atlas edition.
+- **A8:** Section 18 keeps the traffic estimate non-binding and forbids using it as a benchmark target, sample-size input, or forecast.
+- **A9:** Section 9 retains exact captured labels, allows attrition, and forbids substitution or backfilling of unavailable systems.
 
 ## 1. Outcome
 
@@ -50,11 +62,11 @@ This release includes:
 - three deterministic task families: work/done, design, and writing;
 - paired cold and `+Ditto` conditions;
 - pre-registered scoring rules and hard-failure rules;
-- randomized condition labels and blind operator verdicts;
+- randomized condition labels and independent third-party blind verdicts;
 - isolated fixtures and disposable execution worktrees;
 - artifact hashing, validation, redaction, and publication status;
 - a disabled-by-default runner or runbook that requires explicit approval;
-- one schema-validation pilot before the full run;
+- one schema-validation pilot before the scored Ditto Proof v1 run;
 - a sanitized, evidence-linked static results surface;
 - proof-clip specifications for each task family and one combined launch clip;
 - an opt-in tester workflow with no promotional obligation.
@@ -81,7 +93,9 @@ The first benchmark uses the already-published Ditto plugin tag `v0.3.7` and com
 
 ## 6. Task families
 
-Each family has one canonical task for the public benchmark. The fixture, instructions, success tests, time/tool budget, and rubric are frozen before the pilot. The implementation plan may choose concrete fixture content, but it may not change the behaviors measured below.
+Each family has two canonical variants for the public benchmark: one primary variant and one held-out variant. Both are frozen and hashed before the pilot. The held-out variant is excluded from pilot execution, task tuning, rubric tuning, and prompt iteration. Its content remains concealed from scored systems and preference reviewers until its executions are complete, then is published with the final evidence package.
+
+The fixture, instructions, success tests, time/tool budget, and rubric are frozen before the pilot. The implementation plan may choose concrete fixture content, but it may not change the behaviors measured below. The pilot uses separate non-scored schema fixtures so it does not consume either public benchmark variant.
 
 ### 6.1 Work/done
 
@@ -116,7 +130,7 @@ Hard failures include touching excluded surfaces, breaking the primary flow, fai
 
 ### 6.3 Writing
 
-The system receives the same grounded product facts, evidence packet, audience, channel, and length constraints. It must create a channel-native launch or outreach artifact in the operator's established voice.
+The system receives the same grounded synthetic-product facts, evidence packet, audience, channel, and length constraints. Scored fixtures use fictional product and person names so they do not reveal Ohad's identity. The system must create a channel-native launch or outreach artifact in the operator's established voice.
 
 The task measures whether the system:
 
@@ -129,6 +143,8 @@ The task measures whether the system:
 
 Hard failures include an unsupported metric, invented testimonial, false availability claim, privacy leak, prohibited formatting, or a materially spammy call to action.
 
+Voice match is expected to reveal the `+Ditto` condition to anyone familiar with Ohad's writing, so operator-recognition preference is not a valid blind outcome for this family. Voice and operator-specific constraints are scored only as pre-registered mechanism checks. A public writing preference verdict, if collected, is limited to channel quality, clarity, usefulness, and groundedness and must come from independent reviewers with no prior exposure to the operator's identity or voice.
+
 ## 7. Personalization ground truth
 
 Ditto is evaluated against a pre-registered operator rubric derived from the active profile, not against a vague impression after the run.
@@ -137,14 +153,18 @@ Before execution, Ohad approves a private checklist containing the relevant work
 
 Rubric changes after seeing an output invalidate the affected task family. Editorial clarifications that do not change scoring must be versioned and disclosed.
 
+Profile-derived rubric adherence is an internal mechanism check: it can show that the profile was applied as designed, but it cannot by itself prove product value. It is never published as a standalone Ditto win and is excluded from public system-selection or launch claims.
+
 ## 8. Experimental design
 
 ### 8.1 Conditions
 
-- **Cold:** the system receives the frozen task and normal system/host instructions, without Ditto's operator profile or Ditto-specific skill context.
-- **+Ditto:** the same system receives the same task, state, tools, permissions, and budgets with the frozen Ditto profile/skill context enabled through the supported product path.
+- **Cold:** the system receives the frozen task and clean benchmark-host instructions, without Ditto's operator profile or Ditto-specific skill context.
+- **+Ditto:** the same system receives the same task, state, tools, permissions, budgets, and clean benchmark-host instructions with the frozen Ditto profile/skill context enabled through the supported product path.
 
 The cold condition must not receive a paraphrase of Ditto's operator knowledge. The `+Ditto` condition must not receive additional task hints unrelated to Ditto.
+
+For Ditto Proof v1, host-native persistent personalization is absent in both arms. The dedicated benchmark home must contain no user `AGENTS.md`, `CLAUDE.md`, memory, rules, prior chat memory, custom instructions, or equivalent operator context. Repository-local task instructions and host safety/tool instructions remain identical in both arms. This isolates the addition of Ditto but limits the claim to **Ditto versus a clean-host cold start**, not Ditto versus another personalization product or an already-personalized host. The effect is attributable to Ditto only because host-native personalization is held constant across the pair.
 
 ### 8.2 Pair controls
 
@@ -153,6 +173,7 @@ Within a pair, keep constant:
 - starting fixture and commit;
 - system label, underlying model ID when available, host, and host version;
 - system instructions other than the Ditto condition;
+- host-native persistent-context state and dedicated benchmark home;
 - tools and permission policy;
 - token, time, and retry budgets;
 - task text and evaluation tests;
@@ -162,26 +183,62 @@ Each cell runs in a fresh disposable copy or worktree. No transcript, filesystem
 
 ### 8.3 Blinding and order
 
-Condition order is randomized per pair. Outputs receive opaque IDs before operator review. The reviewer must not see the condition, system identity, file path, run order, or metadata that reveals Ditto. Machine-checkable tests run independently of the blind preference review.
+Condition order is randomized per pair. Outputs receive opaque IDs before reviewer access. The reviewer must not see the condition, system identity, operator identity, file path, run order, or metadata that reveals Ditto. Machine-checkable tests run independently of the blind preference review.
 
 If output text directly reveals its condition, the objective checks remain usable but the blind preference verdict is invalid and marked as such.
 
-### 8.4 Primary outcomes
+Writing receives family-specific treatment. Because operator voice itself may expose the condition, the public preference question cannot ask which output sounds more like Ohad. A writing preference verdict is valid only when the reviewer has no prior exposure to Ohad or his voice and judges profile-independent qualities defined in Section 6.3. If those conditions cannot be met, writing reports no blind preference outcome.
+
+### 8.4 Independent reviewer role
+
+Blind preference verdicts are cast by an independent third party who:
+
+- did not create or approve the operator rubric;
+- has no prior exposure to the operator's identity, writing voice, Ditto profile, or benchmark conditions;
+- did not operate the model runs or prepare the blinded artifacts;
+- consents to the specific review task and publication of an anonymous verdict;
+- confirms after review that no condition-revealing metadata or context was visible.
+
+Ohad is the benchmark operator and rubric approver and is explicitly disqualified from casting blind preference verdicts. The run record links the reviewer's consent reference, eligibility attestation, blinding confirmation, and any invalidation reason. A reviewer who recognizes the operator or condition stops and records the verdict as invalid.
+
+### 8.5 Public outcomes and uncertainty
 
 The primary public outcomes are:
 
 1. paired blind preference win/tie/loss rate for `+Ditto`;
 2. hard-failure count by condition;
-3. constraint-adherence pass rate by condition;
-4. task-completion pass rate by condition.
+
+Blind preference is omitted for writing cells that do not satisfy Sections 6.3, 8.3, and 8.4. Profile-derived rubric adherence, operator-specific voice match, profile-independent constraint adherence, and task-completion checks remain diagnostic evidence, but they are not promoted to standalone proof that Ditto creates value.
 
 Duration and token/tool usage are descriptive secondary outcomes. They are not framed as efficiency gains unless the host provides complete, comparable measurements.
 
 No composite score may be introduced after results are visible. If a composite is useful, its weights and tie policy must be frozen in the manifest before the pilot.
 
-## 9. System roster and run size
+Ditto Proof v1 is pre-labelled **small-n, directional only**. The publication reports raw numerators, denominators, ties, exclusions, and invalidations. Where a binary proportion is defined, it also reports a two-sided Wilson 95% confidence interval; `+Ditto` preference intervals exclude ties and show the tie count separately. No p-values, statistical-significance language, universal model ranking, or population-level performance claim is permitted. This uncertainty policy is frozen in the manifest before the pilot and cannot change after outputs are visible.
 
-The intended qualifier roster records these supplied menu labels exactly as seen:
+## 9. Ditto Proof v1 and later roster
+
+### 9.1 Shippable v1 edition
+
+The default public edition is named **Ditto Proof v1**. During cost preflight, Ohad selects exactly two systems: one general-purpose Codex-host system and one general-purpose Claude-host system. Mini, fast, and preview-labelled entries are ineligible. Selection may use documented capability, availability, and cost, but no benchmark output. The exact visible menu label, underlying model ID when exposed, host version, and selection screenshot are frozen before the pilot. Once frozen, an unavailable system is not substituted; the edition must wait or restart under a new benchmark version.
+
+The scored v1 run consists of:
+
+- 2 frozen systems;
+- 3 task families;
+- 2 frozen variants per family, one primary and one held-out;
+- 2 independent trials per system/family/variant;
+- 2 conditions per paired comparison, cold and `+Ditto`.
+
+This produces **24 paired comparisons and 48 isolated cell executions**: `2 systems x 3 families x 2 variants x 2 trials = 24 pairs`; each pair contains two condition executions. It is small enough for one operator to finish while providing repeated trials and a held-out variant in every family.
+
+There is no result-driven qualifier or top-system selection in v1. Both systems are preselected and every valid cell is reported. Reducing the systems, variants, or trials creates a separately named incomplete pilot edition and cannot be presented as Ditto Proof v1.
+
+Before any paid or rate-limited execution, the run operator records current expected cost and quota from provider interfaces and obtains Ohad's explicit approval.
+
+### 9.2 Aspirational Atlas edition
+
+A later broad-roster edition, provisionally named **Ditto Proof Atlas**, may evaluate these supplied menu labels exactly as seen:
 
 **Codex:** `5.5`, `5.6 Sol`, `5.6 Terra`, `5.6 Luna`, `5.4`, `5.4 Mini`, `5.3 Codex Spark`
 
@@ -189,19 +246,11 @@ The intended qualifier roster records these supplied menu labels exactly as seen
 
 At execution time, each entry also records the underlying model ID when exposed, host version, date, mode, tools, permissions, and budgets. An unavailable entry is recorded as unavailable and is never silently replaced with a nearby model.
 
-The full run consists of:
-
-- **Qualifier:** 14 systems x 3 task families x 2 conditions x 1 trial = 84 executions.
-- **Repeat stage:** the four qualifier systems with the strongest pre-registered selection result receive two additional trials per task and condition, for three total trials: 4 x 3 x 2 x 2 = 48 additional executions.
-- **Total after pilot:** 132 executions if all 14 entries are genuinely available.
-
-The top-four selection rule is frozen before the qualifier: fewest hard failures, then highest `+Ditto` paired preference result, then highest constraint-adherence result, then a deterministic alphabetical tie-break on the captured system label. This selection identifies systems for repeatability testing; it is not a claim that one underlying model is universally better.
-
-Before any paid or rate-limited execution, the run operator records expected cost and quota from the current provider interfaces and obtains Ohad's explicit approval. Reducing the roster or repetitions to save cost creates a separately named benchmark edition and must be disclosed.
+Roster attrition is expected. Unavailable entries remain visible as unavailable; no nearby, newer, cheaper, or similarly named system may backfill them. Atlas is aspirational, outside Ditto Proof v1, and not authorized by this specification. It requires its own reviewed design, cost approval, repetition policy, and ship gate. Any future qualifier is exploratory and cannot itself be published as a performance result or used to hide unselected systems.
 
 ## 10. Pilot gate
 
-The pilot uses one currently available system and all three task families in both conditions: six executions. It validates the mechanism, not Ditto's public performance.
+The pilot uses one currently available system and separate non-scored fixtures for all three task families in both conditions: six executions. It validates the mechanism, not Ditto's public performance, and cannot use the primary or held-out v1 fixtures.
 
 The pilot passes only when:
 
@@ -227,12 +276,13 @@ Each execution record contains at least:
 - run ID, pair ID, opaque review ID, task ID, trial, condition, and randomized order;
 - Ditto tag, commit SHA, profile manifest hash, and public rubric hash;
 - exact menu label, underlying model ID when available, host, host version, mode, and run date;
+- host-native persistent-context state, dedicated benchmark-home identifier, and hashes of all host/repository instruction files visible to the cell;
 - tool list, permission policy, token/time/tool budgets, and sampling controls when exposed;
 - input fixture commit and content hash;
 - start/end timestamps and duration;
 - exit status, timeout/retry history, and invalidation reason;
 - transcript, final output, patch, test report, and rendered-artifact hashes where applicable;
-- objective rubric results, hard failures, blind verdict, and reviewer consent reference;
+- objective rubric results, hard failures, blind verdict, reviewer consent reference, reviewer eligibility attestation, and post-review blinding confirmation;
 - redaction result and publication status.
 
 Artifacts are append-only after evaluation. Corrections create a superseding record with a reason; they never overwrite scored evidence.
@@ -273,7 +323,7 @@ Potential participants with existing relevant context include `theconsultant`, `
 
 - review the sanitized rubric;
 - validate a task fixture;
-- provide one blind verdict;
+- provide one blind verdict only after satisfying the independent-reviewer eligibility screen;
 - test the artifact package or reproduction instructions.
 
 The invitation states the time required, what is private, what may become public, and that no promotion is expected. One reminder at most is allowed when someone explicitly opts in and then goes quiet.
@@ -308,7 +358,10 @@ The publication package is static and evidence-linked. It contains:
 - per-cell sanitized evidence links and artifact hashes;
 - all exclusions, invalidations, unavailable roster entries, and retry history;
 - clear language that these are complete-system comparisons;
+- a clear separation between profile-derived mechanism checks and profile-independent public outcomes;
 - reproduction and independent-review instructions.
+
+Profile-derived rubric adherence may appear only as labelled mechanism-validation evidence. It cannot be headlined, ranked, or presented as a standalone Ditto win.
 
 The proof media set contains:
 
@@ -325,7 +378,7 @@ No public benchmark claim is drafted as a conclusion until the complete sanitize
 
 Publication requires all of the following:
 
-- the full run or explicitly named smaller edition is complete;
+- all 48 Ditto Proof v1 cells are complete, or the result is explicitly labelled as an incomplete non-v1 pilot edition;
 - validators and the existing Ditto test suite pass;
 - private-data review passes;
 - exclusions and limitations are included;
@@ -339,7 +392,7 @@ If `+Ditto` does not show a supported advantage, the team publishes no inflated 
 
 Only after the ship gate, launch preparation coordinates the GitHub release, README proof surface, website, YouTube proof, Product Hunt, Hacker News, relevant Reddit communities, X, creator follow-ups, and existing registries in one concentrated window. Every placement uses channel-native copy and points to inspectable proof.
 
-The current traffic model suggests roughly 4,900 additional qualified visitors would be needed to gain 826 stars if the observed visitor-to-star conversion stayed near 17%. This is a planning estimate, not a promise. The benchmark's job is to create a credible reason for those visitors to arrive, try Ditto, and talk about it.
+The current traffic model suggests roughly 4,900 additional qualified visitors would be needed to gain 826 stars if the observed visitor-to-star conversion stayed near 17%. That observed conversion is likely unstable and optimistic because it comes from a short, self-selected launch window. The figure is a non-binding scenario only: it is not a forecast, benchmark target, sample-size input, success criterion, or justification for any public claim. The benchmark's job is to create a credible reason for visitors to arrive, try Ditto, and talk about it.
 
 No more bulk awesome-list pull requests are part of this milestone. Existing high-value submissions may be maintained when maintainers respond, without repeated promotional follow-ups.
 
