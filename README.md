@@ -17,6 +17,8 @@ Your real coding-agent sessions already contain the rules you never wrote down: 
 
 Ditto mines selected evidence from those sessions — Claude Code, Codex, Copilot CLI, and OpenCode logs out of the box — into a private working profile your agent reads before every task. Separate layers for work, design, and writing mean the right part of you loads for the right task.
 
+The [Ditto Proof v1 methodology](docs/proof/README.md) is an unexecuted methodology until a separately approved evidence release exists.
+
 ## Not memory
 
 Memory is what you explicitly told the model.

@@ -1,0 +1,8 @@
+{
+  "schema": "ditto-proof-synthetic-example/1",
+  "label": "synthetic-example",
+  "scored": false,
+  "comparable": false,
+  "execution_count": 0,
+  "limitations": ["synthetic", "no provider execution", "no public result"]
+}
