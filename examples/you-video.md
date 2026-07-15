@@ -34,8 +34,16 @@ description: Evidence-backed Ditto video profile
   - Action: Center a single card, put the number inside it, and dim the background so the card reads.
 - Reaction cut-ins and everything on screen must keep continuous looped motion for their whole window; a static hold reads as a render bug.
   - Action: Loop bob, wobble, breathing, and burst spin for the full duration with repeats sized to the window; never animate-in then hold.
-- Shorts and long videos share the same house style but a different canvas, so aspect is confirmed per platform.
-  - Action: Author shorts at 1080x1920 and long videos at 1920x1080 around 3 to 4 minutes; the same voiceover and final mix serve both.
+- Long-format is the priority and it is a teaching video, not a stretched short: one concept per screen, sustained explanation, a real structure of chapters.
+  - Action: Author long videos at 1920x1080 around 3 to 4 minutes; open on a cinematic hook, then walk one idea at a time with the character hosting and reacting between concepts.
+- The long-format canvas is mostly pure black with big centered ELEGANT SERIF text, one idea per screen, not the Anton bold of the shorts.
+  - Action: Put a single serif line (EB Garamond or similar) centered on near-black for each beat; reserve the heavy Anton block captions for the shorts.
+- Teaching a concept needs the real thing on screen, not just words: real product screenshots, tool UIs, and diagrams carry the explanation.
+  - Action: Show real Claude, Claude Code, and tool UI screenshots plus diagrams (agent workflow node graphs, architecture trees) as each concept lands; never explain a mechanism with text alone.
+- AI agents read best as a visual meme: suited men in black with AI-logo heads (a coral Claude sunburst head, others), labeled by role.
+  - Action: Represent agents as suited figures with logo heads labeled planner, researcher, builder; use the coral Claude sunburst for the Claude agent.
+- Shorts and long videos share the same house identity (character, dark orange palette, cloned voice) but different canvas, pacing, and text weight, so confirm aspect and format per platform.
+  - Action: Author shorts at 1080x1920 with punchy Anton captions and long videos at 1920x1080 with serif teaching cards; the same cloned voice and final-mix pipeline serve both. Reference for the long format: TheCodingSloth "Everything You Need To Know About AI Agents".
 - The dark house style is near-black with a warm vignette, orange is the whole channel, and coral belongs only inside the Claude UI mock.
   - Action: Use a #0a0a0a background with a radial vignette, accent #ff6b35 everywhere, and #d97757 only inside the cream Claude window.
 - The hook is tension in frame 1, never a topic title; on a low-sub channel every frame earns the push on hook and retention alone.
