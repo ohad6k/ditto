@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Ditto Proof v1 publication record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema", "benchmark", "label", "manifest_sha256", "evidence_digest",
+    "valid_cells", "cell_count", "preferences", "hard_failures", "invalidations",
+    "exclusions", "limitations", "record_hashes", "generated_at"
+  ],
+  "properties": {
+    "schema": {"const": "ditto-proof-publication/1"}, "benchmark": {"const": "Ditto Proof v1"},
+    "label": {"const": "small-n, directional only"}, "manifest_sha256": {"type": "string"},
+    "evidence_digest": {"type": "string"}, "valid_cells": {"type": "array"},
+    "cell_count": {"const": 48}, "preferences": {"type": "object"},
+    "hard_failures": {"type": "object"}, "invalidations": {"type": "array"},
+    "exclusions": {"type": "array"}, "limitations": {"type": "array"},
+    "record_hashes": {"type": "array"}, "generated_at": {"type": "string", "format": "date-time"}
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Ditto Proof v1 cell record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema", "cell_id", "pair_id", "attempt", "system_id", "host", "task_id",
+    "family", "variant", "trial", "condition", "order", "review_id",
+    "fixture_sha256", "instruction_sha256", "profile_manifest_sha256",
+    "host_persistent_context", "tool_policy_sha256", "permission_policy_sha256",
+    "budget", "workspace_sha256", "home_audit_sha256", "installed_context_sha256",
+    "exit_status", "exit_code", "meaningful_output", "stdout_sha256", "stderr_sha256",
+    "artifact_hashes", "objective_result_sha256", "hard_failures", "redaction_state",
+    "publication_status"
+  ],
+  "properties": {
+    "schema": {"const": "ditto-proof-cell/1"},
+    "cell_id": {"type": "string"}, "pair_id": {"type": "string"},
+    "attempt": {"type": "integer", "minimum": 1, "maximum": 2},
+    "system_id": {"type": "string"}, "host": {"enum": ["codex", "claude"]},
+    "task_id": {"type": "string"}, "family": {"enum": ["work", "design", "write"]},
+    "variant": {"enum": ["primary", "held-out"]}, "trial": {"enum": [1, 2]},
+    "condition": {"enum": ["cold", "ditto"]}, "order": {"enum": [1, 2]},
+    "review_id": {"type": "string"}, "fixture_sha256": {"type": "string"},
+    "instruction_sha256": {"type": "string"},
+    "profile_manifest_sha256": {"type": ["string", "null"]},
+    "host_persistent_context": {"const": "absent"},
+    "tool_policy_sha256": {"type": "string"}, "permission_policy_sha256": {"type": "string"},
+    "budget": {"type": "object"}, "workspace_sha256": {"type": "string"},
+    "home_audit_sha256": {"type": "string"}, "installed_context_sha256": {"type": ["string", "null"]},
+    "exit_status": {"type": "string"}, "exit_code": {"type": ["integer", "null"]},
+    "meaningful_output": {"type": "boolean"}, "stdout_sha256": {"type": "string"},
+    "stderr_sha256": {"type": "string"}, "artifact_hashes": {"type": "object"},
+    "objective_result_sha256": {"type": ["string", "null"]},
+    "hard_failures": {"type": "array", "items": {"type": "string"}},
+    "redaction_state": {"type": "string"}, "publication_status": {"type": "string"}
+  }
+}

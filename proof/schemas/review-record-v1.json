@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Ditto Proof v1 review record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema", "review_id", "pair_id", "family", "reviewer_role",
+    "consent_reference", "eligibility_attestation", "unfamiliar_with_operator_voice",
+    "blinding_confirmed", "verdict", "left_review_id", "right_review_id",
+    "invalidation_reason", "created_at"
+  ],
+  "properties": {
+    "schema": {"const": "ditto-proof-review/1"}, "review_id": {"type": "string"},
+    "pair_id": {"type": "string"}, "family": {"enum": ["work", "design", "write"]},
+    "reviewer_role": {"enum": ["independent"]}, "consent_reference": {"type": "string"},
+    "eligibility_attestation": {"type": "string"},
+    "unfamiliar_with_operator_voice": {"type": "boolean"},
+    "blinding_confirmed": {"type": "boolean"},
+    "verdict": {"type": ["string", "null"]}, "left_review_id": {"type": "string"},
+    "right_review_id": {"type": "string"}, "invalidation_reason": {"type": "string"},
+    "created_at": {"type": "string", "format": "date-time"}
+  }
+}
