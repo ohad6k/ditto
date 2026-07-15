@@ -1,0 +1,9 @@
+{
+  "family": "design",
+  "surface": "status-card",
+  "goal": "Improve hierarchy and make the primary action unmistakable without changing other surfaces.",
+  "viewport": {"width": 1280, "height": 720},
+  "keyboard_flow": ["status-card", "Review report"],
+  "required_outputs": ["render-1280x720.png", "accessibility-report.json", "change-note.md"],
+  "accessibility_floor": {"keyboard_reachable": true, "named_action": true}
+}
