@@ -255,17 +255,17 @@ git commit -m "feat: persist private Autopilot inbox metadata"
 - Create: `emulo_autopilot/sessions.py`
 - Create: `tests/test_autopilot_sessions.py`
 
-- [ ] **Step 1: Write failing scanner tests**
+- [x] **Step 1: Write failing scanner tests**
 
 Use real temporary Codex/Claude JSONL fixtures. Test first observation pending, unchanged second observation before/after threshold, changed file resets stability, file change during read rejected through an injectable reader, processed fingerprint idempotency, assistant/injected messages excluded, secret redaction before hashes and transient text, metadata-only persisted inbox, 2,000-character per-message cap, 64-KiB total cap, undated fallback to file mtime, and OpenCode physical-path resolution.
 
-- [ ] **Step 2: Run and verify red state**
+- [x] **Step 2: Run and verify red state**
 
 Run: `python -m unittest tests.test_autopilot_sessions -v`
 
 Expected: FAIL because `emulo_autopilot.sessions` does not exist.
 
-- [ ] **Step 3: Implement observation and bounded receipts**
+- [x] **Step 3: Implement observation and bounded receipts**
 
 Public API:
 
@@ -384,6 +384,9 @@ class SessionScanner:
             redacted = emulo.redact((text or "").strip())
             if not redacted:
                 continue
+            if len(receipts) >= 256:
+                truncated += 1
+                continue
             was_truncated = False
             if len(redacted) > 2_000:
                 redacted = redacted[:2_000]
@@ -455,6 +458,7 @@ Message rules:
 
 - `redacted = emulo.redact(text.strip())[:2000]`;
 - total UTF-8 bytes added to transient messages cannot exceed `65536`;
+- persisted receipts cannot exceed `256`; later messages increment the truncated count;
 - truncated messages increment `truncated_message_count`;
 - observed date uses the valid message `YYYY-MM-DD`, otherwise the physical file mtime UTC date;
 - `message_sha256` hashes the bounded redacted message;
@@ -463,7 +467,7 @@ Message rules:
 - receipt metadata sorts by receipt ID before inbox identity;
 - transient messages return in original human-turn order and are never passed to store methods.
 
-- [ ] **Step 4: Run source and privacy regressions**
+- [x] **Step 4: Run source and privacy regressions**
 
 Run:
 
@@ -473,7 +477,7 @@ python -m unittest tests.test_autopilot_sessions tests.test_autopilot_store test
 
 Expected: PASS.
 
-- [ ] **Step 5: Run full suite and commit**
+- [x] **Step 5: Run full suite and commit**
 
 Run: `python -m unittest discover -s tests -v`
 
