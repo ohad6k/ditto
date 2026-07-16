@@ -10,8 +10,8 @@
 - Danger: Reusing Sandbox OAuth credentials, committing the Client Secret, or deploying before the production secret exists would leave authentication unavailable or cross environments.
 - Repo fix: Replace only the production Client ID placeholder; keep checkout disabled and Polar production identifiers unconfigured.
 - Verification: Run the production configuration guard, Worker typecheck/tests, and Wrangler production dry-run before committing.
-- Provider/MCP proof: Owner confirmation only; secret installation and a successful production callback remain unproven.
-- Open action: Generate the OAuth Client Secret in GitHub and install it directly with Wrangler for `emulo-production`, without exposing its value.
+- Provider/MCP proof: Cloudflare `secret list` returned exactly `GITHUB_CLIENT_SECRET` for `emulo-production`; deployments `b0af7ddb-89e4-48b1-9bdc-c07b0149931c` and `6eb69d76-5871-484b-ada8-5b5b60cb7439` record Worker creation and the secret change. The secret value was never read or recorded. Live `/`, `/account`, and `/v1/account/status` return Cloudflare `404`/`1042` because application code is intentionally not deployed yet.
+- Open action: Create the two Polar production products and install the remaining production secrets before deploying application code and proving the GitHub callback.
 
 ### 2026-07-16 - Emulo founding-beta billing experience
 
