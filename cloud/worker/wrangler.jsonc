@@ -14,8 +14,8 @@
     "PUBLIC_BASE_URL": "https://emulo.ohad1306.workers.dev/",
     "PAID_CHECKOUT_ENABLED": "false",
     "POLAR_SERVER": "sandbox",
-    "POLAR_MONTHLY_PRODUCT_ID": "not-configured",
-    "POLAR_YEARLY_PRODUCT_ID": "not-configured"
+    "POLAR_MONTHLY_PRODUCT_ID": "b9d044ac-d2e4-4998-81d4-64f58d9b2c40",
+    "POLAR_YEARLY_PRODUCT_ID": "9938198d-ef59-4d46-804e-b43773e68f70"
   },
   "secrets": {
     "required": ["POLAR_WEBHOOK_SECRET", "GITHUB_CLIENT_SECRET", "POLAR_ACCESS_TOKEN"]
