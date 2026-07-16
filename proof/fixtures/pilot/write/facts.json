@@ -1,0 +1,13 @@
+{
+  "product": "Northstar Notes",
+  "fictional": true,
+  "verified_facts": [
+    "Runs locally",
+    "Exports plain text",
+    "Supports three color themes"
+  ],
+  "unverified_claims": [
+    "Saves ten hours every week",
+    "Used by thousands of teams"
+  ]
+}

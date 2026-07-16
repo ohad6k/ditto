@@ -1,0 +1,9 @@
+{
+  "family": "write",
+  "channel": "x",
+  "audience": "developers who keep local project notes",
+  "character_limit": 240,
+  "voice": "specific, calm, evidence-led",
+  "required_outputs": ["post.txt", "claim-map.json"],
+  "prohibited": ["unsupported claims", "invented testimonial", "pressure language", "guarantees"]
+}

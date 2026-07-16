@@ -1,0 +1,7 @@
+{
+  "family": "work",
+  "required_outputs": ["test-report.json", "changed-files.json"],
+  "allowed_paths": ["calculator.py"],
+  "command": ["python", "-m", "unittest", "test_calculator.py", "-v"],
+  "forbid_unrelated_changes": true
+}

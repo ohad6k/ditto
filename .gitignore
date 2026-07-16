@@ -38,3 +38,8 @@ mcp-publisher.exe
 # local editor / dev tooling
 .claude/
 nul
+
+# Ditto Proof private fixtures, profiles, reviewer records, and run artifacts
+.ditto-proof-private/
+proof-private/
+ditto-proof-runs/
