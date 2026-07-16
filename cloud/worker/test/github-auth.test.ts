@@ -23,7 +23,9 @@ async function sha256(value: string): Promise<string> {
   ).join("");
 }
 
-function dependencies(fetcher = vi.fn()): GitHubAuthDependencies {
+function dependencies(
+  fetcher: typeof fetch = vi.fn() as unknown as typeof fetch,
+): GitHubAuthDependencies {
   let randomCall = 0;
   return {
     now: () => new Date(NOW),
@@ -145,6 +147,32 @@ describe("GitHub OAuth", () => {
     const columns = await testEnv.DB.prepare("PRAGMA table_info(browser_sessions)")
       .all<{ name: string }>();
     expect(columns.results.map(({ name }) => name)).not.toContain("access_token");
+  });
+
+  it("invokes the upstream fetch function without an object receiver", async () => {
+    await seedFlow();
+    let call = 0;
+    const receiverSensitiveFetch = async function (
+      this: unknown,
+      _input: RequestInfo | URL,
+      _init?: RequestInit,
+    ): Promise<Response> {
+      expect(this).toBeUndefined();
+      call += 1;
+      return call === 1
+        ? Response.json({ access_token: "test-token" })
+        : Response.json({ id: 12345678 });
+    };
+    const response = await completeGitHubOAuth(
+      new Request(
+        `https://api.example/v1/auth/github/callback?code=temporary-code&state=${STATE}`,
+        { headers: { cookie: `__Host-emulo_oauth=${BROWSER_BINDING}` } },
+      ),
+      testEnv,
+      dependencies(receiverSensitiveFetch),
+    );
+    expect(response.status).toBe(303);
+    expect(call).toBe(2);
   });
 
   it("rejects replayed state before contacting GitHub", async () => {

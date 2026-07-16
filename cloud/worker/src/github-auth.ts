@@ -241,8 +241,9 @@ export async function completeGitHubOAuth(
 
   let currentStage: "token_exchange" | "user_lookup" | "identity_write" | "session_write" =
     "token_exchange";
+  const fetchUpstream = dependencies.fetch;
   try {
-    const tokenResponse = await dependencies.fetch(
+    const tokenResponse = await fetchUpstream(
       "https://github.com/login/oauth/access_token",
       {
         method: "POST",
@@ -277,7 +278,7 @@ export async function completeGitHubOAuth(
     }
 
     currentStage = "user_lookup";
-    const userResponse = await dependencies.fetch("https://api.github.com/user", {
+    const userResponse = await fetchUpstream("https://api.github.com/user", {
       headers: {
         accept: "application/vnd.github+json",
         Authorization: `Bearer ${accessToken}`,
