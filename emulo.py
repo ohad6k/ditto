@@ -2424,11 +2424,11 @@ def _card_colors():
 # the fixed brand mark — same in every screenshot, like a distro logo in neofetch.
 # solid blocks only: every UTF-8 byte here survives cp1252 pipes, unlike ═ and ╝.
 _CARD_LOGO = [
-    "██████   ██  ████████  ████████   ██████ ",
-    "██   ██  ██     ██         ██    ██    ██",
-    "██   ██  ██     ██         ██    ██    ██",
-    "██   ██  ██     ██         ██    ██    ██",
-    "██████   ██     ██         ██     ██████ ",
+    "██████  ██    ██  ██    ██  ██       ██████ ",
+    "██      ███  ███  ██    ██  ██      ██    ██",
+    "█████   ██ ██ ██  ██    ██  ██      ██    ██",
+    "██      ██    ██  ██    ██  ██      ██    ██",
+    "██████  ██    ██   ██████   ██████   ██████ ",
 ]
 
 # the engraving, pre-rendered as classic ASCII ramp art at three widths
@@ -2927,6 +2927,7 @@ def show_card(out_dir, card_path=None, no_open=False, still=False):
     card["_out_dir"] = os.path.abspath(out_dir)
     print_card(card, still=still)
     html_path = os.path.join(out_dir, "card.html")
+    os.makedirs(out_dir, exist_ok=True)
     with open(html_path, "w", encoding="utf-8") as w:
         w.write(render_card_html(card))
     print(f"\nwrote: {html_path}  (open it, screenshot it, post it)")
@@ -3089,6 +3090,16 @@ def configure_console():
                 reconfigure(encoding="utf-8", errors="backslashreplace")
             except (AttributeError, ValueError):
                 pass
+
+def resolve_out_dir(value=None):
+    # Mirrors resolve_emulo_home: an explicit --out wins, otherwise prefer
+    # emulo-out but keep using an existing pre-rename ditto-out so a user's
+    # already-mined corpus and card stay reachable. Nothing is moved.
+    if value:
+        return value
+    if not os.path.isdir("emulo-out") and os.path.isdir("ditto-out"):
+        return "ditto-out"
+    return "emulo-out"
 
 def resolve_emulo_home(value=None):
     # EMULO_HOME wins; DITTO_HOME (pre-rename) still honored; and an existing
@@ -3984,7 +3995,8 @@ def legacy_main():
     ap = argparse.ArgumentParser(description="mine your AI sessions into a model of you")
     ap.add_argument("--source", choices=["auto", "codex", "claude", "copilot", "opencode", "antigravity"], default="auto")
     ap.add_argument("--path", help="a folder of .jsonl session logs to read instead")
-    ap.add_argument("--out", default="emulo-out")
+    ap.add_argument("--out", default=None,
+                    help="mining output dir (default: emulo-out, or an existing ditto-out from before the rename)")
     ap.add_argument("--chunks", type=int, default=20)
     ap.add_argument("--dry-run", action="store_true", help="show counts and output paths without writing files")
     ap.add_argument("--no-redact", action="store_true", help="skip redaction (NOT recommended)")
@@ -4006,6 +4018,8 @@ def legacy_main():
             sys.exit(1)
         install_profile(args.install, args.target, args.repo, args.home, args.yes, args.dry_run)
         return
+
+    args.out = resolve_out_dir(args.out)
 
     if args.card is not None:
         show_card(args.out, args.card or None, args.no_open, still=args.still)

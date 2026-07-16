@@ -16,6 +16,10 @@ description: Evidence-backed Emulo video profile
   - Action: Reveal each accumulating line as a plain div driven by the timeline, never as its own clip on a shared track.
 - Build every video as a single paused GSAP timeline in HyperFrames, root carrying the composition id and data-start, data-duration, data-width, data-height, with every animated element marked as a clip.
   - Action: Author one seek-safe paused timeline; gate every reveal to its beat so a static seek renders correctly.
+- A GSAP fromTo in a timeline applies its from state at build time, so any from state that is visible paints over the whole video from frame 0.
+  - Action: Set gsap.defaults immediateRender false in every composition; a white flash tween or a hide-the-previous-pose tween otherwise washes or clutters every frame.
+- A logo-head agent figure disappears when the suit silhouette is near-black on a near-black canvas, leaving a floating head over a collar.
+  - Action: Draw the suit light enough to read on the background with a faint outline, crop the artwork to the torso so the neck sits at its top edge, and overlap the head onto the neck.
 - Captions carry one idea per scene and match the voiceover word for word.
   - Action: Write uppercase display captions of 2 to 4 words that repeat the spoken words exactly, popped in with a back.out ease.
 - Copy for a video is Ohad's voice: normal capitalization, no em or en dashes, no trust-badge filler, real numbers when Emulo is the subject.
@@ -47,7 +51,9 @@ description: Evidence-backed Emulo video profile
 - The dark house style is near-black with a warm vignette, orange is the whole channel, and coral belongs only inside the Claude UI mock.
   - Action: Use a #0a0a0a background with a radial vignette, accent #ff6b35 everywhere, and #d97757 only inside the cream Claude window.
 - The hook is tension in frame 1, never a topic title; on a low-sub channel every frame earns the push on hook and retention alone.
-  - Action: Open on a wound, a number, or a mistake in the first frame, not a title card.
+  - Action: Open on a wound, a number, or a mistake in the first frame, not a title card; keep the lead-in under about 0.6s so no dead black opens the retention graph.
+- Freezes are provable, not a matter of opinion, and the end card is the easiest one to miss because its motion is authored to a fixed length.
+  - Action: Run ffmpeg freezedetect over every finished cut and treat any reported run as a bug; carry the closing motion all the way to the composition total, not a hardcoded few seconds.
 - The install CTA and handle must be exact; a guessed command on a public video is a failure.
   - Action: Show /plugin install emulo@emulo or npx skills add ohad6k/emulo@emulo, never a pip guess, and end on the @biosrios handle.
 - The mascot is the channel identity: a polished manga boy, white spiky hair, white hoodie, reading as solid white on black where the light fills are the character.
