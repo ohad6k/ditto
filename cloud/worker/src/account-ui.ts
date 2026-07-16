@@ -335,7 +335,29 @@ button { font: inherit; }
   *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; }
 }`;
 
-const ACCOUNT_SCRIPT = `for (const form of document.querySelectorAll("[data-checkout-form]")) {
+const ACCOUNT_SCRIPT = `const MAX_STATUS_ATTEMPTS = 12;
+const STATUS_DELAY_MS = 1500;
+
+function safePolarUrl(value) {
+  if (typeof value !== "string") return null;
+  try {
+    const url = new URL(value);
+    const polarHost = url.hostname === "polar.sh" || url.hostname.endsWith(".polar.sh");
+    return url.protocol === "https:" && polarHost ? url.toString() : null;
+  } catch {
+    return null;
+  }
+}
+
+async function hostedAction(responsePromise) {
+  const response = await responsePromise;
+  const payload = await response.json();
+  const url = response.ok ? safePolarUrl(payload.url) : null;
+  if (url === null) throw new Error("hosted action unavailable");
+  window.location.assign(url);
+}
+
+for (const form of document.querySelectorAll("[data-checkout-form]")) {
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
     const button = form.querySelector("button[data-plan]");
@@ -345,25 +367,120 @@ const ACCOUNT_SCRIPT = `for (const form of document.querySelectorAll("[data-chec
     button.disabled = true;
     status.textContent = "Creating secure Polar checkout...";
     try {
-      const response = await fetch("/v1/billing/checkout", {
+      await hostedAction(fetch("/v1/billing/checkout", {
         method: "POST",
         credentials: "same-origin",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ plan }),
-      });
-      const payload = await response.json();
-      if (!response.ok || typeof payload.url !== "string") {
-        status.textContent = "Checkout is unavailable right now.";
-        button.disabled = false;
-        return;
-      }
-      window.location.assign(payload.url);
+      }));
     } catch {
       status.textContent = "Checkout is unavailable. Please retry.";
       button.disabled = false;
     }
   });
-}`;
+}
+
+for (const form of document.querySelectorAll("[data-portal-form]")) {
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const button = form.querySelector("button");
+    const status = document.querySelector("#account-action-status");
+    if (!(button instanceof HTMLButtonElement) || !(status instanceof HTMLElement)) return;
+    button.disabled = true;
+    status.textContent = "Opening your secure Polar portal...";
+    try {
+      await hostedAction(fetch("/v1/billing/portal", {
+        method: "POST",
+        credentials: "same-origin",
+      }));
+    } catch {
+      status.textContent = "The billing portal is unavailable. Please retry.";
+      button.disabled = false;
+    }
+  });
+}
+
+function updatePaymentSurface(root, state) {
+  const title = root.querySelector("[data-status-title]");
+  const copy = root.querySelector("[data-status-copy]");
+  const badge = root.querySelector("[data-status-badge]");
+  const action = root.querySelector("[data-status-action]");
+  if (!(title instanceof HTMLElement) || !(copy instanceof HTMLElement) || !(badge instanceof HTMLElement) || !(action instanceof HTMLAnchorElement)) return false;
+
+  root.dataset.paymentState = state;
+  action.href = "/account";
+  action.textContent = "Open Emulo account";
+  if (state === "active" || state === "trialing") {
+    badge.textContent = "Active";
+    badge.dataset.tone = "";
+    title.textContent = "Founding Beta activated";
+    copy.textContent = "Polar's signed confirmation is applied. Your founding access is now active.";
+    return true;
+  }
+  if (state === "past_due" || state === "grace") {
+    badge.textContent = "Attention";
+    badge.dataset.tone = "attention";
+    title.textContent = "Billing needs attention";
+    copy.textContent = "Polar confirmed a billing issue. Open your account to manage it; local Emulo stays yours.";
+    return true;
+  }
+  if (state === "ended" || state === "refunded") {
+    badge.textContent = "Paused";
+    badge.dataset.tone = "ended";
+    title.textContent = "Cloud continuity is paused";
+    copy.textContent = "Polar no longer reports active access. Your local profiles and workflows remain yours.";
+    return true;
+  }
+  return false;
+}
+
+function wait(milliseconds) {
+  return new Promise((resolve) => setTimeout(resolve, milliseconds));
+}
+
+async function pollPaymentStatus() {
+  const root = document.querySelector('[data-payment-state="verifying"][data-authenticated="true"]');
+  if (!(root instanceof HTMLElement)) return;
+  for (let attempt = 0; attempt < MAX_STATUS_ATTEMPTS; attempt += 1) {
+    try {
+      const response = await fetch("/v1/account/status", {
+        method: "GET",
+        credentials: "same-origin",
+        headers: { accept: "application/json" },
+      });
+      if (response.status === 401) {
+        const title = root.querySelector("[data-status-title]");
+        const copy = root.querySelector("[data-status-copy]");
+        const badge = root.querySelector("[data-status-badge]");
+        const action = root.querySelector("[data-status-action]");
+        if (title instanceof HTMLElement) title.textContent = "Sign in to verify access";
+        if (copy instanceof HTMLElement) copy.textContent = "Reconnect the account used at checkout, then Emulo can read the verified status.";
+        if (badge instanceof HTMLElement) badge.textContent = "Reconnect";
+        if (action instanceof HTMLAnchorElement) {
+          action.href = "/v1/auth/github/start";
+          action.textContent = "Continue with GitHub";
+        }
+        return;
+      }
+      if (response.ok) {
+        const payload = await response.json();
+        const state = payload?.entitlement?.state;
+        if (typeof state === "string" && updatePaymentSurface(root, state)) return;
+      }
+    } catch {
+      // Keep the truthful pending state and retry within the bounded window.
+    }
+    if (attempt + 1 < MAX_STATUS_ATTEMPTS) await wait(STATUS_DELAY_MS);
+  }
+  const title = root.querySelector("[data-status-title]");
+  const copy = root.querySelector("[data-status-copy]");
+  const badge = root.querySelector("[data-status-badge]");
+  if (title instanceof HTMLElement) title.textContent = "Confirmation is still pending";
+  if (copy instanceof HTMLElement) copy.textContent = "No active entitlement is visible yet. Your account page will show access as soon as a verified Polar confirmation arrives.";
+  if (badge instanceof HTMLElement) badge.textContent = "Pending";
+}
+
+void pollPaymentStatus();`;
 
 function htmlDocument(
   title: string,

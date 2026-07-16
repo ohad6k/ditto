@@ -26,6 +26,38 @@ function authenticatedHeaders(): HeadersInit {
   return { cookie: `__Host-emulo_session=${SESSION_TOKEN}` };
 }
 
+async function insertActiveEntitlement(): Promise<void> {
+  await testEnv.DB.batch([
+    testEnv.DB.prepare(
+      `INSERT INTO billing_customers
+       (provider, provider_customer_id, account_id, external_customer_id, updated_at)
+       VALUES ('polar', ?, ?, ?, ?)`,
+    ).bind(
+      "polar_customer_integration",
+      ACCOUNT_ID,
+      ACCOUNT_ID,
+      "2026-07-16T20:02:07.698Z",
+    ),
+    testEnv.DB.prepare(
+      `INSERT INTO entitlements
+       (account_id, state, product_code, provider, provider_subscription_id,
+        provider_customer_id, provider_product_id, provider_effective_at,
+        provider_event_id, current_period_end, grace_ends_at, recovery_ends_at,
+        updated_at)
+       VALUES (?, 'active', 'founding-monthly', 'polar', ?, ?, ?, ?, ?, ?, NULL, NULL, ?)`,
+    ).bind(
+      ACCOUNT_ID,
+      "polar_subscription_integration",
+      "polar_customer_integration",
+      testEnv.POLAR_MONTHLY_PRODUCT_ID,
+      "2026-07-16T20:02:03.754Z",
+      "polar_event_integration",
+      "2026-08-16T20:02:03.754Z",
+      "2026-07-16T20:02:07.698Z",
+    ),
+  ]);
+}
+
 describe("authenticated Worker integration", () => {
   beforeEach(async () => {
     await testEnv.DB.batch([
@@ -114,6 +146,40 @@ describe("authenticated Worker integration", () => {
       entitlement: { state: "none", productCode: null },
     });
     expect(body).not.toMatch(/accountId|account_id|provider|subscription|customer/i);
+  });
+
+  it("renders webhook-confirmed active account and receipt states", async () => {
+    await insertActiveEntitlement();
+
+    const account = await SELF.fetch("https://api.example/account", {
+      headers: authenticatedHeaders(),
+    });
+    const accountBody = await account.text();
+    expect(accountBody).toContain('data-account-state="active"');
+    expect(accountBody).toContain("Founding Beta is active");
+    expect(accountBody).toContain("data-portal-form");
+    expect(accountBody).not.toContain("data-checkout-form");
+
+    const complete = await SELF.fetch(
+      "https://api.example/v1/billing/complete",
+      { headers: authenticatedHeaders() },
+    );
+    const completeBody = await complete.text();
+    expect(completeBody).toContain('data-payment-state="active"');
+    expect(completeBody).toContain("Founding Beta activated");
+    expect(completeBody).not.toContain("Waiting for Polar confirmation");
+  });
+
+  it("ships bounded checkout, portal, and status-polling interactions", async () => {
+    const script = await (
+      await SELF.fetch("https://api.example/account.js")
+    ).text();
+    expect(script).toContain('fetch("/v1/billing/checkout"');
+    expect(script).toContain('fetch("/v1/billing/portal"');
+    expect(script).toContain('fetch("/v1/account/status"');
+    expect(script).toContain("MAX_STATUS_ATTEMPTS");
+    expect(script).toContain('credentials: "same-origin"');
+    expect(script).not.toContain("innerHTML");
   });
 
   it("keeps checkout disabled through the public Worker route", async () => {
