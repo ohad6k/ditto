@@ -37,3 +37,23 @@ def candidate_fixture(
     }
     candidate["candidate_id"] = contracts.candidate_identity(candidate)
     return candidate
+
+
+def decision_fixture(
+    candidate_id,
+    decision="approve",
+    reason="founder-review",
+    policy_class="review",
+    decided_at="2026-07-16T10:02:00Z",
+):
+    value = {
+        "schema_version": contracts.DECISION_SCHEMA,
+        "decision_id": "",
+        "candidate_id": candidate_id,
+        "decision": decision,
+        "reason": reason,
+        "policy_class": policy_class,
+        "decided_at": decided_at,
+    }
+    value["decision_id"] = contracts.decision_identity(value)
+    return value

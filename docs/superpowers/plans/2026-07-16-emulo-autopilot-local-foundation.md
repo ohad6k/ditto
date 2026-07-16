@@ -413,7 +413,7 @@ git commit -m "feat: define strict Autopilot contracts"
 - Create: `emulo_autopilot/store.py`
 - Create: `tests/test_autopilot_store.py`
 
-- [ ] **Step 1: Write failing store tests**
+- [x] **Step 1: Write failing store tests**
 
 Cover initialization, path containment, candidate idempotency, conflicting same-ID bytes, append-only decisions, newest-decision selection, lock contention, explicit lock recovery, injected atomic-write failure, and corrupt-record fail-closed behavior.
 
@@ -438,13 +438,13 @@ class AutopilotStoreTest(unittest.TestCase):
                     pass
 ```
 
-- [ ] **Step 2: Run and verify failure**
+- [x] **Step 2: Run and verify failure**
 
 Run: `python -m unittest tests.test_autopilot_store -v`
 
 Expected: FAIL because `emulo_autopilot.store` does not exist.
 
-- [ ] **Step 3: Implement private paths and atomic writes**
+- [x] **Step 3: Implement private paths and atomic writes**
 
 Implement:
 
@@ -573,7 +573,7 @@ class AutopilotStore:
 
 On Windows, reject `FILE_ATTRIBUTE_REPARSE_POINT` paths. Lock records include `operation_id`, operation name, PID, hostname, and UTC creation time. A failed write must preserve the previous valid bytes.
 
-- [ ] **Step 4: Implement candidates and decisions**
+- [x] **Step 4: Implement candidates and decisions**
 
 ```python
     def put_candidate(self, candidate):
@@ -631,7 +631,7 @@ On Windows, reject `FILE_ATTRIBUTE_REPARSE_POINT` paths. Lock records include `o
 
 Decision identity is SHA-256 over canonical content excluding `decision_id`. Do not update candidate records with mutable status.
 
-- [ ] **Step 5: Run store and existing profile-store tests**
+- [x] **Step 5: Run store and existing profile-store tests**
 
 Run:
 
@@ -641,7 +641,7 @@ python -m unittest tests.test_autopilot_store tests.test_profile_store -v
 
 Expected: PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```powershell
 git add emulo_autopilot/store.py tests/test_autopilot_store.py
