@@ -41,11 +41,16 @@
 - Create: `cloud/worker/migrations/0001_billing_integrity.sql`
 - Create: `cloud/worker/src/repository.ts`
 - Create: `cloud/worker/test/repository.test.ts`
+- Create: `cloud/worker/test/apply-migrations.ts`
+- Modify: `cloud/worker/vitest.config.ts`
+- Modify: `cloud/worker/tsconfig.json`
+- Modify: `cloud/worker/package.json`
+- Modify: `cloud/worker/package-lock.json`
 
-- [ ] Add failing tests for duplicate event IDs, newer-wins convergence, older-event refusal, equal-time deterministic tie-break, unknown account, and payload-body absence.
-- [ ] Create minimal `accounts`, `billing_customers`, `billing_events`, and `entitlements` tables with point-query indexes and strict checks.
-- [ ] Implement transactional event metadata insert plus conditional customer/entitlement upserts using prepared statements only.
-- [ ] Apply the migration only to Wrangler's local D1 and run integration tests; commit `feat: persist convergent billing entitlements`.
+- [x] Add failing tests for duplicate event IDs, newer-wins convergence, older-event refusal, equal-time deterministic tie-break, unknown account, and payload-body absence.
+- [x] Create minimal `accounts`, `billing_customers`, `billing_events`, and `entitlements` tables with point-query indexes and strict checks.
+- [x] Implement transactional event metadata insert plus conditional customer/entitlement upserts using prepared statements only.
+- [x] Apply the migration only to Wrangler's local D1 and run integration tests; commit `feat: persist convergent billing entitlements`.
 
 ### Task 3: Verified Polar webhook route
 
