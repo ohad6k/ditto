@@ -12,6 +12,22 @@ function json(status: number, body: Record<string, string>): Response {
   });
 }
 
+function page(title: string, message: string): Response {
+  return new Response(
+    `<!doctype html><meta charset="utf-8"><title>${title}</title><main><h1>${title}</h1><p>${message}</p></main>`,
+    {
+      status: 200,
+      headers: {
+        "cache-control": "no-store",
+        "content-security-policy": "default-src 'none'; frame-ancestors 'none'; base-uri 'none'",
+        "content-type": "text/html; charset=utf-8",
+        "referrer-policy": "no-referrer",
+        "x-content-type-options": "nosniff",
+      },
+    },
+  );
+}
+
 export default {
   async fetch(request, env, _context?): Promise<Response> {
     const url = new URL(request.url);
@@ -23,6 +39,24 @@ export default {
         service: "emulo-autopilot-api",
         status: "ok",
       });
+    }
+    if (url.pathname === "/account") {
+      if (request.method !== "GET") {
+        return json(405, { status: "method-not-allowed" });
+      }
+      return page(
+        "Emulo account",
+        "Your browser account is connected. Billing and Autopilot controls remain in the local Emulo control center.",
+      );
+    }
+    if (url.pathname === "/v1/billing/complete") {
+      if (request.method !== "GET") {
+        return json(405, { status: "method-not-allowed" });
+      }
+      return page(
+        "Payment submitted",
+        "Emulo enables cloud access only after a verified Polar confirmation. You can return to the local control center.",
+      );
     }
     if (url.pathname === "/v1/billing/webhooks/polar") {
       if (request.method !== "POST") {

@@ -69,10 +69,10 @@
 - Modify: `cloud/worker/README.md`
 - Modify: `docs/superpowers/plans/2026-07-16-emulo-authenticated-polar-checkout.md`
 
-- [ ] Add end-to-end Worker tests for methods, origins, cookies, no-store headers, route isolation, disabled checkout, and webhook independence.
-- [ ] Document exact Cloudflare Free, GitHub OAuth App, and Polar Sandbox dashboard paths and nonsecret verification evidence.
-- [ ] Run local migrations, typecheck, all Worker/Python tests, audit, bundle dry-run, secret scan, and independent review.
-- [ ] Commit `feat: gate Emulo founding checkout behind authenticated sandbox`.
+- [x] Add end-to-end Worker tests for methods, origins, cookies, no-store headers, route isolation, disabled checkout, and webhook independence.
+- [x] Document exact Cloudflare Free, GitHub OAuth App, and Polar Sandbox dashboard paths and nonsecret verification evidence.
+- [x] Run local migrations, typecheck, all Worker/Python tests, audit, bundle dry-run, secret scan, and independent review.
+- [x] Commit `feat: gate Emulo founding checkout behind authenticated sandbox`.
 
 ## Completion gate
 

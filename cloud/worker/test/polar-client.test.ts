@@ -190,6 +190,19 @@ describe("authenticated Polar billing", () => {
     expect(createCheckout).not.toHaveBeenCalled();
   });
 
+  it("rejects a cross-origin browser checkout", async () => {
+    const { dependencies, createCheckout } = billingDependencies();
+    const crossOrigin = request("/v1/billing/checkout", { plan: "monthly" });
+    crossOrigin.headers.set("origin", "https://attacker.example");
+    const response = await handlePolarCheckout(
+      crossOrigin,
+      enabledEnv(),
+      dependencies,
+    );
+    expect(response.status).toBe(403);
+    expect(createCheckout).not.toHaveBeenCalled();
+  });
+
   it("creates a portal only for the authenticated external account", async () => {
     const { dependencies, createPortal } = billingDependencies();
     const response = await handlePolarPortal(

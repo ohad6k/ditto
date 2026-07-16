@@ -265,10 +265,14 @@ export async function completeGitHubOAuth(
         now.getTime() + SESSION_LIFETIME_SECONDS * 1000,
       ).toISOString(),
     });
-    const response = safeResponse(
-      200,
-      "Signed in to Emulo. You can close this tab.",
-    );
+    const response = new Response(null, {
+      status: 303,
+      headers: {
+        "cache-control": "no-store",
+        location: new URL("/account?signin=complete", publicBase(env)!).toString(),
+        "referrer-policy": "no-referrer",
+      },
+    });
     response.headers.set(
       "set-cookie",
       `${SESSION_COOKIE}=${sessionToken}; Path=/; Max-Age=${SESSION_LIFETIME_SECONDS}; Secure; HttpOnly; SameSite=Lax`,

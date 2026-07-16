@@ -105,7 +105,10 @@ describe("GitHub OAuth", () => {
       testEnv,
       dependencies(fetcher),
     );
-    expect(response.status).toBe(200);
+    expect(response.status).toBe(303);
+    expect(response.headers.get("location")).toBe(
+      "https://api.example/account?signin=complete",
+    );
     expect(fetcher).toHaveBeenCalledTimes(2);
     const tokenRequest = fetcher.mock.calls[0];
     expect(tokenRequest[0]).toBe("https://github.com/login/oauth/access_token");
@@ -202,6 +205,6 @@ describe("GitHub OAuth", () => {
           dependencies(fetcher),
         )
       ).status,
-    ).toBe(200);
+    ).toBe(303);
   });
 });

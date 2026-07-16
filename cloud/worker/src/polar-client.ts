@@ -81,6 +81,11 @@ function billingConfigured(env: Env): boolean {
   );
 }
 
+function originAllowed(request: Request, env: Env): boolean {
+  const origin = request.headers.get("origin");
+  return origin === null || origin === publicBase(env)?.origin;
+}
+
 async function readPlan(request: Request): Promise<"monthly" | "yearly" | null> {
   if (!request.headers.get("content-type")?.toLowerCase().startsWith("application/json")) {
     return null;
@@ -167,6 +172,9 @@ export async function handlePolarCheckout(
   if (!billingConfigured(env)) {
     return json(503, { status: "unavailable" });
   }
+  if (!originAllowed(request, env)) {
+    return json(403, { status: "forbidden" });
+  }
   const session = await authenticateBrowserSession(
     request,
     env.DB,
@@ -208,6 +216,9 @@ export async function handlePolarPortal(
 ): Promise<Response> {
   if (!billingConfigured(env)) {
     return json(503, { status: "unavailable" });
+  }
+  if (!originAllowed(request, env)) {
+    return json(403, { status: "forbidden" });
   }
   const session = await authenticateBrowserSession(
     request,
