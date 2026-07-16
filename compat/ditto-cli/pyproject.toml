@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ditto-cli"
+version = "0.5.0"
+description = "Deprecated: ditto is now emulo. Installs emulo and forwards to it."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "ohad6k" }]
+keywords = ["deprecated", "emulo", "renamed"]
+classifiers = [
+  "Development Status :: 7 - Inactive",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+]
+dependencies = ["emulo>=0.5.0"]
+
+[project.urls]
+Homepage = "https://github.com/ohad6k/emulo"
+Repository = "https://github.com/ohad6k/emulo"
+
+[project.scripts]
+ditto = "ditto_cli_compat:main"
+ditto-cli = "ditto_cli_compat:main"
+
+[tool.setuptools]
+py-modules = ["ditto_cli_compat"]
