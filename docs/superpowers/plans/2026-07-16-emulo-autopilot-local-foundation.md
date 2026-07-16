@@ -654,7 +654,7 @@ git commit -m "feat: add atomic Autopilot local store"
 - Create: `emulo_autopilot/policy.py`
 - Create: `tests/test_autopilot_policy.py`
 
-- [ ] **Step 1: Write an exhaustive table test**
+- [x] **Step 1: Write an exhaustive table test**
 
 ```python
 class PolicyTest(unittest.TestCase):
@@ -677,13 +677,13 @@ class PolicyTest(unittest.TestCase):
 
 Also test duplicate session IDs do not count, malformed candidates reject, and unknown risk categories reject rather than downgrade to review.
 
-- [ ] **Step 2: Run and verify failure**
+- [x] **Step 2: Run and verify failure**
 
 Run: `python -m unittest tests.test_autopilot_policy -v`
 
 Expected: FAIL because policy module does not exist.
 
-- [ ] **Step 3: Implement pure deterministic classification**
+- [x] **Step 3: Implement pure deterministic classification**
 
 ```python
 PolicyResult = collections.namedtuple("PolicyResult", "policy_class reason")
@@ -695,6 +695,8 @@ PROHIBITED_RISKS = frozenset({
 
 def classify_candidate(candidate, auto_activate_enabled=False):
     candidate = validate_candidate(candidate)
+    if not isinstance(auto_activate_enabled, bool):
+        raise ValueError("auto_activate_enabled must be a boolean")
     if set(candidate["risk_categories"]) - PROHIBITED_RISKS:
         return PolicyResult("reject", "unknown-risk-category")
     if candidate["risk_categories"]:
@@ -716,13 +718,13 @@ def classify_candidate(candidate, auto_activate_enabled=False):
 
 Policy output never activates anything. It only classifies.
 
-- [ ] **Step 4: Run focused tests**
+- [x] **Step 4: Run focused tests**
 
 Run: `python -m unittest tests.test_autopilot_policy tests.test_autopilot_contracts -v`
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```powershell
 git add emulo_autopilot/policy.py tests/test_autopilot_policy.py
