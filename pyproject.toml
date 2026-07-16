@@ -26,6 +26,7 @@ Repository = "https://github.com/ohad6k/emulo"
 [project.scripts]
 emulo = "emulo:main"
 emulo-cli = "emulo:main"  # deprecated alias, kept so existing scripts keep working
+emulo-autopilot = "emulo_autopilot.cli:main"
 
 [tool.setuptools]
 py-modules = ["emulo"]

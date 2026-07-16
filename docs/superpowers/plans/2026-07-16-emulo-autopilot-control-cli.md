@@ -45,11 +45,11 @@
 - Create: `tests/test_autopilot_cli.py`
 - Modify: `pyproject.toml`
 
-- [ ] Add failing tests for `status`, `queue`, `review`, `activate`, `rollback`, and exact-ID `recover-lock`, plus JSON stderr and nonzero exit on refusal.
-- [ ] Implement `main(argv=None)` with global `--emulo-home` and subcommands. Generate UTC-second timestamps internally; do not expose timestamp spoofing flags.
-- [ ] Add only `emulo-autopilot = "emulo_autopilot.cli:main"`; retain both existing entry points unchanged.
-- [ ] Verify a built wheel contains the package and all three console scripts.
-- [ ] Run the full suite, then commit `feat: add safe Autopilot control CLI`.
+- [x] Add failing tests for `status`, `queue`, `review`, `activate`, `rollback`, and exact-ID `recover-lock`, plus JSON stderr and nonzero exit on refusal.
+- [x] Implement `main(argv=None)` with global `--emulo-home` and subcommands. Generate UTC-second timestamps internally; do not expose timestamp spoofing flags.
+- [x] Add only `emulo-autopilot = "emulo_autopilot.cli:main"`; retain both existing entry points unchanged.
+- [x] Verify a built wheel contains the package and all three console scripts.
+- [x] Run the full suite, then commit `feat: add safe Autopilot control CLI`.
 
 ## Completion gate
 
