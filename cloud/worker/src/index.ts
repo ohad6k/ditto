@@ -1,9 +1,10 @@
+import { resolveAccountStatus, type AccountStatus } from "./account-status";
 import type { Env } from "./contracts";
 import { beginGitHubOAuth, completeGitHubOAuth } from "./github-auth";
 import { handlePolarWebhook } from "./polar";
 import { handlePolarCheckout, handlePolarPortal } from "./polar-client";
 
-function json(status: number, body: Record<string, string>): Response {
+function json(status: number, body: unknown): Response {
   return Response.json(body, {
     status,
     headers: {
@@ -58,9 +59,24 @@ const ACCOUNT_SCRIPT = `for (const form of document.querySelectorAll("[data-chec
   });
 }`;
 
-function accountPage(checkoutEnabled: boolean): Response {
-  const disabled = checkoutEnabled ? "" : " disabled aria-disabled=\"true\"";
-  const status = checkoutEnabled
+function accountPage(account: AccountStatus): Response {
+  if (!account.authenticated) {
+    return new Response(
+      `<!doctype html><meta charset="utf-8"><title>Emulo account</title><main><h1>Emulo account</h1><p>Connect your GitHub identity to open your private Emulo account.</p><p><a href="/v1/auth/github/start">Continue with GitHub</a></p></main>`,
+      {
+        status: 200,
+        headers: {
+          "cache-control": "no-store",
+          "content-security-policy": "default-src 'none'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'",
+          "content-type": "text/html; charset=utf-8",
+          "referrer-policy": "no-referrer",
+          "x-content-type-options": "nosniff",
+        },
+      },
+    );
+  }
+  const disabled = account.checkoutEnabled ? "" : " disabled aria-disabled=\"true\"";
+  const status = account.checkoutEnabled
     ? "Sandbox checkout is enabled for the private lifecycle test."
     : "Sandbox checkout is disabled.";
   return new Response(
@@ -107,9 +123,14 @@ export default {
       if (request.method !== "GET") {
         return json(405, { status: "method-not-allowed" });
       }
-      return accountPage(
-        env.PAID_CHECKOUT_ENABLED === "true" && env.POLAR_SERVER === "sandbox",
-      );
+      try {
+        return accountPage(await resolveAccountStatus(request, env));
+      } catch {
+        return page(
+          "Emulo account unavailable",
+          "Your account could not be loaded safely. Please retry.",
+        );
+      }
     }
     if (url.pathname === "/account.js") {
       if (request.method !== "GET") {
@@ -125,6 +146,19 @@ export default {
         "Payment submitted",
         "Emulo enables cloud access only after a verified Polar confirmation. You can return to the local control center.",
       );
+    }
+    if (url.pathname === "/v1/account/status") {
+      if (request.method !== "GET") {
+        return json(405, { status: "method-not-allowed" });
+      }
+      try {
+        const status = await resolveAccountStatus(request, env);
+        return status.authenticated
+          ? json(200, status)
+          : json(401, { status: "unauthenticated" });
+      } catch {
+        return json(503, { status: "unavailable" });
+      }
     }
     if (url.pathname === "/v1/billing/webhooks/polar") {
       if (request.method !== "POST") {
