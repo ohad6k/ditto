@@ -111,7 +111,7 @@ Decisions are append-only. A candidate can have multiple decisions, but only its
 - Create: `tests/test_autopilot_contracts.py`
 - Modify: `pyproject.toml`
 
-- [ ] **Step 1: Write failing package and contract tests**
+- [x] **Step 1: Write failing package and contract tests**
 
 Create `tests/autopilot_helpers.py` with this exact reusable builder, then create tests that import the package, validate the resulting candidate, and reject extra keys, uppercase hashes, assistant evidence, unsupported kinds/domains, duplicate receipt IDs, non-UTC timestamps, raw quote fields, traversal-like artifact names, and candidate IDs that do not match canonical content.
 
@@ -166,13 +166,13 @@ class CandidateContractTest(unittest.TestCase):
             contracts.validate_candidate(candidate)
 ```
 
-- [ ] **Step 2: Run tests and verify import failure**
+- [x] **Step 2: Run tests and verify import failure**
 
 Run: `python -m unittest tests.test_autopilot_contracts -v`
 
 Expected: FAIL because `emulo_autopilot` does not exist.
 
-- [ ] **Step 3: Implement strict stdlib-only contracts**
+- [x] **Step 3: Implement strict stdlib-only contracts**
 
 Implement these public callables with exact-key validation and no permissive coercion. Keep the helper bodies in this task so later modules consume one contract implementation:
 
@@ -219,7 +219,8 @@ def _identifier(value, kind, label):
     return value
 
 def _timestamp(value, label):
-    _string(value, label, 20, 20)
+    if not isinstance(value, str):
+        raise ValueError(label + " must be UTC seconds")
     try:
         datetime.datetime.strptime(value, "%Y-%m-%dT%H:%M:%SZ")
     except ValueError as exc:
@@ -236,6 +237,14 @@ def candidate_identity(candidate):
     identity = {key: value for key, value in candidate.items()
                 if key not in {"candidate_id", "created_at"}}
     return "cand_" + sha256_text(canonical_json(identity))[:20]
+
+def decision_identity(decision):
+    identity = {key: value for key, value in decision.items() if key != "decision_id"}
+    return "dec_" + sha256_text(canonical_json(identity))[:20]
+
+def generation_identity(generation):
+    identity = {key: value for key, value in generation.items() if key != "generation_id"}
+    return "gen_" + sha256_text(canonical_json(identity))[:20]
 
 def validate_candidate(value):
     value = _mapping(copy.deepcopy(value), "candidate")
@@ -357,7 +366,7 @@ def validate_head(value):
 
 Use `copy.deepcopy` on successful return. Reject booleans where integers are expected. Require domains in `{"work", "design", "write", "video"}`, kinds in `{"directive", "correction", "preference", "workflow", "retirement"}`, and timestamps matching `YYYY-MM-DDTHH:MM:SSZ` after a real `datetime.strptime` parse.
 
-- [ ] **Step 4: Expose package version and package it**
+- [x] **Step 4: Expose package version and package it**
 
 `emulo_autopilot/__init__.py`:
 
@@ -379,7 +388,7 @@ packages = ["emulo_autopilot"]
 
 Keep the existing compatibility comments on `emulo-cli`.
 
-- [ ] **Step 5: Run focused and packaging tests**
+- [x] **Step 5: Run focused and packaging tests**
 
 Run:
 
@@ -391,7 +400,7 @@ python -c "import zipfile,glob; p=glob.glob(r'$env:TEMP\emulo-autopilot-wheel\*.
 
 Expected: all tests pass and wheel assertion exits 0. If the `build` module is unavailable, use `python -m pip wheel . --no-deps -w "$env:TEMP\emulo-autopilot-wheel"` and record the command used.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```powershell
 git add pyproject.toml emulo_autopilot/__init__.py emulo_autopilot/contracts.py tests/autopilot_helpers.py tests/test_autopilot_contracts.py

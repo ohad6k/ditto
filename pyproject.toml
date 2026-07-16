@@ -29,6 +29,7 @@ emulo-cli = "emulo:main"  # deprecated alias, kept so existing scripts keep work
 
 [tool.setuptools]
 py-modules = ["emulo"]
+packages = ["emulo_autopilot"]
 
 [tool.setuptools.dynamic]
 version = { attr = "emulo.EMULO_VERSION" }
