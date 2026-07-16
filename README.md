@@ -6,7 +6,7 @@
 <p align="center"><b>Your AI agents act like they just met you. Emulo fixes that.</b></p>
 
 <p align="center">
-<img src="https://img.shields.io/github/stars/ohad6k/emulo?style=for-the-badge&color=3a3a3a&labelColor=141414&logo=github&logoColor=white&cacheSeconds=1800" alt="stars">
+<img src="https://img.shields.io/github/stars/ohad6k/emulo?style=for-the-badge&color=3a3a3a&labelColor=141414&logo=github&logoColor=white&cacheSeconds=600" alt="stars">
 <a href="https://discord.gg/QMnYtVcxk2"><img src="https://img.shields.io/badge/discord-join-3a3a3a?style=for-the-badge&labelColor=141414&logo=discord&logoColor=white" alt="discord"></a>
 <img src="https://img.shields.io/badge/license-MIT-3a3a3a?style=for-the-badge&labelColor=141414" alt="MIT">
 <img src="https://img.shields.io/badge/python-zero_deps-3a3a3a?style=for-the-badge&labelColor=141414&logo=python&logoColor=white" alt="Python, zero dependencies">
