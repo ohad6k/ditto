@@ -57,6 +57,14 @@ describe("authenticated Worker integration", () => {
     const accountBody = await account.text();
     expect(accountBody).toContain("Continue with GitHub");
     expect(accountBody).not.toContain("account is connected");
+    expect(accountBody).toContain('class="brand-mark"');
+    expect(accountBody).toContain('href="/emulo.svg"');
+    expect(accountBody).toContain('href="/account.css"');
+    expect(accountBody).toContain('data-account-state="signed-out"');
+    expect(accountBody).toContain("Your way of working, carried forward.");
+    expect(account.headers.get("content-security-policy")).toContain(
+      "style-src 'self'",
+    );
 
     const script = await SELF.fetch("https://api.example/account.js");
     expect(script.status).toBe(200);
@@ -65,6 +73,16 @@ describe("authenticated Worker integration", () => {
     );
     expect(await script.text()).toContain('fetch("/v1/billing/checkout"');
 
+    const styles = await SELF.fetch("https://api.example/account.css");
+    expect(styles.status).toBe(200);
+    expect(styles.headers.get("content-type")).toBe("text/css; charset=utf-8");
+    expect(await styles.text()).toContain("prefers-reduced-motion");
+
+    const mark = await SELF.fetch("https://api.example/emulo.svg");
+    expect(mark.status).toBe(200);
+    expect(mark.headers.get("content-type")).toBe("image/svg+xml; charset=utf-8");
+    expect(await mark.text()).toContain("emulo mascot");
+
     const complete = await SELF.fetch(
       "https://api.example/v1/billing/complete",
     );
@@ -72,6 +90,9 @@ describe("authenticated Worker integration", () => {
     const body = await complete.text();
     expect(body).toContain("verified Polar confirmation");
     expect(body).not.toContain("access is active");
+    expect(body).toContain('data-payment-state="verifying"');
+    expect(body).toContain('aria-live="polite"');
+    expect(body).not.toContain("Payment successful");
   });
 
   it("returns no-store authenticated status without identifiers", async () => {
@@ -117,6 +138,16 @@ describe("authenticated Worker integration", () => {
     expect(
       (
         await SELF.fetch("https://api.example/account.js", { method: "POST" })
+      ).status,
+    ).toBe(405);
+    expect(
+      (
+        await SELF.fetch("https://api.example/account.css", { method: "POST" })
+      ).status,
+    ).toBe(405);
+    expect(
+      (
+        await SELF.fetch("https://api.example/emulo.svg", { method: "POST" })
       ).status,
     ).toBe(405);
     expect(
