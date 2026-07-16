@@ -1,13 +1,13 @@
 ---
 name: you-working
-description: The working-self lens — laws, taste, and voice so an agent acts like this person on a task. The default ditto output.
+description: The working-self lens — laws, taste, and voice so an agent acts like this person on a task. The default emulo output.
 ---
 
 # you-working — the default lens
 
 > Worked example, mined from the repo author's own real coding sessions (~1,900 sessions, 8 months).
 > This is the **working self**: the laws and taste an agent loads before a task. It's what
-> `python ditto.py` + the default reducer produce. The [thinking](you-thinking.md) and
+> `python emulo.py` + the default reducer produce. The [thinking](you-thinking.md) and
 > [designer](you-designer.md) lenses are the same logs, cut differently.
 > Project and client names are stripped.
 

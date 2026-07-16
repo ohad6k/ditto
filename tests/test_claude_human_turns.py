@@ -7,9 +7,9 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SPEC = importlib.util.spec_from_file_location("ditto", ROOT / "ditto.py")
-ditto = importlib.util.module_from_spec(SPEC)
-SPEC.loader.exec_module(ditto)
+SPEC = importlib.util.spec_from_file_location("emulo", ROOT / "emulo.py")
+emulo = importlib.util.module_from_spec(SPEC)
+SPEC.loader.exec_module(emulo)
 
 
 def claude_record(text, **extra):
@@ -33,29 +33,29 @@ def mine(records):
     with tempfile.TemporaryDirectory() as tmp:
         log = Path(tmp) / "session.jsonl"
         write_jsonl(log, records)
-        return [t for _, t in ditto.user_messages(str(log))]
+        return [t for _, t in emulo.user_messages(str(log))]
 
 
 class IsHumanTurnTest(unittest.TestCase):
     def test_harness_markers_disqualify(self):
-        self.assertFalse(ditto.is_human_turn({"isMeta": True}))
-        self.assertFalse(ditto.is_human_turn({"isSidechain": True}))
-        self.assertFalse(ditto.is_human_turn({"toolUseResult": {"ok": True}}))
-        self.assertFalse(ditto.is_human_turn({"isCompactSummary": True}))
+        self.assertFalse(emulo.is_human_turn({"isMeta": True}))
+        self.assertFalse(emulo.is_human_turn({"isSidechain": True}))
+        self.assertFalse(emulo.is_human_turn({"toolUseResult": {"ok": True}}))
+        self.assertFalse(emulo.is_human_turn({"isCompactSummary": True}))
 
     def test_origin_kind_is_authoritative(self):
-        self.assertTrue(ditto.is_human_turn(
+        self.assertTrue(emulo.is_human_turn(
             {"origin": {"kind": "human"}, "promptSource": "sdk"}))
-        self.assertFalse(ditto.is_human_turn(
+        self.assertFalse(emulo.is_human_turn(
             {"origin": {"kind": "task-notification"}}))
 
     def test_prompt_source_sdk_only_disqualifies_headless(self):
         # Claude Desktop stamps promptSource="sdk" on typed prompts.
-        self.assertTrue(ditto.is_human_turn(
+        self.assertTrue(emulo.is_human_turn(
             {"promptSource": "sdk", "entrypoint": "claude-desktop"}))
-        self.assertFalse(ditto.is_human_turn(
+        self.assertFalse(emulo.is_human_turn(
             {"promptSource": "sdk", "entrypoint": "sdk-cli"}))
-        self.assertTrue(ditto.is_human_turn({}))
+        self.assertTrue(emulo.is_human_turn({}))
 
 
 class ClaudeMiningTest(unittest.TestCase):
@@ -94,7 +94,7 @@ class SubagentPathFilterTest(unittest.TestCase):
                         [claude_record("machine")])
             write_jsonl(root / "my-subagents-notes" / "notes.jsonl",
                         [claude_record("also human")])
-            files = ditto.discover_files([str(root)])
+            files = emulo.discover_files([str(root)])
             names = {os.path.basename(f) for f in files}
             self.assertEqual({"main.jsonl", "notes.jsonl"}, names)
 

@@ -60,13 +60,13 @@ class ProofDocumentationTest(unittest.TestCase):
 
     def test_docs_make_no_new_benchmark_result_claim_before_execution(self):
         text = RUNBOOK.read_text(encoding="utf-8")
-        self.assertNotIn("Ditto wins", text)
+        self.assertNotIn("Emulo wins", text)
         self.assertNotIn("statistically significant", text)
         self.assertIn("no public result exists", text)
 
     def test_private_roots_are_ignored_and_readme_marks_method_unexecuted(self):
         ignored = (ROOT / ".gitignore").read_text(encoding="utf-8")
-        for path in (".ditto-proof-private/", "proof-private/", "ditto-proof-runs/"):
+        for path in (".emulo-proof-private/", "proof-private/", "emulo-proof-runs/"):
             self.assertIn(path, ignored)
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
         self.assertIn("docs/proof/README.md", readme)
@@ -96,7 +96,7 @@ class ProofDocumentationTest(unittest.TestCase):
             "no scored fixture execution",
             "no public result",
             "no Antigravity dependency",
-            "no modification to normal Ditto behavior",
+            "no modification to normal Emulo behavior",
         ):
             self.assertIn(phrase, text)
 

@@ -7,9 +7,9 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SPEC = importlib.util.spec_from_file_location("ditto", ROOT / "ditto.py")
-ditto = importlib.util.module_from_spec(SPEC)
-SPEC.loader.exec_module(ditto)
+SPEC = importlib.util.spec_from_file_location("emulo", ROOT / "emulo.py")
+emulo = importlib.util.module_from_spec(SPEC)
+SPEC.loader.exec_module(emulo)
 
 
 def build_db(root):
@@ -43,21 +43,21 @@ class OpencodeDbTest(unittest.TestCase):
     def test_discovers_one_entry_per_session_and_mines_only_typed_text(self):
         with tempfile.TemporaryDirectory() as tmp:
             db_path = build_db(tmp)
-            entries = ditto.discover_files([tmp])
+            entries = emulo.discover_files([tmp])
             self.assertEqual(2, len(entries))
-            self.assertTrue(all(ditto.OPENCODE_DB_SESSION_SEP in e for e in entries))
+            self.assertTrue(all(emulo.OPENCODE_DB_SESSION_SEP in e for e in entries))
 
             texts = []
             for entry in entries:
-                texts += [t for _, t in ditto.user_messages(entry)]
+                texts += [t for _, t in emulo.user_messages(entry)]
             self.assertEqual(["done means live proof", "ship the fix tonight"], sorted(texts))
 
-            self.assertEqual("opencode", ditto.source_kind(db_path))
+            self.assertEqual("opencode", emulo.source_kind(db_path))
 
     def test_missing_or_empty_root_is_quiet(self):
         with tempfile.TemporaryDirectory() as tmp:
-            self.assertEqual([], ditto.discover_files([tmp]))
-            self.assertEqual([], ditto.discover_files([str(Path(tmp) / "nope")]))
+            self.assertEqual([], emulo.discover_files([tmp]))
+            self.assertEqual([], emulo.discover_files([str(Path(tmp) / "nope")]))
 
 
 class OpencodeLegacyStorageTest(unittest.TestCase):
@@ -86,9 +86,9 @@ class OpencodeLegacyStorageTest(unittest.TestCase):
                 n = len(list(pdir.glob("*.json")))
                 (pdir / f"prt_{n}.json").write_text(json.dumps(part), encoding="utf-8")
 
-            entries = ditto.discover_files([str(root)])
+            entries = emulo.discover_files([str(root)])
             self.assertEqual([str(session_file)], entries)
-            mined = ditto.user_messages(entries[0])
+            mined = emulo.user_messages(entries[0])
             self.assertEqual([("2026-07-13", "never fake data")], mined)
 
     def test_legacy_layout_mines_under_any_path_root_name(self):
@@ -108,10 +108,10 @@ class OpencodeLegacyStorageTest(unittest.TestCase):
             (pdir / "prt_0.json").write_text(
                 json.dumps({"type": "text", "text": "one step, short"}), encoding="utf-8")
 
-            entries = ditto.discover_files([str(root)])
+            entries = emulo.discover_files([str(root)])
             self.assertEqual([str(session_file)], entries)
             self.assertEqual([("2026-07-13", "one step, short")],
-                             ditto.user_messages(entries[0]))
+                             emulo.user_messages(entries[0]))
 
 
 if __name__ == "__main__":

@@ -8,7 +8,7 @@ description: A working profile mined from your own AI sessions — laws, taste, 
 > This starts with `name:` / `description:` frontmatter on purpose: drop this file at
 > `.claude/skills/you/SKILL.md` and Claude Code registers it as a skill, no other setup.
 >
-> This is a **synthetic sample** so you can see the shape of what ditto produces.
+> This is a **synthetic sample** so you can see the shape of what emulo produces.
 > It's a made-up developer ("Sam"), not a real person. Yours will be mined from
 > your own logs and will read nothing like this.
 

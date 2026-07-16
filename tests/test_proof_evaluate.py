@@ -30,7 +30,7 @@ def pair(family="design"):
                 "review_id": "review-111", "family": family,
             },
             {
-                "condition": "ditto", "system_id": "system-codex", "order": 1,
+                "condition": "emulo", "system_id": "system-codex", "order": 1,
                 "review_id": "review-222", "family": family,
             },
         ],
@@ -87,7 +87,7 @@ class EvaluationTest(unittest.TestCase):
         packet = build_blind_pair(frozen_pair, outputs)
         encoded = json.dumps(packet).lower()
 
-        for forbidden in ("cold", "ditto", "codex", "claude", "workspace", "order"):
+        for forbidden in ("cold", "emulo", "codex", "claude", "workspace", "order"):
             self.assertNotIn(forbidden, encoded)
         self.assertEqual("review-222", packet["left"]["review_id"])
 
@@ -106,7 +106,7 @@ class EvaluationTest(unittest.TestCase):
             "right_review_id": packet["right"]["review_id"],
         }, family="design")
 
-        self.assertEqual("ditto", reveal_verdict(review, frozen_pair))
+        self.assertEqual("emulo", reveal_verdict(review, frozen_pair))
 
     def test_reveal_rejects_unvalidated_or_invalid_review(self):
         with self.assertRaisesRegex(ValueError, "validated eligible review"):

@@ -1,17 +1,17 @@
 {
-  "name": "ditto",
-  "description": "Ditto: mine your local AI coding session logs into a personal profile your agent loads before every task.",
+  "name": "emulo",
+  "description": "Emulo: mine your local AI coding session logs into a personal profile your agent loads before every task.",
   "owner": {"name": "Ohad"},
   "plugins": [
     {
-      "name": "ditto",
+      "name": "emulo",
       "source": "./",
-      "displayName": "Ditto",
+      "displayName": "Emulo",
       "description": "Mine real AI coding sessions into a bounded, evidence-backed personal layer.",
-      "version": "0.4.0",
+      "version": "0.5.0",
       "author": {"name": "Ohad"},
-      "homepage": "https://github.com/ohad6k/ditto",
-      "repository": "https://github.com/ohad6k/ditto",
+      "homepage": "https://github.com/ohad6k/emulo",
+      "repository": "https://github.com/ohad6k/emulo",
       "license": "MIT",
       "keywords": ["personalization", "skills", "session-mining", "agents"],
       "category": "Developer Tools"

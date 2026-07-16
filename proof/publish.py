@@ -1,4 +1,4 @@
-"""Deterministic, privacy-gated publication for Ditto Proof v1."""
+"""Deterministic, privacy-gated publication for Emulo Proof v1."""
 
 import html
 from collections import Counter
@@ -36,20 +36,20 @@ PROHIBITED_PUBLIC_CLAIMS = (
 def aggregate_preferences(verdicts):
     """Aggregate independent pair verdicts without counting ties as losses."""
     verdicts = list(verdicts)
-    unexpected = sorted(set(verdicts) - {"ditto", "cold", "tie"})
+    unexpected = sorted(set(verdicts) - {"emulo", "cold", "tie"})
     if unexpected:
         raise ValueError("unexpected preference verdict: " + ", ".join(unexpected))
     counts = {
-        "ditto_wins": verdicts.count("ditto"),
+        "emulo_wins": verdicts.count("emulo"),
         "cold_wins": verdicts.count("cold"),
         "ties": verdicts.count("tie"),
     }
-    counts["binary_denominator"] = counts["ditto_wins"] + counts["cold_wins"]
+    counts["binary_denominator"] = counts["emulo_wins"] + counts["cold_wins"]
     counts["raw_denominator"] = len(verdicts)
     return {
         "counts": counts,
-        "ditto_wilson_95": wilson_interval(
-            counts["ditto_wins"], counts["binary_denominator"]
+        "emulo_wilson_95": wilson_interval(
+            counts["emulo_wins"], counts["binary_denominator"]
         ),
     }
 
@@ -69,7 +69,7 @@ def _eligible_records(manifest, records):
     cell_ids = [record.get("cell_id") for record in eligible]
     frozen = _frozen_cells(manifest)
     if len(eligible) != 48:
-        raise ValueError("Ditto Proof v1 requires 48 valid cells")
+        raise ValueError("Emulo Proof v1 requires 48 valid cells")
     if len(set(cell_ids)) != 48 or set(cell_ids) != set(frozen):
         raise ValueError("eligible records must match the frozen 48-cell matrix")
     for record in eligible:
@@ -97,7 +97,7 @@ def _eligible_records(manifest, records):
         if contribution["review_status"] == "invalid":
             if not contribution.get("invalidation_reason"):
                 raise ValueError("invalid review requires an invalidation reason")
-        elif contribution.get("preference") not in {"ditto", "cold", "tie"}:
+        elif contribution.get("preference") not in {"emulo", "cold", "tie"}:
             raise ValueError("valid review requires a frozen preference")
     return sorted(eligible, key=lambda item: item["cell_id"])
 
@@ -154,7 +154,7 @@ def _preference_summary(records):
 
 def _failure_summary(records):
     result = {}
-    for condition in ("cold", "ditto"):
+    for condition in ("cold", "emulo"):
         failures = [
             failure
             for record in records
@@ -239,7 +239,7 @@ def _verify_hash_bound_evidence(manifest, records, store):
             "evaluations",
             record.get("evaluation_sha256"),
         )
-        if evaluation.get("schema") != "ditto-proof-evaluation/1" or evaluation.get(
+        if evaluation.get("schema") != "emulo-proof-evaluation/1" or evaluation.get(
             "cell_id"
         ) != record["cell_id"]:
             raise ValueError("evaluation evidence identity mismatch")
@@ -323,7 +323,7 @@ def build_publication(manifest, records, ship_approval, evidence_store=None):
         ),
     )
     publication = {
-        "schema": "ditto-proof-publication/1",
+        "schema": "emulo-proof-publication/1",
         "benchmark": BENCHMARK_NAME,
         "label": "small-n, directional only",
         "manifest_sha256": sha256_bytes(canonical_bytes(manifest)),
@@ -352,7 +352,7 @@ def build_publication(manifest, records, ship_approval, evidence_store=None):
 def render_index(publication, destination, canaries, private_roots=()):
     """Write a byte-stable two-file static package after scanning both payloads."""
     validate_publication_record(publication)
-    title = "Ditto Proof v1"
+    title = "Emulo Proof v1"
     counts = publication["preferences"]["overall"]["counts"]
     body = (
         "<!doctype html>\n"
@@ -361,7 +361,7 @@ def render_index(publication, destination, canaries, private_roots=()):
         f"<h1>{html.escape(title)}</h1>"
         "<p>Complete-system comparison from a clean-host cold start. "
         "Small-n, directional only.</p>"
-        f"<p>Ditto wins: {counts['ditto_wins']}; cold wins: "
+        f"<p>Emulo wins: {counts['emulo_wins']}; cold wins: "
         f"{counts['cold_wins']}; ties: {counts['ties']}.</p>"
         "</html>\n"
     )

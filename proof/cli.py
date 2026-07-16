@@ -1,4 +1,4 @@
-"""Command-line interface for local Ditto Proof v1 artifact operations."""
+"""Command-line interface for local Emulo Proof v1 artifact operations."""
 
 import argparse
 import json
@@ -40,7 +40,7 @@ def _parser():
     freeze_system.add_argument("--model-id")
     freeze_system.add_argument("--host-version", required=True)
     freeze_system.add_argument("--run-argv", action="append", required=True)
-    freeze_system.add_argument("--ditto-install-argv", action="append", required=True)
+    freeze_system.add_argument("--emulo-install-argv", action="append", required=True)
     freeze_system.add_argument("--screenshot-sha256", required=True)
     freeze_system.add_argument("--tool-policy-sha256", required=True)
     freeze_system.add_argument("--permission-policy-sha256", required=True)
@@ -87,7 +87,7 @@ def _dispatch(args):
             args.model_id,
             args.host_version,
             args.run_argv,
-            args.ditto_install_argv,
+            args.emulo_install_argv,
             args.screenshot_sha256,
             args.tool_policy_sha256,
             args.permission_policy_sha256,

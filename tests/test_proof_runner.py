@@ -20,7 +20,7 @@ def manifest():
                 "system_id": "system-a",
                 "host": "codex",
                 "run_argv": ["provider", "run"],
-                "ditto_install_argv": ["installer", "run"],
+                "emulo_install_argv": ["installer", "run"],
             }
         ]
     }
@@ -68,15 +68,15 @@ class RunnerTest(unittest.TestCase):
             run_root, fixture_hash = create_run_root(Path(tmp))
             cold_cell = cell("cell-cold", "cold")
             cold_cell["fixture_sha256"] = fixture_hash
-            ditto_cell = cell("cell-ditto", "ditto")
-            ditto_cell["fixture_sha256"] = fixture_hash
+            emulo_cell = cell("cell-emulo", "emulo")
+            emulo_cell["fixture_sha256"] = fixture_hash
 
             cold = prepare_cell(manifest(), cold_cell, run_root)
-            ditto = prepare_cell(manifest(), ditto_cell, run_root)
+            emulo = prepare_cell(manifest(), emulo_cell, run_root)
 
-            self.assertNotEqual(cold.workspace, ditto.workspace)
-            self.assertNotEqual(cold.home, ditto.home)
-            self.assertEqual(cold.fixture_sha256, ditto.fixture_sha256)
+            self.assertNotEqual(cold.workspace, emulo.workspace)
+            self.assertNotEqual(cold.home, emulo.home)
+            self.assertEqual(cold.fixture_sha256, emulo.fixture_sha256)
             self.assertEqual("frozen\n", (cold.workspace / "brief.md").read_text("utf-8"))
 
     def test_prepare_rejects_instruction_hash_mismatch(self):
@@ -135,10 +135,10 @@ class RunnerTest(unittest.TestCase):
             self.assertEqual(str(prepared.home), kwargs["env"]["USERPROFILE"])
 
     @mock.patch("proof.runner.subprocess.run")
-    def test_ditto_condition_installs_before_provider_and_hashes_home(self, run):
+    def test_emulo_condition_installs_before_provider_and_hashes_home(self, run):
         def effect(argv, **kwargs):
             if argv[0] == "installer":
-                installed = Path(kwargs["env"]["DITTO_HOME"])
+                installed = Path(kwargs["env"]["EMULO_HOME"])
                 installed.mkdir(parents=True)
                 (installed / "profile.txt").write_text("frozen profile", encoding="utf-8")
             return subprocess.CompletedProcess(argv, 0, stdout="ok", stderr="")
@@ -147,9 +147,9 @@ class RunnerTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             run_root, fixture_hash = create_run_root(Path(tmp))
             frozen_manifest = manifest()
-            frozen_cell = cell(condition="ditto")
+            frozen_cell = cell(condition="emulo")
             frozen_cell["fixture_sha256"] = fixture_hash
-            expected = Path(tmp) / "expected-home" / ".ditto"
+            expected = Path(tmp) / "expected-home" / ".emulo"
             expected.mkdir(parents=True)
             (expected / "profile.txt").write_text(
                 "frozen profile", encoding="utf-8"
@@ -170,10 +170,10 @@ class RunnerTest(unittest.TestCase):
             self.assertRegex(installed_hash, r"^[0-9a-f]{64}$")
 
     @mock.patch("proof.runner.subprocess.run")
-    def test_ditto_setup_rejects_noop_or_extra_persistent_context(self, run):
+    def test_emulo_setup_rejects_noop_or_extra_persistent_context(self, run):
         with tempfile.TemporaryDirectory() as tmp:
             base = Path(tmp)
-            expected = base / "expected-home" / ".ditto"
+            expected = base / "expected-home" / ".emulo"
             expected.mkdir(parents=True)
             (expected / "profile.txt").write_text("frozen", encoding="utf-8")
             expected_hash = tree_hash(expected.parent)
@@ -182,13 +182,13 @@ class RunnerTest(unittest.TestCase):
                 with self.subTest(mode=mode):
                     run_root, fixture_hash = create_run_root(base / mode)
                     frozen_manifest = manifest()
-                    frozen_cell = cell(cell_id=f"cell-{mode}", condition="ditto")
+                    frozen_cell = cell(cell_id=f"cell-{mode}", condition="emulo")
                     frozen_cell["fixture_sha256"] = fixture_hash
                     frozen_cell["profile_manifest_sha256"] = expected_hash
 
                     def effect(argv, **kwargs):
                         if argv[0] == "installer" and mode == "extra":
-                            home = Path(kwargs["env"]["DITTO_HOME"])
+                            home = Path(kwargs["env"]["EMULO_HOME"])
                             home.mkdir(parents=True)
                             (home / "profile.txt").write_text("frozen", encoding="utf-8")
                             (Path(kwargs["env"]["HOME"]) / "AGENTS.md").write_text(

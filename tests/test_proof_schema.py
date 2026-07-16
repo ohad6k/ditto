@@ -18,11 +18,11 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def minimal_manifest():
     return {
-        "schema": "ditto-proof/1",
-        "benchmark": "Ditto Proof v1",
+        "schema": "emulo-proof/1",
+        "benchmark": "Emulo Proof v1",
         "benchmark_version": "1.0.0",
-        "ditto_ref": "v0.3.7",
-        "ditto_commit": "5f4008b0c0df40dcadb92c8fd1ba4dcf3aee40d0",
+        "emulo_ref": "v0.3.7",
+        "emulo_commit": "5f4008b0c0df40dcadb92c8fd1ba4dcf3aee40d0",
         "profile_manifest_sha256": "a" * 64,
         "private_rubric_sha256": "b" * 64,
         "public_rubric_sha256": "c" * 64,
@@ -40,7 +40,7 @@ def minimal_manifest():
 class ProofSchemaTest(unittest.TestCase):
     def test_manifest_rejects_unknown_version_before_cardinality(self):
         value = minimal_manifest()
-        value["schema"] = "ditto-proof/2"
+        value["schema"] = "emulo-proof/2"
 
         with self.assertRaisesRegex(ValueError, "unsupported schema"):
             validate_manifest(value)
@@ -52,11 +52,11 @@ class ProofSchemaTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "unexpected keys: surprise"):
             validate_manifest(value)
 
-    def test_manifest_rejects_mixed_ditto_version(self):
+    def test_manifest_rejects_mixed_emulo_version(self):
         value = minimal_manifest()
-        value["ditto_ref"] = "v0.3.8"
+        value["emulo_ref"] = "v0.3.8"
 
-        with self.assertRaisesRegex(ValueError, "mixed Ditto version"):
+        with self.assertRaisesRegex(ValueError, "mixed Emulo version"):
             validate_manifest(value)
 
     def test_manifest_requires_two_systems_and_24_pairs(self):
@@ -76,7 +76,7 @@ class ProofSchemaTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "persistent context"):
             validate_cell(
                 {
-                    "schema": "ditto-proof-cell/1",
+                    "schema": "emulo-proof-cell/1",
                     "host_persistent_context": "present",
                 }
             )

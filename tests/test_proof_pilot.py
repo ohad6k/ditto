@@ -88,7 +88,7 @@ class PilotFixtureTest(unittest.TestCase):
             self.assertTrue(contract["required_outputs"])
             text = json.dumps(contract).casefold()
             self.assertNotIn("ohad", text)
-            self.assertNotIn("ditto", text)
+            self.assertNotIn("emulo", text)
 
     def test_six_cells_are_isolated_opaque_and_non_scored(self):
         registry = load_pilot_registry(PILOT_ROOT / "registry.json")
@@ -96,12 +96,12 @@ class PilotFixtureTest(unittest.TestCase):
         self.assertEqual(6, len(cells))
         self.assertEqual(6, len({item["cell_id"] for item in cells}))
         self.assertEqual(6, len({item["review_id"] for item in cells}))
-        self.assertEqual({"cold", "ditto"}, {item["condition"] for item in cells})
+        self.assertEqual({"cold", "emulo"}, {item["condition"] for item in cells})
         self.assertTrue(all(item["scored"] is False for item in cells))
         self.assertTrue(
             all(
                 "cold" not in item["review_id"]
-                and "ditto" not in item["review_id"]
+                and "emulo" not in item["review_id"]
                 for item in cells
             )
         )
@@ -112,7 +112,7 @@ class PilotFixtureTest(unittest.TestCase):
         source = PILOT_ROOT / work["path"]
         with tempfile.TemporaryDirectory() as root:
             first = reset_fixture(source, Path(root) / "cold", work["fixture_sha256"])
-            second = reset_fixture(source, Path(root) / "ditto", work["fixture_sha256"])
+            second = reset_fixture(source, Path(root) / "emulo", work["fixture_sha256"])
             self.assertNotEqual(first, second)
             self.assertEqual(tree_hash(first), tree_hash(second))
 
@@ -189,7 +189,7 @@ class PilotFixtureTest(unittest.TestCase):
                         model_id=f"synthetic-{host}",
                         host_version="test-only",
                         run_argv=[sys.executable, "-c", "print('not executed')"],
-                        ditto_install_argv=[
+                        emulo_install_argv=[
                             sys.executable,
                             "-c",
                             "print('not executed')",
@@ -245,7 +245,7 @@ class PilotFixtureTest(unittest.TestCase):
                 pair_records = []
                 for cell in pair["cells"]:
                     attempt = {
-                        "schema": "ditto-proof-attempt/1",
+                        "schema": "emulo-proof-attempt/1",
                         **{
                             field: cell[field]
                             for field in (
@@ -264,7 +264,7 @@ class PilotFixtureTest(unittest.TestCase):
                     evaluation_sha256 = store.record_evaluation(
                         cell["cell_id"],
                         {
-                            "schema": "ditto-proof-evaluation/1",
+                            "schema": "emulo-proof-evaluation/1",
                             "cell_id": cell["cell_id"],
                             "checks": {"synthetic_contract": True},
                             "hard_failures": [],
@@ -300,7 +300,7 @@ class PilotFixtureTest(unittest.TestCase):
                 self.assertEqual("paired-review/1", packet["schema"])
                 ordered = sorted(pair["cells"], key=lambda item: item["order"])
                 review_record = {
-                    "schema": "ditto-proof-review/1",
+                    "schema": "emulo-proof-review/1",
                     "review_id": f"decision-{pair['pair_id']}",
                     "pair_id": pair["pair_id"],
                     "family": pair["family"],

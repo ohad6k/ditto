@@ -8,7 +8,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-DITTO = ROOT / "ditto.py"
+EMULO = ROOT / "emulo.py"
 
 
 def write_jsonl(path, rows):
@@ -18,12 +18,12 @@ def write_jsonl(path, rows):
             fh.write(json.dumps(row) + "\n")
 
 
-class DittoCliTest(unittest.TestCase):
+class EmuloCliTest(unittest.TestCase):
     def test_dry_run_counts_without_writing_files(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             logs = root / "logs"
-            out = root / "ditto-out"
+            out = root / "emulo-out"
             write_jsonl(logs / "codex.jsonl", [
                 {
                     "timestamp": "2026-07-08T10:00:00Z",
@@ -54,7 +54,7 @@ class DittoCliTest(unittest.TestCase):
             ])
 
             result = subprocess.run(
-                [sys.executable, str(DITTO), "--path", str(logs), "--out", str(out), "--dry-run"],
+                [sys.executable, str(EMULO), "--path", str(logs), "--out", str(out), "--dry-run"],
                 check=True,
                 capture_output=True,
                 text=True,
@@ -71,7 +71,7 @@ class DittoCliTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             logs = root / "logs"
-            out = root / "ditto-out"
+            out = root / "emulo-out"
             write_jsonl(logs / "codex.jsonl", [
                 {
                     "timestamp": "2026-07-08T10:00:00Z",
@@ -92,7 +92,7 @@ class DittoCliTest(unittest.TestCase):
             ])
 
             result = subprocess.run(
-                [sys.executable, str(DITTO), "--path", str(logs), "--out", str(out), "--chunks", "1"],
+                [sys.executable, str(EMULO), "--path", str(logs), "--out", str(out), "--chunks", "1"],
                 check=True,
                 capture_output=True,
                 text=True,
@@ -109,29 +109,29 @@ class DittoCliTest(unittest.TestCase):
 
     def test_redacts_bare_and_is_form_credentials_without_eating_prose(self):
         import importlib.util
-        spec = importlib.util.spec_from_file_location("ditto", DITTO)
-        ditto = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(ditto)
+        spec = importlib.util.spec_from_file_location("emulo", EMULO)
+        emulo = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(emulo)
 
         for secret in ("the password is Hunter2!x", "psk Tr0ub4dor3",
                        "wifi key abc12345", "password: sekritvalue1"):
-            self.assertIn("[REDACTED]", ditto.redact(secret), secret)
+            self.assertIn("[REDACTED]", emulo.redact(secret), secret)
 
         for prose in ("the password is wrong", "password reset email",
                       "my token store", "passwd prompt appeared",
                       "boarding pass QF12345", "pwd C:/Users/me/project1"):
-            self.assertNotIn("[REDACTED]", ditto.redact(prose), prose)
+            self.assertNotIn("[REDACTED]", emulo.redact(prose), prose)
 
     def test_phone_redaction_does_not_eat_dates_versions_or_part_numbers(self):
         import importlib.util
-        spec = importlib.util.spec_from_file_location("ditto", DITTO)
-        ditto = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(ditto)
+        spec = importlib.util.spec_from_file_location("emulo", EMULO)
+        emulo = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(emulo)
 
         for keep in ("2026-06-14", "07/09/2026", "v0.8.0", "0x04", "4.6 V",
                      "acer-15-6-aspire-lite-n4500", "18 payments of 150",
                      "PEX 543 777 2996", "129424534", "1,656 sessions"):
-            self.assertNotIn("[PHONE]", ditto.redact(keep), keep)
+            self.assertNotIn("[PHONE]", emulo.redact(keep), keep)
 
         for phone in ("07 5477 4500", "+61 400 123 456", "0400123456",
                       "052-1234567", "0521234567", "03-1234567",
@@ -139,7 +139,7 @@ class DittoCliTest(unittest.TestCase):
                       "reach me at +972 52-123-4567.",
                       "(02) 9876 5432", "(03) 123-4567", "+1 (415) 555-2671",
                       "07700 900123", "+49 151 12345678"):
-            self.assertIn("[PHONE]", ditto.redact(phone), phone)
+            self.assertIn("[PHONE]", emulo.redact(phone), phone)
 
     def test_install_codex_writes_skill_and_refuses_overwrite(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -154,7 +154,7 @@ class DittoCliTest(unittest.TestCase):
             subprocess.run(
                 [
                     sys.executable,
-                    str(DITTO),
+                    str(EMULO),
                     "--install",
                     str(profile),
                     "--target",
@@ -173,7 +173,7 @@ class DittoCliTest(unittest.TestCase):
             second = subprocess.run(
                 [
                     sys.executable,
-                    str(DITTO),
+                    str(EMULO),
                     "--install",
                     str(profile),
                     "--target",
@@ -203,7 +203,7 @@ class DittoCliTest(unittest.TestCase):
             subprocess.run(
                 [
                     sys.executable,
-                    str(DITTO),
+                    str(EMULO),
                     "--install",
                     str(profile),
                     "--target",
@@ -218,7 +218,7 @@ class DittoCliTest(unittest.TestCase):
 
             installed = agents.read_text(encoding="utf-8")
             self.assertIn("keep this", installed)
-            self.assertIn("<!-- ditto profile:start -->", installed)
+            self.assertIn("<!-- emulo profile:start -->", installed)
             self.assertIn("- done means live", installed)
             self.assertNotIn("name: you", installed)
 
@@ -232,13 +232,13 @@ class DittoCliTest(unittest.TestCase):
                 "---\nname: you\ndescription: test profile\n---\n\n# profile\n\n- done means live\n",
                 encoding="utf-8",
             )
-            cmd = [sys.executable, str(DITTO), "--install", str(profile),
+            cmd = [sys.executable, str(EMULO), "--install", str(profile),
                    "--target", "opencode", "--home", str(home)]
 
             subprocess.run(cmd, check=True, capture_output=True, text=True)
             dest = home / ".config" / "opencode" / "AGENTS.md"
             installed = dest.read_text(encoding="utf-8")
-            self.assertIn("<!-- ditto profile:start -->", installed)
+            self.assertIn("<!-- emulo profile:start -->", installed)
             self.assertIn("- done means live", installed)
             self.assertNotIn("name: you", installed)
 
@@ -251,7 +251,7 @@ class DittoCliTest(unittest.TestCase):
             subprocess.run(cmd + ["--yes"], check=True, capture_output=True, text=True)
             replaced = dest.read_text(encoding="utf-8")
             self.assertIn("# my own rules", replaced)
-            self.assertEqual(1, replaced.count("<!-- ditto profile:start -->"))
+            self.assertEqual(1, replaced.count("<!-- emulo profile:start -->"))
 
     def test_install_cursor_writes_mdc_frontmatter(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -267,7 +267,7 @@ class DittoCliTest(unittest.TestCase):
             subprocess.run(
                 [
                     sys.executable,
-                    str(DITTO),
+                    str(EMULO),
                     "--install",
                     str(profile),
                     "--target",
@@ -281,7 +281,7 @@ class DittoCliTest(unittest.TestCase):
             )
 
             rule = (repo / ".cursor" / "rules" / "you.mdc").read_text(encoding="utf-8")
-            self.assertTrue(rule.startswith("---\ndescription: ditto user profile\nalwaysApply: true\n---"))
+            self.assertTrue(rule.startswith("---\ndescription: emulo user profile\nalwaysApply: true\n---"))
             self.assertIn("- keep answers short", rule)
             self.assertNotIn("name: you", rule)
 
@@ -290,7 +290,7 @@ class DittoCliTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             logs = root / "logs"
-            out = root / "ditto-out"
+            out = root / "emulo-out"
             rows = []
             # same long spec pasted into three sessions + short "yes" repeated three times
             for i in range(3):
@@ -305,7 +305,7 @@ class DittoCliTest(unittest.TestCase):
             write_jsonl(logs / "codex.jsonl", rows)
 
             result = subprocess.run(
-                [sys.executable, str(DITTO), "--path", str(logs), "--out", str(out), "--chunks", "1"],
+                [sys.executable, str(EMULO), "--path", str(logs), "--out", str(out), "--chunks", "1"],
                 check=True, capture_output=True, text=True,
             )
             self.assertIn("duplicate specs/rules collapsed: 2", result.stdout)
@@ -314,9 +314,9 @@ class DittoCliTest(unittest.TestCase):
             self.assertEqual(corpus.count("\nyes"), 3)                        # every short "yes" kept
 
             # --no-dedupe keeps all three copies
-            out2 = root / "ditto-out2"
+            out2 = root / "emulo-out2"
             subprocess.run(
-                [sys.executable, str(DITTO), "--path", str(logs), "--out", str(out2), "--chunks", "1", "--no-dedupe"],
+                [sys.executable, str(EMULO), "--path", str(logs), "--out", str(out2), "--chunks", "1", "--no-dedupe"],
                 check=True, capture_output=True, text=True,
             )
             corpus2 = (out2 / "you-corpus.txt").read_text(encoding="utf-8")
@@ -326,7 +326,7 @@ class DittoCliTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             logs = root / "logs"
-            out = root / "ditto-out"
+            out = root / "emulo-out"
             write_jsonl(logs / "codex.jsonl", [
                 {
                     "timestamp": "2025-11-02T10:00:00Z",
@@ -339,7 +339,7 @@ class DittoCliTest(unittest.TestCase):
             ])
 
             subprocess.run(
-                [sys.executable, str(DITTO), "--path", str(logs), "--out", str(out), "--chunks", "1"],
+                [sys.executable, str(EMULO), "--path", str(logs), "--out", str(out), "--chunks", "1"],
                 check=True,
                 capture_output=True,
                 text=True,
@@ -353,7 +353,7 @@ class DittoCliTest(unittest.TestCase):
 
     def test_card_renders_terminal_and_html(self):
         with tempfile.TemporaryDirectory() as tmp:
-            out = Path(tmp) / "ditto-out"
+            out = Path(tmp) / "emulo-out"
             out.mkdir()
             (out / "card.json").write_text(json.dumps({
                 "archetype": "Proof-First Builder",
@@ -372,7 +372,7 @@ class DittoCliTest(unittest.TestCase):
             }), encoding="utf-8")
 
             result = subprocess.run(
-                [sys.executable, str(DITTO), "--card", "--out", str(out), "--no-open"],
+                [sys.executable, str(EMULO), "--card", "--out", str(out), "--no-open"],
                 check=True,
                 capture_output=True,
                 text=True,
@@ -391,10 +391,10 @@ class DittoCliTest(unittest.TestCase):
 
     def test_card_without_card_json_fails_with_hint(self):
         with tempfile.TemporaryDirectory() as tmp:
-            out = Path(tmp) / "ditto-out"
+            out = Path(tmp) / "emulo-out"
             out.mkdir()
             result = subprocess.run(
-                [sys.executable, str(DITTO), "--card", "--out", str(out), "--no-open"],
+                [sys.executable, str(EMULO), "--card", "--out", str(out), "--no-open"],
                 capture_output=True,
                 text=True,
             )
@@ -409,7 +409,7 @@ class DittoCliTest(unittest.TestCase):
             (logs / "bad.jsonl").write_text("{}\nnot-json\n", encoding="utf-8")
             out = root / "out"
             result = subprocess.run(
-                [sys.executable, str(DITTO), "--path", str(logs), "--out", str(out)],
+                [sys.executable, str(EMULO), "--path", str(logs), "--out", str(out)],
                 capture_output=True,
                 text=True,
             )
@@ -428,7 +428,7 @@ class DittoCliTest(unittest.TestCase):
             result = subprocess.run(
                 [
                     sys.executable,
-                    str(DITTO),
+                    str(EMULO),
                     "--install",
                     str(profile),
                     "--target",
@@ -457,11 +457,11 @@ class DittoCliTest(unittest.TestCase):
                 }])
             out = root / "out"
             subprocess.run(
-                [sys.executable, str(DITTO), "--path", str(logs), "--out", str(out), "--chunks", "6"],
+                [sys.executable, str(EMULO), "--path", str(logs), "--out", str(out), "--chunks", "6"],
                 check=True,
             )
             subprocess.run(
-                [sys.executable, str(DITTO), "--path", str(logs), "--out", str(out), "--chunks", "1"],
+                [sys.executable, str(EMULO), "--path", str(logs), "--out", str(out), "--chunks", "1"],
                 check=True,
             )
             self.assertEqual(["chunk-01.txt"], sorted(p.name for p in (out / "chunks").iterdir()))
@@ -472,7 +472,7 @@ class DittoCliTest(unittest.TestCase):
             repo = root / "repo"
             repo.mkdir()
             agents = repo / "AGENTS.md"
-            original = "# rules\n\n<!-- ditto profile:start -->\nbroken\n"
+            original = "# rules\n\n<!-- emulo profile:start -->\nbroken\n"
             agents.write_text(original, encoding="utf-8")
             profile = root / "you.md"
             profile.write_text(
@@ -482,7 +482,7 @@ class DittoCliTest(unittest.TestCase):
             result = subprocess.run(
                 [
                     sys.executable,
-                    str(DITTO),
+                    str(EMULO),
                     "--install",
                     str(profile),
                     "--target",
@@ -512,7 +512,7 @@ class DittoCliTest(unittest.TestCase):
             subprocess.run(
                 [
                     sys.executable,
-                    str(DITTO),
+                    str(EMULO),
                     "--install",
                     str(profile),
                     "--target",
@@ -538,7 +538,7 @@ class DittoCliTest(unittest.TestCase):
             result = subprocess.run(
                 [
                     sys.executable,
-                    str(DITTO),
+                    str(EMULO),
                     "--install",
                     str(profile),
                     "--target",

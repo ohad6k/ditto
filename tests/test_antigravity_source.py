@@ -6,9 +6,9 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SPEC = importlib.util.spec_from_file_location("ditto", ROOT / "ditto.py")
-ditto = importlib.util.module_from_spec(SPEC)
-SPEC.loader.exec_module(ditto)
+SPEC = importlib.util.spec_from_file_location("emulo", ROOT / "emulo.py")
+emulo = importlib.util.module_from_spec(SPEC)
+SPEC.loader.exec_module(emulo)
 
 
 def write_transcript(root, conversation_id, records):
@@ -51,7 +51,7 @@ class AntigravityTranscriptTest(unittest.TestCase):
                 {"type": "SYSTEM_MESSAGE", "source": "SYSTEM",
                  "content": "harness notice", "created_at": "2026-06-09T09:26:00Z"},
             ])
-            mined = ditto.user_messages(path)
+            mined = emulo.user_messages(path)
             self.assertEqual([("2026-06-09", "done means live proof")], mined)
 
     def test_unwrapped_content_is_kept_verbatim(self):
@@ -62,24 +62,24 @@ class AntigravityTranscriptTest(unittest.TestCase):
             path = write_transcript(root, "conv-b", [record])
             self.assertEqual(
                 [("2026-06-09", "raw prompt with no envelope")],
-                ditto.user_messages(path),
+                emulo.user_messages(path),
             )
 
     def test_discovery_source_kind_and_label(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp) / "antigravity"
             path = write_transcript(root, "conv-c", [user_input("ship it")])
-            entries = ditto.discover_files([str(root / "brain")])
+            entries = emulo.discover_files([str(root / "brain")])
             self.assertEqual([path], entries)
-            self.assertEqual("antigravity", ditto.source_kind(path))
+            self.assertEqual("antigravity", emulo.source_kind(path))
             # parent dir is always "logs"; the label must carry the
             # conversation id so sessions stay distinguishable.
-            self.assertEqual("conv-c/transcript.jsonl", ditto.session_label(path))
+            self.assertEqual("conv-c/transcript.jsonl", emulo.session_label(path))
 
     def test_registered_in_sources_and_auto_kind_is_stable(self):
-        self.assertIn("antigravity", ditto.SOURCES)
+        self.assertIn("antigravity", emulo.SOURCES)
         self.assertTrue(
-            ditto.SOURCES["antigravity"][0].endswith(
+            emulo.SOURCES["antigravity"][0].endswith(
                 str(Path(".gemini") / "antigravity" / "brain")
             )
         )

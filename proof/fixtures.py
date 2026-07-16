@@ -129,7 +129,7 @@ def seal_fixture(source, private_root, task_id, repository_root=None):
     if files != source_files:
         raise ValueError("sealed fixture bytes changed during copy")
     lock = {
-        "schema": "ditto-proof-fixture/1",
+        "schema": "emulo-proof-fixture/1",
         "task_id": task_id,
         "fixture_commit": fixture_commit,
         "files": files,
@@ -146,7 +146,7 @@ def load_fixture_lock(private_root, task_id):
         raise ValueError("task ID must be normalized lowercase text")
     path = safe_child(private_root, "fixture-locks", f"{task_id}.json")
     value = json.loads(path.read_text(encoding="utf-8"))
-    if value.get("schema") != "ditto-proof-fixture/1" or value.get("task_id") != task_id:
+    if value.get("schema") != "emulo-proof-fixture/1" or value.get("task_id") != task_id:
         raise ValueError("fixture lock identity mismatch")
     if value.get("fixture_sha256") != sha256_bytes(canonical_bytes(value.get("files"))):
         raise ValueError("fixture lock hash mismatch")

@@ -1,4 +1,4 @@
-# Ditto mining contracts
+# Emulo mining contracts
 
 The Plugin release uses one bounded worker pass per selected segment, followed by one reducer pass over validated reports. Workers never read another segment and the reducer never reads raw session logs.
 
@@ -8,7 +8,7 @@ Read only the assigned frozen receipt packet. Maximize recall independently for 
 
 Every evidence item includes `domain`, `kind`, `scope`, `context`, `signal_family`, a concrete instruction and implication, plus exact receipt objects shaped as `{receipt_id, session_id, date, text}`. `scope` is either `universal` or `contextual`; contextual evidence must name the context. `write` evidence additionally requires a `register` per the register rules below; no other domain may carry one. Quotes and contradictions must copy the packet receipt text and date verbatim. The complete canonical JSON report may not exceed 24,576 bytes.
 
-Before returning, run `python "$DITTO_PY" plugin validate-scout --run-id "$RUN_ID" --packet-hash "$PACKET_HASH" --report "$REPORT_PATH"`. Correct rejected output inside the same scout pass. The orchestrator caches only validated content-addressed reports.
+Before returning, run `python "$EMULO_PY" plugin validate-scout --run-id "$RUN_ID" --packet-hash "$PACKET_HASH" --report "$REPORT_PATH"`. Correct rejected output inside the same scout pass. The orchestrator caches only validated content-addressed reports.
 
 The schema-1 segment contract below exists only for explicitly enabled legacy reproduction.
 
@@ -75,17 +75,17 @@ Rules:
 7. A truthful all-`no-signal` report with an empty `evidence` list is valid. Invented evidence is not.
 8. Every `write` evidence item requires `"register": "casual" | "professional" | "shared"` per the register rules above. No `work`, `design`, or `video` item may carry a `register`.
 
-Before returning, run the assigned read-only `python "$DITTO_PY" plugin validate-report --run-id "$RUN_ID" --report "$REPORT_PATH"` command. If it rejects the report, correct the report and run the same validation again inside this worker pass. Return only after it reports `status: valid`. The orchestrator caches the report after the worker exits.
+Before returning, run the assigned read-only `python "$EMULO_PY" plugin validate-report --run-id "$RUN_ID" --report "$REPORT_PATH"` command. If it rejects the report, correct the report and run the same validation again inside this worker pass. Return only after it reports `status: valid`. The orchestrator caches the report after the worker exits.
 
 ## Experimental adaptive isolated domain reducer contract
 
 Run one reducer for exactly one named domain. Read only that domain's validated evidence projection; never read another domain or raw history. Write one assigned JSON draft using schema `2`, the exact `domain` and `evidence_set_hash`, an `active` or permitted `inactive` status, rules with preserved evidence IDs and scope, discarded conflict records, and coverage counts for evidence items, distinct sessions, strata, and unresolved contradictions.
 
-An inferred rule needs two distinct sessions and two available source/time strata. A single-provider pattern may qualify across two time strata. Contextual evidence cannot become a universal rule. Unresolved contradictions must be discarded, not installed. Work must remain active; inactive design/write/video drafts use the exact instruction `run ditto and deepen <domain>`.
+An inferred rule needs two distinct sessions and two available source/time strata. A single-provider pattern may qualify across two time strata. Contextual evidence cannot become a universal rule. Unresolved contradictions must be discarded, not installed. Work must remain active; inactive design/write/video drafts use the exact instruction `run emulo and deepen <domain>`.
 
 Every `write` rule carries a `register`. When all referenced evidence shares one register, the rule keeps exactly that register; evidence from mixed registers reduces to `shared`. A rule may never claim a register its evidence does not show.
 
-Before returning, run `python "$DITTO_PY" plugin validate-domain --run-id "$RUN_ID" --domain "$DOMAIN" --draft "$DRAFT_PATH"`. Correct rejected output within the same reducer pass. The orchestrator content-addresses only validated domain drafts.
+Before returning, run `python "$EMULO_PY" plugin validate-domain --run-id "$RUN_ID" --domain "$DOMAIN" --draft "$DRAFT_PATH"`. Correct rejected output within the same reducer pass. The orchestrator content-addresses only validated domain drafts.
 
 ## Legacy combined reducer contract
 
@@ -103,7 +103,7 @@ card.json
 draft-manifest.json
 ```
 
-Use exact profile frontmatter names: `ditto-work-profile`, `ditto-design-profile`, `ditto-write-profile`, and `ditto-video-profile`. Every active profile must contain each installed rule and its operational implication.
+Use exact profile frontmatter names: `emulo-work-profile`, `emulo-design-profile`, `emulo-write-profile`, and `emulo-video-profile`. Every active profile must contain each installed rule and its operational implication.
 
 An active `you-writer.md` groups its rules under exact register headings: `## Voice laws` for `shared` rules, `## Casual register` for `casual`, and `## Professional register` for `professional`. Omit a heading only when no rule carries that register. Every write rule in `draft-manifest.json` carries a `register` following the reducer register rules: a rule keeps its evidence's single shared register, and mixed-register evidence reduces to `shared`.
 
@@ -130,17 +130,17 @@ An active `you-writer.md` groups its rules under exact register headings: `## Vo
     "design": {
       "status": "inactive",
       "reason": "insufficient evidence",
-      "deepen_instruction": "run ditto and deepen design"
+      "deepen_instruction": "run emulo and deepen design"
     },
     "write": {
       "status": "inactive",
       "reason": "insufficient evidence",
-      "deepen_instruction": "run ditto and deepen write"
+      "deepen_instruction": "run emulo and deepen write"
     },
     "video": {
       "status": "inactive",
       "reason": "insufficient evidence",
-      "deepen_instruction": "run ditto and deepen video"
+      "deepen_instruction": "run emulo and deepen video"
     }
   }
 }
@@ -156,4 +156,4 @@ The truth must sting. Name the cost, not the habit: what it breaks, when it bite
 
 Do not invent file hashes. Python validates this draft pack, computes every file hash and immutable profile version, and refuses incomplete or generic output.
 
-Before returning, run the assigned read-only `python "$DITTO_PY" plugin validate-pack --run-id "$RUN_ID" --pack "$PACK_DIR"` command. If it rejects the pack, correct only the assigned pack and run the same validation again inside this reducer pass. Return only after it reports `status: valid`. The orchestrator activates the pack after the reducer exits.
+Before returning, run the assigned read-only `python "$EMULO_PY" plugin validate-pack --run-id "$RUN_ID" --pack "$PACK_DIR"` command. If it rejects the pack, correct only the assigned pack and run the same validation again inside this reducer pass. Return only after it reports `status: valid`. The orchestrator activates the pack after the reducer exits.

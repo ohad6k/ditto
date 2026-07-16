@@ -9,10 +9,10 @@ from unittest import mock
 
 
 ROOT = Path(__file__).resolve().parents[1]
-DITTO = ROOT / "ditto.py"
-SPEC = importlib.util.spec_from_file_location("ditto_mcp", DITTO)
-ditto = importlib.util.module_from_spec(SPEC)
-SPEC.loader.exec_module(ditto)
+EMULO = ROOT / "emulo.py"
+SPEC = importlib.util.spec_from_file_location("emulo_mcp", EMULO)
+emulo = importlib.util.module_from_spec(SPEC)
+SPEC.loader.exec_module(emulo)
 
 
 def rpc(**kw):
@@ -22,39 +22,39 @@ def rpc(**kw):
 
 
 class McpHandlerTest(unittest.TestCase):
-    HOME = "/tmp/ditto-home-unused"
+    HOME = "/tmp/emulo-home-unused"
 
     def test_initialize_echoes_a_supported_protocol_and_names_the_server(self):
-        response = ditto.mcp_handle(
+        response = emulo.mcp_handle(
             rpc(id=1, method="initialize", params={"protocolVersion": "2025-03-26"}),
             self.HOME,
         )
         self.assertEqual("2025-03-26", response["result"]["protocolVersion"])
-        self.assertEqual("ditto", response["result"]["serverInfo"]["name"])
+        self.assertEqual("emulo", response["result"]["serverInfo"]["name"])
         self.assertIn("tools", response["result"]["capabilities"])
 
     def test_initialize_falls_back_when_client_sends_no_version(self):
-        response = ditto.mcp_handle(rpc(id=1, method="initialize", params={}), self.HOME)
-        self.assertEqual(ditto.MCP_PROTOCOL_VERSION, response["result"]["protocolVersion"])
+        response = emulo.mcp_handle(rpc(id=1, method="initialize", params={}), self.HOME)
+        self.assertEqual(emulo.MCP_PROTOCOL_VERSION, response["result"]["protocolVersion"])
 
     def test_a_notification_is_never_answered(self):
-        self.assertIsNone(ditto.mcp_handle(rpc(method="notifications/initialized"), self.HOME))
+        self.assertIsNone(emulo.mcp_handle(rpc(method="notifications/initialized"), self.HOME))
 
     def test_tools_list_exposes_exactly_the_profile_loader(self):
-        response = ditto.mcp_handle(rpc(id=2, method="tools/list"), self.HOME)
+        response = emulo.mcp_handle(rpc(id=2, method="tools/list"), self.HOME)
         tools = response["result"]["tools"]
-        self.assertEqual(["load_ditto_profile"], [tool["name"] for tool in tools])
+        self.assertEqual(["load_emulo_profile"], [tool["name"] for tool in tools])
         self.assertEqual(
             ["design", "video", "work", "write"],
             tools[0]["inputSchema"]["properties"]["domain"]["enum"],
         )
 
     def test_unknown_method_is_method_not_found(self):
-        response = ditto.mcp_handle(rpc(id=3, method="does/notexist"), self.HOME)
+        response = emulo.mcp_handle(rpc(id=3, method="does/notexist"), self.HOME)
         self.assertEqual(-32601, response["error"]["code"])
 
     def test_unknown_tool_is_invalid_params(self):
-        response = ditto.mcp_handle(
+        response = emulo.mcp_handle(
             rpc(id=4, method="tools/call", params={"name": "nope", "arguments": {}}),
             self.HOME,
         )
@@ -72,12 +72,12 @@ class McpHandlerTest(unittest.TestCase):
                 "profile_version": "abcd1234abcd1234abcd",
                 "paths": [str(work), str(design)],
             }
-            with mock.patch.object(ditto, "resolve_profile_paths", return_value=fake):
-                response = ditto.mcp_handle(
+            with mock.patch.object(emulo, "resolve_profile_paths", return_value=fake):
+                response = emulo.mcp_handle(
                     rpc(
                         id=5,
                         method="tools/call",
-                        params={"name": "load_ditto_profile", "arguments": {"domain": "design"}},
+                        params={"name": "load_emulo_profile", "arguments": {"domain": "design"}},
                     ),
                     tmp,
                 )
@@ -89,27 +89,27 @@ class McpHandlerTest(unittest.TestCase):
 
     def test_tools_call_without_a_profile_returns_the_recovery_instruction(self):
         with mock.patch.object(
-            ditto,
+            emulo,
             "resolve_profile_paths",
-            side_effect=ValueError("no active Ditto profile; run ditto"),
+            side_effect=ValueError("no active Emulo profile; run emulo"),
         ):
-            response = ditto.mcp_handle(
-                rpc(id=6, method="tools/call", params={"name": "load_ditto_profile", "arguments": {}}),
+            response = emulo.mcp_handle(
+                rpc(id=6, method="tools/call", params={"name": "load_emulo_profile", "arguments": {}}),
                 self.HOME,
             )
         self.assertTrue(response["result"]["isError"])
-        self.assertIn("run ditto", response["result"]["content"][0]["text"])
+        self.assertIn("run emulo", response["result"]["content"][0]["text"])
 
     def test_tools_call_defaults_to_the_work_domain(self):
         captured = {}
 
         def fake_resolve(home, domain):
             captured["domain"] = domain
-            raise ValueError("no active Ditto profile; run ditto")
+            raise ValueError("no active Emulo profile; run emulo")
 
-        with mock.patch.object(ditto, "resolve_profile_paths", side_effect=fake_resolve):
-            ditto.mcp_handle(
-                rpc(id=7, method="tools/call", params={"name": "load_ditto_profile", "arguments": {}}),
+        with mock.patch.object(emulo, "resolve_profile_paths", side_effect=fake_resolve):
+            emulo.mcp_handle(
+                rpc(id=7, method="tools/call", params={"name": "load_emulo_profile", "arguments": {}}),
                 self.HOME,
             )
         self.assertEqual("work", captured["domain"])
@@ -119,7 +119,7 @@ class McpStdioTest(unittest.TestCase):
     def run_server(self, messages, home):
         stdin = "".join(json.dumps(message) + "\n" for message in messages)
         result = subprocess.run(
-            [sys.executable, str(DITTO), "mcp", "--ditto-home", home],
+            [sys.executable, str(EMULO), "mcp", "--emulo-home", home],
             input=stdin,
             capture_output=True,
             text=True,
@@ -136,22 +136,22 @@ class McpStdioTest(unittest.TestCase):
                     {"jsonrpc": "2.0", "method": "notifications/initialized"},
                     {"jsonrpc": "2.0", "id": 2, "method": "tools/list"},
                     {"jsonrpc": "2.0", "id": 3, "method": "tools/call",
-                     "params": {"name": "load_ditto_profile", "arguments": {"domain": "work"}}},
+                     "params": {"name": "load_emulo_profile", "arguments": {"domain": "work"}}},
                 ],
                 tmp,
             )
         # the notification produces no response, so exactly three replies come back
         self.assertEqual([1, 2, 3], [message["id"] for message in responses])
-        self.assertEqual("ditto", responses[0]["result"]["serverInfo"]["name"])
-        self.assertEqual("load_ditto_profile", responses[1]["result"]["tools"][0]["name"])
+        self.assertEqual("emulo", responses[0]["result"]["serverInfo"]["name"])
+        self.assertEqual("load_emulo_profile", responses[1]["result"]["tools"][0]["name"])
         self.assertTrue(responses[2]["result"]["isError"])
-        self.assertIn("run ditto", responses[2]["result"]["content"][0]["text"])
+        self.assertIn("run emulo", responses[2]["result"]["content"][0]["text"])
 
     def test_a_malformed_line_is_reported_and_the_loop_survives(self):
         with tempfile.TemporaryDirectory() as tmp:
             stdin = "not json\n" + json.dumps({"jsonrpc": "2.0", "id": 9, "method": "ping"}) + "\n"
             result = subprocess.run(
-                [sys.executable, str(DITTO), "mcp", "--ditto-home", tmp],
+                [sys.executable, str(EMULO), "mcp", "--emulo-home", tmp],
                 input=stdin,
                 capture_output=True,
                 text=True,

@@ -1,4 +1,4 @@
-"""Freeze live system identity and construct the exact Ditto Proof v1 matrix."""
+"""Freeze live system identity and construct the exact Emulo Proof v1 matrix."""
 
 import hashlib
 import random
@@ -7,8 +7,8 @@ from proof import (
     BENCHMARK_NAME,
     BENCHMARK_SCHEMA,
     CONDITIONS,
-    DITTO_COMMIT,
-    DITTO_REF,
+    EMULO_COMMIT,
+    EMULO_REF,
     FAMILIES,
     TRIALS,
     VARIANTS,
@@ -39,7 +39,7 @@ def build_system_freeze(
     model_id,
     host_version,
     run_argv,
-    ditto_install_argv,
+    emulo_install_argv,
     screenshot_sha256,
     tool_policy_sha256,
     permission_policy_sha256,
@@ -59,7 +59,7 @@ def build_system_freeze(
     if not isinstance(host_version, str) or not host_version:
         raise ValueError("host version is required")
     _require_argv(run_argv, "run_argv")
-    _require_argv(ditto_install_argv, "ditto_install_argv")
+    _require_argv(emulo_install_argv, "emulo_install_argv")
     for digest, label in (
         (screenshot_sha256, "selection_screenshot_sha256"),
         (tool_policy_sha256, "tool_policy_sha256"),
@@ -77,7 +77,7 @@ def build_system_freeze(
         "model_id": model_id,
         "host_version": host_version,
         "run_argv": list(run_argv),
-        "ditto_install_argv": list(ditto_install_argv),
+        "emulo_install_argv": list(emulo_install_argv),
         "selection_screenshot_sha256": screenshot_sha256,
         "tool_policy_sha256": tool_policy_sha256,
         "permission_policy_sha256": permission_policy_sha256,
@@ -186,7 +186,7 @@ def build_pairs(
                                 ),
                                 "profile_manifest_sha256": (
                                     profile_manifest_sha256
-                                    if condition == "ditto"
+                                    if condition == "emulo"
                                     else None
                                 ),
                                 "host_persistent_context": "absent",
@@ -211,8 +211,8 @@ def build_manifest(
         "schema": BENCHMARK_SCHEMA,
         "benchmark": BENCHMARK_NAME,
         "benchmark_version": "1.0.0",
-        "ditto_ref": DITTO_REF,
-        "ditto_commit": DITTO_COMMIT,
+        "emulo_ref": EMULO_REF,
+        "emulo_commit": EMULO_COMMIT,
         "profile_manifest_sha256": profile_manifest_sha256,
         "private_rubric_sha256": private_rubric_sha256,
         "public_rubric_sha256": public_rubric_sha256,

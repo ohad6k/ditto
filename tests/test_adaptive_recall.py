@@ -12,9 +12,9 @@ from types import SimpleNamespace
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SPEC = importlib.util.spec_from_file_location("ditto_adaptive", ROOT / "ditto.py")
-ditto = importlib.util.module_from_spec(SPEC)
-SPEC.loader.exec_module(ditto)
+SPEC = importlib.util.spec_from_file_location("emulo_adaptive", ROOT / "emulo.py")
+emulo = importlib.util.module_from_spec(SPEC)
+SPEC.loader.exec_module(emulo)
 
 
 def make_record(session_id, messages, source="codex"):
@@ -115,8 +115,8 @@ def history_fixture():
 
 def run_plugin_prepare(history, stage):
     completed = subprocess.run(
-        [sys.executable, str(ROOT / "ditto.py"), "plugin", "prepare", "--path", str(history.logs),
-         "--stage", stage, "--ditto-home", str(history.home)],
+        [sys.executable, str(ROOT / "emulo.py"), "plugin", "prepare", "--path", str(history.logs),
+         "--stage", stage, "--emulo-home", str(history.home)],
         check=True, capture_output=True, text=True,
     )
     return json.loads(completed.stdout)
@@ -124,8 +124,8 @@ def run_plugin_prepare(history, stage):
 
 def run_plugin_preflight(history, home):
     return subprocess.run(
-        [sys.executable, str(ROOT / "ditto.py"), "plugin", "preflight", "--path", str(history.logs),
-         "--stage", "A", "--ditto-home", str(home)],
+        [sys.executable, str(ROOT / "emulo.py"), "plugin", "preflight", "--path", str(history.logs),
+         "--stage", "A", "--emulo-home", str(home)],
         check=True, capture_output=True, text=True,
     )
 
@@ -227,7 +227,7 @@ def valid_domain_draft(domain, evidence_ids=None, scope="universal", evidence=No
         rule["register"] = next(iter(registers)) if len(registers) == 1 else "shared"
     return {
         "schema_version": "2", "domain": domain,
-        "evidence_set_hash": ditto.compute_domain_evidence_hash(domain, evidence),
+        "evidence_set_hash": emulo.compute_domain_evidence_hash(domain, evidence),
         "status": "active",
         "rules": [rule],
         "discarded": [],
@@ -275,9 +275,9 @@ def adaptive_run_fixture(active_domains=("work",), shared_receipts=False):
             domain_evidence = evidence_fixture((domain,))
             drafts[domain] = {
                 "schema_version": "2", "domain": domain,
-                "evidence_set_hash": ditto.compute_domain_evidence_hash(domain, evidence),
+                "evidence_set_hash": emulo.compute_domain_evidence_hash(domain, evidence),
                 "status": "inactive", "reason": "insufficient evidence",
-                "deepen_instruction": f"run ditto and deepen {domain}", "rules": [], "discarded": [],
+                "deepen_instruction": f"run emulo and deepen {domain}", "rules": [], "discarded": [],
                 "coverage": {"evidence_items": 0, "distinct_sessions": 0, "strata": 0,
                              "unresolved_contradictions": 0},
             }
@@ -293,7 +293,7 @@ def directory_hash(path):
 
 
 def load_assembled_card(run):
-    result = ditto.assemble_profile_pack(run.home, run.plan, run.domain_drafts)
+    result = emulo.assemble_profile_pack(run.home, run.plan, run.domain_drafts)
     return json.loads((Path(result["pack_path"]) / "card.json").read_text(encoding="utf-8"))
 
 
@@ -328,8 +328,8 @@ class ReceiptLedgerTest(unittest.TestCase):
             ("2026-01-02", "second preference"),
         ])
 
-        first = ditto.build_receipt_ledger([record])
-        second = ditto.build_receipt_ledger([record])
+        first = emulo.build_receipt_ledger([record])
+        second = emulo.build_receipt_ledger([record])
 
         self.assertEqual(first, second)
         self.assertEqual(2, len(first))
@@ -351,8 +351,8 @@ class ReceiptLedgerTest(unittest.TestCase):
                 },
             }])
 
-            result = ditto.mine_files([str(path)])
-            ledger = ditto.build_receipt_ledger(result["records"])
+            result = emulo.mine_files([str(path)])
+            ledger = emulo.build_receipt_ledger(result["records"])
 
             self.assertNotIn("sk-", ledger[0]["text"])
 
@@ -364,7 +364,7 @@ class SalienceIndexTest(unittest.TestCase):
             "never call it done until you verified it live",
         ])
 
-        scored = ditto.score_receipts(receipts)
+        scored = emulo.score_receipts(receipts)
         by_text = {item["text"]: item for item in scored}
 
         self.assertGreater(
@@ -379,12 +379,12 @@ class SalienceIndexTest(unittest.TestCase):
             sessions=["a", "a", "b"],
         )
 
-        scored = ditto.score_receipts(receipts)
+        scored = emulo.score_receipts(receipts)
 
         self.assertTrue(all(item["recurrence_sessions"] == 2 for item in scored))
 
     def test_domain_hints_are_nonexclusive(self):
-        item = ditto.score_receipts(receipt_fixtures([
+        item = emulo.score_receipts(receipt_fixtures([
             "make the launch UI real, not a fake screenshot",
         ]))[0]
 
@@ -394,7 +394,7 @@ class SalienceIndexTest(unittest.TestCase):
     def test_hebrew_and_mixed_unicode_round_trip_exactly(self):
         text = "אל תשתמש בצילום מסך מזויף — keep it real"
 
-        item = ditto.score_receipts(receipt_fixtures([text]))[0]
+        item = emulo.score_receipts(receipt_fixtures([text]))[0]
 
         self.assertEqual(text, item["text"])
 
@@ -402,26 +402,26 @@ class SalienceIndexTest(unittest.TestCase):
 class PacketSelectionTest(unittest.TestCase):
     def test_stage_a_is_deterministic_bounded_and_domain_balanced(self):
         scored = scored_history_fixture(tokens=600_000)
-        selected = ditto.select_salience_stage(scored, "A")
-        packets = ditto.pack_selected_receipts(selected, 6, 50_000)
+        selected = emulo.select_salience_stage(scored, "A")
+        packets = emulo.pack_selected_receipts(selected, 6, 50_000)
 
         self.assertLessEqual(sum(item["tokens"] for item in selected), 300_000)
         self.assertLessEqual(len(packets), 6)
         self.assertTrue(all(packet["source_tokens"] <= 50_000 for packet in packets))
         for domain in ("work", "design", "write", "video"):
             self.assertTrue(any(domain in item["domain_hints"] for item in selected))
-        self.assertEqual(packets, ditto.pack_selected_receipts(selected, 6, 50_000))
+        self.assertEqual(packets, emulo.pack_selected_receipts(selected, 6, 50_000))
 
     def test_rare_late_rejection_survives_large_generic_history(self):
         scored = rare_signal_fixture(generic_receipts=10_000, rare_position="last")
-        selected = ditto.select_salience_stage(scored, "A")
+        selected = emulo.select_salience_stage(scored, "A")
 
         self.assertIn("rare-rejection", {item["fixture_id"] for item in selected})
 
     def test_stage_b_excludes_every_stage_a_receipt(self):
         scored = scored_history_fixture(tokens=800_000)
-        first = ditto.select_salience_stage(scored, "A")
-        second = ditto.select_salience_stage(scored, "B", [item["receipt_id"] for item in first])
+        first = emulo.select_salience_stage(scored, "A")
+        second = emulo.select_salience_stage(scored, "B", [item["receipt_id"] for item in first])
 
         self.assertTrue({item["receipt_id"] for item in first}.isdisjoint(
             {item["receipt_id"] for item in second}
@@ -461,18 +461,18 @@ class AdaptivePlanTest(unittest.TestCase):
 class ScoutReportTest(unittest.TestCase):
     def test_each_domain_has_an_independent_twelve_item_budget(self):
         report = valid_scout_report(items_per_domain=12)
-        ditto.validate_scout_report(report, packet_fixture())
+        emulo.validate_scout_report(report, packet_fixture())
         report["evidence"].append(extra_work_evidence())
 
         with self.assertRaisesRegex(ValueError, "work evidence ceiling"):
-            ditto.validate_scout_report(report, packet_fixture())
+            emulo.validate_scout_report(report, packet_fixture())
 
     def test_receipt_must_match_exact_packet_text_and_date(self):
         report = valid_scout_report(items_per_domain=1)
         report["evidence"][0]["quotes"][0]["receipt_id"] = "rcpt-" + "f" * 20
 
         with self.assertRaisesRegex(ValueError, "receipt"):
-            ditto.validate_scout_report(report, packet_fixture())
+            emulo.validate_scout_report(report, packet_fixture())
 
     def test_contextual_evidence_requires_context(self):
         report = valid_scout_report(items_per_domain=1)
@@ -480,7 +480,7 @@ class ScoutReportTest(unittest.TestCase):
         report["evidence"][0]["context"] = ""
 
         with self.assertRaisesRegex(ValueError, "context"):
-            ditto.validate_scout_report(report, packet_fixture())
+            emulo.validate_scout_report(report, packet_fixture())
 
 
 class DomainDraftTest(unittest.TestCase):
@@ -489,19 +489,19 @@ class DomainDraftTest(unittest.TestCase):
         draft = valid_domain_draft("work", evidence_ids=["ev-design-a"], evidence=evidence)
 
         with self.assertRaisesRegex(ValueError, "work evidence"):
-            ditto.validate_domain_draft(draft, "work", evidence, run_plan_fixture())
+            emulo.validate_domain_draft(draft, "work", evidence, run_plan_fixture())
 
     def test_contextual_rule_cannot_be_universal(self):
         evidence = contextual_evidence_fixture()
         draft = valid_domain_draft("design", scope="universal", evidence=evidence)
 
         with self.assertRaisesRegex(ValueError, "scope"):
-            ditto.validate_domain_draft(draft, "design", evidence, run_plan_fixture())
+            emulo.validate_domain_draft(draft, "design", evidence, run_plan_fixture())
 
     def test_repeated_single_provider_rule_can_use_two_time_strata(self):
         evidence = single_provider_two_quarter_fixture()
 
-        ditto.validate_domain_draft(valid_domain_draft("write", evidence=evidence), "write", evidence, run_plan_fixture())
+        emulo.validate_domain_draft(valid_domain_draft("write", evidence=evidence), "write", evidence, run_plan_fixture())
 
 
 class DeterministicAssemblyTest(unittest.TestCase):
@@ -515,7 +515,7 @@ class DeterministicAssemblyTest(unittest.TestCase):
         run.plan["pack_path"] = str(victim)
 
         with self.assertRaisesRegex(ValueError, "assigned run directory"):
-            ditto.assemble_profile_pack(run.home, run.plan, run.domain_drafts)
+            emulo.assemble_profile_pack(run.home, run.plan, run.domain_drafts)
 
         self.assertEqual("do not delete", sentinel.read_text(encoding="utf-8"))
 
@@ -523,7 +523,7 @@ class DeterministicAssemblyTest(unittest.TestCase):
         run = adaptive_run_fixture(active_domains=("work", "write"))
         self.addCleanup(run.tmp.cleanup)
 
-        result = ditto.assemble_profile_pack(run.home, run.plan, run.domain_drafts)
+        result = emulo.assemble_profile_pack(run.home, run.plan, run.domain_drafts)
 
         self.assertEqual(
             {"you.md", "you-writer.md", "appendix.md", "card.json", "draft-manifest.json"},
@@ -534,8 +534,8 @@ class DeterministicAssemblyTest(unittest.TestCase):
         run = adaptive_run_fixture(active_domains=("work", "design", "write", "video"))
         self.addCleanup(run.tmp.cleanup)
 
-        first = directory_hash(ditto.assemble_profile_pack(run.home, run.plan, run.domain_drafts)["pack_path"])
-        second = directory_hash(ditto.assemble_profile_pack(run.home, run.plan, run.domain_drafts)["pack_path"])
+        first = directory_hash(emulo.assemble_profile_pack(run.home, run.plan, run.domain_drafts)["pack_path"])
+        second = directory_hash(emulo.assemble_profile_pack(run.home, run.plan, run.domain_drafts)["pack_path"])
 
         self.assertEqual(first, second)
 
@@ -553,7 +553,7 @@ class AdaptiveStageTest(unittest.TestCase):
         run = completed_stage_a_fixture(weak_domains=("design", "write"))
         self.addCleanup(run.tmp.cleanup)
 
-        next_plan = ditto.build_next_stage_plan(run.home, run.run_id)
+        next_plan = emulo.build_next_stage_plan(run.home, run.run_id)
 
         self.assertEqual(run.plan["corpus_snapshot_hash"], next_plan["corpus_snapshot_hash"])
         self.assertEqual(["design", "write"], next_plan["planned_domains"])
@@ -564,7 +564,7 @@ class AdaptiveStageTest(unittest.TestCase):
         run = completed_stage_a_fixture(weak_domains=("write",))
         self.addCleanup(run.tmp.cleanup)
 
-        next_plan = ditto.build_next_stage_plan(run.home, run.run_id)
+        next_plan = emulo.build_next_stage_plan(run.home, run.run_id)
 
         self.assertEqual(["write"], next_plan["planned_domains"])
 
@@ -597,8 +597,8 @@ class ExperimentalAdaptiveRoutingTest(unittest.TestCase):
                 "payload": {"type": "message", "role": "user", "content": [{"text": "specific signal"}]},
             }])
             completed = subprocess.run(
-                [sys.executable, str(ROOT / "ditto.py"), "plugin", "preflight", "--path",
-                 str(root / "logs"), *extra, "--ditto-home", str(root / "private")],
+                [sys.executable, str(ROOT / "emulo.py"), "plugin", "preflight", "--path",
+                 str(root / "logs"), *extra, "--emulo-home", str(root / "private")],
                 check=True, capture_output=True, text=True,
             )
             return json.loads(completed.stdout)
@@ -630,10 +630,10 @@ class PerformanceTest(unittest.TestCase):
         ]
         started = time.perf_counter()
 
-        receipts = ditto.build_receipt_ledger(records)
-        scored = ditto.score_receipts(receipts)
-        selected = ditto.select_salience_stage(scored, "A")
-        packets = ditto.pack_selected_receipts(selected, 6, 50_000)
+        receipts = emulo.build_receipt_ledger(records)
+        scored = emulo.score_receipts(receipts)
+        selected = emulo.select_salience_stage(scored, "A")
+        packets = emulo.pack_selected_receipts(selected, 6, 50_000)
         elapsed = time.perf_counter() - started
 
         self.assertLess(elapsed, 120)

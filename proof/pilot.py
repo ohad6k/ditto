@@ -9,13 +9,13 @@ from proof.privacy import sanitize_text
 
 
 FAMILIES = ("work", "design", "write")
-CONDITIONS = ("cold", "ditto")
+CONDITIONS = ("cold", "emulo")
 
 
 def load_pilot_registry(path):
     path = Path(path)
     value = json.loads(path.read_text(encoding="utf-8"))
-    if value.get("schema") != "ditto-proof-pilot-registry/1":
+    if value.get("schema") != "emulo-proof-pilot-registry/1":
         raise ValueError("unsupported pilot registry")
     tasks = value.get("tasks")
     if not isinstance(tasks, list) or len(tasks) != 3:
@@ -82,7 +82,7 @@ def build_pilot_package(records, canaries, private_roots=()):
         if item.get("redaction_state") != "passed":
             raise ValueError("pilot redaction must pass")
     package = {
-        "schema": "ditto-proof-pilot/1",
+        "schema": "emulo-proof-pilot/1",
         "label": "pilot",
         "scored": False,
         "comparable": False,

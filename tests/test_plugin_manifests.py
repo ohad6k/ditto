@@ -6,9 +6,9 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SPEC = importlib.util.spec_from_file_location("ditto_manifests", ROOT / "ditto.py")
-ditto = importlib.util.module_from_spec(SPEC)
-SPEC.loader.exec_module(ditto)
+SPEC = importlib.util.spec_from_file_location("emulo_manifests", ROOT / "emulo.py")
+emulo = importlib.util.module_from_spec(SPEC)
+SPEC.loader.exec_module(emulo)
 
 
 class PluginSkillTest(unittest.TestCase):
@@ -18,7 +18,7 @@ class PluginSkillTest(unittest.TestCase):
     def test_exact_skill_names(self):
         expected = {"mine": "mine", "work": "work", "design": "design", "write": "write"}
         for folder, name in expected.items():
-            fields = ditto.parse_frontmatter(self.read(folder))
+            fields = emulo.parse_frontmatter(self.read(folder))
             self.assertEqual(name, fields["name"])
 
     def test_routing_descriptions_are_mutually_bounded(self):
@@ -60,7 +60,7 @@ class PluginManifestTest(unittest.TestCase):
         path = ROOT / ".github" / "plugin" / "plugin.json"
         self.assertTrue(path.is_file(), "GitHub Copilot requires a recognized plugin.json location")
         manifest = json.loads(path.read_text(encoding="utf-8"))
-        self.assertEqual("ditto", manifest["name"])
+        self.assertEqual("emulo", manifest["name"])
         self.assertEqual(
             ["./skills/mine", "./skills/work", "./skills/design", "./skills/write", "./skills/video"],
             manifest["skills"],
@@ -69,48 +69,48 @@ class PluginManifestTest(unittest.TestCase):
             self.assertTrue((ROOT / relative).is_dir(), relative)
 
     def test_patch_release_versions_match_across_public_surfaces(self):
-        expected = "0.4.0"
+        expected = "0.5.0"
         manifests = [
             ROOT / ".github" / "plugin" / "plugin.json",
             ROOT / ".claude-plugin" / "plugin.json",
             ROOT / ".codex-plugin" / "plugin.json",
         ]
-        self.assertEqual(expected, ditto.DITTO_VERSION)
+        self.assertEqual(expected, emulo.EMULO_VERSION)
         for path in manifests:
             manifest = json.loads(path.read_text(encoding="utf-8"))
             self.assertEqual(expected, manifest["version"], str(path.relative_to(ROOT)))
         marketplace = json.loads((ROOT / ".claude-plugin" / "marketplace.json").read_text(encoding="utf-8"))
-        plugin = next(item for item in marketplace["plugins"] if item["name"] == "ditto")
+        plugin = next(item for item in marketplace["plugins"] if item["name"] == "emulo")
         self.assertEqual(expected, plugin["version"])
-        runtime = json.loads((ROOT / ".agents" / "skills" / "ditto" / "runtime.json").read_text(encoding="utf-8"))
+        runtime = json.loads((ROOT / ".agents" / "skills" / "emulo" / "runtime.json").read_text(encoding="utf-8"))
         self.assertEqual(expected, runtime["version"])
         self.assertEqual("v" + expected, runtime["ref"])
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
         self.assertIn("--ref v" + expected, readme)
-        self.assertIn("/v" + expected + "/ditto.py", readme)
+        self.assertIn("/v" + expected + "/emulo.py", readme)
 
     def test_codex_manifest_exposes_only_static_skills(self):
         manifest = json.loads((ROOT / ".codex-plugin" / "plugin.json").read_text(encoding="utf-8"))
-        self.assertEqual("ditto", manifest["name"])
+        self.assertEqual("emulo", manifest["name"])
         self.assertEqual("./skills/", manifest["skills"])
         self.assertEqual("#141414", manifest["interface"]["brandColor"])
-        self.assertFalse(any(".ditto" in json.dumps(value) for value in manifest.values()))
+        self.assertFalse(any(".emulo" in json.dumps(value) for value in manifest.values()))
 
     def test_marketplace_points_to_repository_root(self):
         market = json.loads((ROOT / ".agents" / "plugins" / "marketplace.json").read_text(encoding="utf-8"))
-        plugin = next(item for item in market["plugins"] if item["name"] == "ditto")
+        plugin = next(item for item in market["plugins"] if item["name"] == "emulo")
         self.assertEqual("./", plugin["source"]["path"])
 
     def test_claude_manifest_is_static_and_leak_free(self):
         manifest = json.loads((ROOT / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"))
-        self.assertEqual("ditto", manifest["name"])
+        self.assertEqual("emulo", manifest["name"])
         self.assertEqual("MIT", manifest["license"])
-        self.assertFalse(any(".ditto" in json.dumps(value) for value in manifest.values()))
+        self.assertFalse(any(".emulo" in json.dumps(value) for value in manifest.values()))
 
     def test_claude_marketplace_points_to_repository_root(self):
         market = json.loads((ROOT / ".claude-plugin" / "marketplace.json").read_text(encoding="utf-8"))
-        self.assertEqual("ditto", market["name"])
-        plugin = next(item for item in market["plugins"] if item["name"] == "ditto")
+        self.assertEqual("emulo", market["name"])
+        plugin = next(item for item in market["plugins"] if item["name"] == "emulo")
         self.assertEqual("./", plugin["source"])
         self.assertFalse(plugin["source"].startswith(".."))
 
@@ -124,8 +124,8 @@ class PluginManifestTest(unittest.TestCase):
         self.assertTrue(forbidden.isdisjoint(found))
 
     def test_skills_sh_bootstrap_is_outside_native_plugin_discovery(self):
-        self.assertTrue((ROOT / ".agents" / "skills" / "ditto" / "SKILL.md").is_file())
-        self.assertFalse((ROOT / "skills" / "ditto" / "SKILL.md").exists())
+        self.assertTrue((ROOT / ".agents" / "skills" / "emulo" / "SKILL.md").is_file())
+        self.assertFalse((ROOT / "skills" / "emulo" / "SKILL.md").exists())
         native = {path.parent.name for path in (ROOT / "skills").glob("*/SKILL.md")}
         self.assertEqual({"mine", "work", "design", "write", "video"}, native)
 
@@ -141,16 +141,16 @@ class DocumentationTruthTest(unittest.TestCase):
         )
         self.assertEqual(22, sum(calibration["required"].values()))
         self.assertEqual(5, sum(calibration["baseline"]["recovered"].values()))
-        if ditto.QUALITY_DEFAULT_MODE == "bounded":
+        if emulo.QUALITY_DEFAULT_MODE == "bounded":
             passing = calibration["passing_bounded_run"]
             self.assertIsNotNone(passing, "bounded cannot be the quality default without a new frozen-gate run")
             self.assertEqual(calibration["required"], passing["recovered"])
         else:
-            self.assertEqual("full", ditto.QUALITY_DEFAULT_MODE)
+            self.assertEqual("full", emulo.QUALITY_DEFAULT_MODE)
 
     def test_every_public_mining_surface_calls_preview_a_starter_profile(self):
         notice = "Quick preview creates a starter profile from selected history, not the full profile."
-        for relative in ("README.md", "skills/mine/SKILL.md", ".agents/skills/ditto/SKILL.md"):
+        for relative in ("README.md", "skills/mine/SKILL.md", ".agents/skills/emulo/SKILL.md"):
             text = (ROOT / relative).read_text(encoding="utf-8")
             self.assertIn(notice, text, relative)
             self.assertIn("full-history quality default", text.lower(), relative)
@@ -158,7 +158,7 @@ class DocumentationTruthTest(unittest.TestCase):
     def test_public_docs_separate_local_extractor_from_model_processing(self):
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
         security = (ROOT / "SECURITY.md").read_text(encoding="utf-8")
-        runtime = (ROOT / "ditto.py").read_text(encoding="utf-8")
+        runtime = (ROOT / "emulo.py").read_text(encoding="utf-8")
         sentence = "Selected redacted text is processed by the model provider you choose."
         self.assertIn(sentence, readme)
         self.assertIn(sentence, security)
@@ -168,11 +168,11 @@ class DocumentationTruthTest(unittest.TestCase):
         self.assertIn(sentence, runtime)
 
     def test_npx_bootstrap_is_bounded_and_separate_from_native_routing(self):
-        skill = (ROOT / ".agents" / "skills" / "ditto" / "SKILL.md").read_text(encoding="utf-8").lower()
+        skill = (ROOT / ".agents" / "skills" / "emulo" / "SKILL.md").read_text(encoding="utf-8").lower()
         self.assertIn("plugin preflight", skill)
         self.assertIn("planned_worker_calls", skill)
         self.assertIn("core profile", skill)
-        self.assertIn("native ditto:mine is not available", skill)
+        self.assertIn("native emulo:mine is not available", skill)
         self.assertNotIn("depth beats token efficiency", skill)
         self.assertNotIn("fetch it from main", skill)
 
@@ -182,8 +182,8 @@ class DocumentationTruthTest(unittest.TestCase):
 
     def test_readme_preserves_the_explicit_npx_install(self):
         readme = (ROOT / "README.md").read_text(encoding="utf-8").lower()
-        self.assertIn("npx skills add ohad6k/ditto@ditto", readme)
-        self.assertIn("run ditto", readme)
+        self.assertIn("npx skills add ohad6k/emulo@emulo", readme)
+        self.assertIn("run emulo", readme)
         self.assertIn("plugin-install command itself", readme)
         self.assertIn("zero mining model calls", readme)
         self.assertIn("host interaction", readme)

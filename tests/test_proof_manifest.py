@@ -30,7 +30,7 @@ def systems():
             model_id="model-id-a",
             host_version="0.1",
             run_argv=["codex", "exec"],
-            ditto_install_argv=["python", "install.py"],
+            emulo_install_argv=["python", "install.py"],
             screenshot_sha256="a" * 64,
             tool_policy_sha256="b" * 64,
             permission_policy_sha256="c" * 64,
@@ -43,7 +43,7 @@ def systems():
             model_id="model-id-b",
             host_version="0.2",
             run_argv=["claude", "-p"],
-            ditto_install_argv=["python", "install.py"],
+            emulo_install_argv=["python", "install.py"],
             screenshot_sha256="d" * 64,
             tool_policy_sha256="e" * 64,
             permission_policy_sha256="f" * 64,
@@ -69,14 +69,14 @@ class ManifestTest(unittest.TestCase):
         self.assertEqual(48, len({cell["cell_id"] for cell in cells}))
         self.assertEqual(48, len({cell["review_id"] for cell in cells}))
         for pair in pairs:
-            self.assertEqual({"cold", "ditto"}, {cell["condition"] for cell in pair["cells"]})
+            self.assertEqual({"cold", "emulo"}, {cell["condition"] for cell in pair["cells"]})
             self.assertEqual({1, 2}, {cell["order"] for cell in pair["cells"]})
             self.assertTrue(all("cold" not in cell["review_id"] for cell in pair["cells"]))
-            self.assertTrue(all("ditto" not in cell["review_id"] for cell in pair["cells"]))
+            self.assertTrue(all("emulo" not in cell["review_id"] for cell in pair["cells"]))
             cold = next(cell for cell in pair["cells"] if cell["condition"] == "cold")
-            ditto = next(cell for cell in pair["cells"] if cell["condition"] == "ditto")
+            emulo = next(cell for cell in pair["cells"] if cell["condition"] == "emulo")
             self.assertIsNone(cold["profile_manifest_sha256"])
-            self.assertEqual("9" * 64, ditto["profile_manifest_sha256"])
+            self.assertEqual("9" * 64, emulo["profile_manifest_sha256"])
 
     def test_seed_changes_hidden_order_but_not_pair_identity(self):
         kwargs = dict(
@@ -141,7 +141,7 @@ class ManifestTest(unittest.TestCase):
             created_at="2026-07-15T00:00:00Z",
         )
 
-        self.assertEqual("Ditto Proof v1", manifest["benchmark"])
+        self.assertEqual("Emulo Proof v1", manifest["benchmark"])
         self.assertEqual(24, len(manifest["pairs"]))
 
 

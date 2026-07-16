@@ -83,7 +83,7 @@ def prepare_cell(manifest, cell, run_root):
         "USERPROFILE": str(home),
         "CODEX_HOME": str(home / ".codex"),
         "CLAUDE_CONFIG_DIR": str(home / ".claude"),
-        "DITTO_HOME": str(home / ".ditto"),
+        "EMULO_HOME": str(home / ".emulo"),
         "XDG_CONFIG_HOME": str(home / ".config"),
     }
     return PreparedCell(
@@ -130,17 +130,17 @@ def execute_cell(manifest, cell, run_root, execute, approval):
     timeout = cell["budget"]["time_seconds"]
 
     installed_context_sha256 = None
-    if cell["condition"] == "ditto":
-        installation = _run_argv(system["ditto_install_argv"], prepared, timeout)
+    if cell["condition"] == "emulo":
+        installation = _run_argv(system["emulo_install_argv"], prepared, timeout)
         if installation.returncode != 0:
-            raise RuntimeError("frozen Ditto installation failed before provider execution")
+            raise RuntimeError("frozen Emulo installation failed before provider execution")
         installed_context_sha256 = tree_hash(prepared.home)
         if installed_context_sha256 != cell.get("profile_manifest_sha256"):
             raise ValueError(
                 "installed context does not match the frozen profile manifest"
             )
     elif cell["condition"] != "cold":
-        raise ValueError("cell condition must be cold or ditto")
+        raise ValueError("cell condition must be cold or emulo")
 
     completed = _run_argv(system["run_argv"], prepared, timeout)
     return prepared, completed, installed_context_sha256

@@ -7,7 +7,7 @@ from proof.store import EvidenceStore, validate_attempt_identity
 
 def attempt(exit_status="ok", meaningful=True):
     return {
-        "schema": "ditto-proof-attempt/1",
+        "schema": "emulo-proof-attempt/1",
         "cell_id": "cell-a",
         "pair_id": "pair-a",
         "system_id": "system-a",
@@ -39,7 +39,7 @@ def cell():
 
 def evaluation():
     return {
-        "schema": "ditto-proof-evaluation/1",
+        "schema": "emulo-proof-evaluation/1",
         "cell_id": "cell-a",
         "hard_failures": [],
         "checks": {"tests": "passed"},

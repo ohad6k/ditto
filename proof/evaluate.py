@@ -127,7 +127,7 @@ def build_blind_pair(pair, outputs_by_review_id):
     ordered = sorted(pair["cells"], key=lambda cell: cell["order"])
     if len(ordered) != 2 or {cell["condition"] for cell in ordered} != {
         "cold",
-        "ditto",
+        "emulo",
     }:
         raise ValueError("blind packet requires one frozen pair")
     sides = []

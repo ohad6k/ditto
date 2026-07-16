@@ -1,13 +1,13 @@
 # Roadmap
 
-Ditto's current focus is the bounded plugin loop: deterministic extraction, stable caches, exact evidence receipts, private versioned profiles, safe migration, and separate work/design/write routing. User feedback and what it changed lives in `docs/FEEDBACK.md`.
+Emulo's current focus is the bounded plugin loop: deterministic extraction, stable caches, exact evidence receipts, private versioned profiles, safe migration, and separate work/design/write routing. User feedback and what it changed lives in `docs/FEEDBACK.md`.
 
 ## Current release
 
-- Fourth mined domain `video` (`ditto:video`): mining loads motion, caption, voiceover, and edit taste before video work, alongside work, design, and write
-- Voice registers in the writing profile: mined `write` evidence carries a `casual`, `professional`, or `shared` register, `you-writer.md` groups rules by register, and `ditto:write` infers the register from task context instead of asking (from user feedback, `docs/FEEDBACK.md`)
-- Cross-agent selected bootstrap through `npx skills add ohad6k/ditto@ditto`
-- Native Codex plugin with `ditto:mine`, `ditto:work`, `ditto:design`, and `ditto:write`
+- Fourth mined domain `video` (`emulo:video`): mining loads motion, caption, voiceover, and edit taste before video work, alongside work, design, and write
+- Voice registers in the writing profile: mined `write` evidence carries a `casual`, `professional`, or `shared` register, `you-writer.md` groups rules by register, and `emulo:write` infers the register from task context instead of asking (from user feedback, `docs/FEEDBACK.md`)
+- Cross-agent selected bootstrap through `npx skills add ohad6k/emulo@emulo`
+- Native Codex plugin with `emulo:mine`, `emulo:work`, `emulo:design`, and `emulo:write`
 - Bounded starter candidates capped at 160K new source tokens and nine planned mining passes
 - Explicit deep mode, never an automatic fallback
 - Content-addressed segments and validated report/reduction reuse
@@ -17,11 +17,11 @@ Ditto's current focus is the bounded plugin loop: deterministic extraction, stab
 
 ### Benchmark release
 
-Run the approved cold-versus-Ditto model matrix, publish the reproducible leaderboard, and produce proof clips as a separate release. No benchmark score belongs in the plugin release.
+Run the approved cold-versus-Emulo model matrix, publish the reproducible leaderboard, and produce proof clips as a separate release. No benchmark score belongs in the plugin release.
 
 ### More session sources
 
-Adapters for more local coding-agent logs (issue #3). The Hermes Agent spec is complete in-thread: read its SQLite `state.db` read-only (WAL-aware), resolve `HERMES_HOME` overrides and per-profile databases, extract user messages only. Cursor and Windsurf storage docs are in progress. Adapter code lands after the ditto.py rewrite.
+Adapters for more local coding-agent logs (issue #3). The Hermes Agent spec is complete in-thread: read its SQLite `state.db` read-only (WAL-aware), resolve `HERMES_HOME` overrides and per-profile databases, extract user messages only. Cursor and Windsurf storage docs are in progress. Adapter code lands after the emulo.py rewrite.
 
 ### Workflow mining
 

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "Ditto Proof v1 publication record",
+  "title": "Emulo Proof v1 publication record",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -9,7 +9,7 @@
     "exclusions", "limitations", "record_hashes", "generated_at"
   ],
   "properties": {
-    "schema": {"const": "ditto-proof-publication/1"}, "benchmark": {"const": "Ditto Proof v1"},
+    "schema": {"const": "emulo-proof-publication/1"}, "benchmark": {"const": "Emulo Proof v1"},
     "label": {"const": "small-n, directional only"}, "manifest_sha256": {"type": "string"},
     "evidence_digest": {"type": "string"}, "valid_cells": {"type": "array"},
     "cell_count": {"const": 48}, "preferences": {"type": "object"},

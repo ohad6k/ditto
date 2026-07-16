@@ -1,5 +1,5 @@
 {
-  "schema": "ditto-proof-pilot-registry/1",
+  "schema": "emulo-proof-pilot-registry/1",
   "tasks": [
     {"task_id": "pilot-work", "family": "work", "path": "work", "contract": "checks.json", "fixture_sha256": "52746c7694fcb96458ac18af2699690c7c46a3c89f050b3623a1b211cacbcaf5", "scored": false},
     {"task_id": "pilot-design", "family": "design", "path": "design", "contract": "contract.json", "fixture_sha256": "59eb175d7cadb197bb75a05daeabb52836c6e0efd683ccd987c0c83541ab1170", "scored": false},

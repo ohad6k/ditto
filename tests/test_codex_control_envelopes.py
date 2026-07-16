@@ -9,11 +9,11 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def load_ditto():
-    spec = importlib.util.spec_from_file_location("ditto", ROOT / "ditto.py")
-    ditto = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(ditto)
-    return ditto
+def load_emulo():
+    spec = importlib.util.spec_from_file_location("emulo", ROOT / "emulo.py")
+    emulo = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(emulo)
+    return emulo
 
 
 def codex_record(text):
@@ -37,11 +37,11 @@ def write_jsonl(path, rows):
 
 class CodexControlEnvelopeTest(unittest.TestCase):
     def mine(self, texts):
-        ditto = load_ditto()
+        emulo = load_emulo()
         with tempfile.TemporaryDirectory() as tmp:
             log = Path(tmp) / "session.jsonl"
             write_jsonl(log, [codex_record(t) for t in texts])
-            return [t for _, t in ditto.user_messages(str(log))]
+            return [t for _, t in emulo.user_messages(str(log))]
 
     def test_complete_control_envelopes_are_dropped(self):
         controls = [
@@ -80,8 +80,8 @@ class CodexControlEnvelopeTest(unittest.TestCase):
 
 class CodexLogRootsTest(unittest.TestCase):
     def test_sources_include_archived_sessions(self):
-        ditto = load_ditto()
-        roots = [os.path.normpath(r) for r in ditto.SOURCES["codex"]]
+        emulo = load_emulo()
+        roots = [os.path.normpath(r) for r in emulo.SOURCES["codex"]]
         self.assertTrue(any(r.endswith("sessions") and "archived" not in r for r in roots))
         self.assertTrue(any(r.endswith("archived_sessions") for r in roots))
 
@@ -90,8 +90,8 @@ class CodexLogRootsTest(unittest.TestCase):
         old = os.environ.get("CODEX_HOME")
         os.environ["CODEX_HOME"] = override
         try:
-            ditto = load_ditto()
-            for root in ditto.SOURCES["codex"]:
+            emulo = load_emulo()
+            for root in emulo.SOURCES["codex"]:
                 self.assertTrue(os.path.normpath(root).startswith(os.path.normpath(override)))
         finally:
             if old is None:

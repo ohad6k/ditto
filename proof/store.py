@@ -81,7 +81,7 @@ class EvidenceStore:
 
     def record_attempt(self, cell_id, value):
         frozen_cell = self._frozen_cell(cell_id)
-        if value.get("schema") != "ditto-proof-attempt/1":
+        if value.get("schema") != "emulo-proof-attempt/1":
             raise ValueError("unsupported attempt schema")
         if value.get("cell_id") != cell_id:
             raise ValueError("attempt cell ID mismatch")
@@ -107,7 +107,7 @@ class EvidenceStore:
             cell_id,
             "retry-authorizations",
             {
-                "schema": "ditto-proof-retry-authorization/1",
+                "schema": "emulo-proof-retry-authorization/1",
                 "cell_id": cell_id,
                 "prior_attempt_sha256": self.events(cell_id, "attempts")[0]["sha256"],
                 "reason": reason,
@@ -116,7 +116,7 @@ class EvidenceStore:
 
     def record_evaluation(self, cell_id, value):
         self._frozen_cell(cell_id)
-        if value.get("schema") != "ditto-proof-evaluation/1":
+        if value.get("schema") != "emulo-proof-evaluation/1":
             raise ValueError("unsupported evaluation schema")
         if value.get("cell_id") != cell_id:
             raise ValueError("evaluation cell ID mismatch")
@@ -176,7 +176,7 @@ class EvidenceStore:
             cell_id,
             "invalidations",
             {
-                "schema": "ditto-proof-invalidation/1",
+                "schema": "emulo-proof-invalidation/1",
                 "cell_id": cell_id,
                 "scope": scope,
                 "reason": reason,

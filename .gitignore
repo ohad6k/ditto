@@ -1,4 +1,5 @@
-# ditto never commits your mined data
+# emulo never commits your mined data
+emulo-out/
 ditto-out/
 you-corpus.txt
 chunks/
@@ -39,7 +40,7 @@ mcp-publisher.exe
 .claude/
 nul
 
-# Ditto Proof private fixtures, profiles, reviewer records, and run artifacts
-.ditto-proof-private/
+# Emulo Proof private fixtures, profiles, reviewer records, and run artifacts
+.emulo-proof-private/
 proof-private/
-ditto-proof-runs/
+emulo-proof-runs/

@@ -4,5 +4,5 @@ startCommand:
     type: object
     properties: {}
   commandFunction: |
-    (config) => ({ command: 'python', args: ['ditto.py', 'mcp'] })
+    (config) => ({ command: 'python', args: ['emulo.py', 'mcp'] })
   exampleConfig: {}

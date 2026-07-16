@@ -35,7 +35,7 @@ def _systems():
                 model_id=f"model-{host}",
                 host_version="1.0",
                 run_argv=[host, "run"],
-                ditto_install_argv=["python", "install.py"],
+                emulo_install_argv=["python", "install.py"],
                 screenshot_sha256=marker * 64,
                 tool_policy_sha256="b" * 64,
                 permission_policy_sha256="c" * 64,
@@ -99,7 +99,7 @@ def _records(manifest, count=48):
     values.evidence_store = MemoryEvidence()
     index = 0
     for pair_index, pair in enumerate(manifest["pairs"]):
-        desired = ("ditto", "cold", "tie")[pair_index % 3]
+        desired = ("emulo", "cold", "tie")[pair_index % 3]
         ordered = sorted(pair["cells"], key=lambda item: item["order"])
         if desired == "tie":
             blind_verdict = "tie"
@@ -107,7 +107,7 @@ def _records(manifest, count=48):
             selected = next(cell for cell in ordered if cell["condition"] == desired)
             blind_verdict = "left" if selected["order"] == 1 else "right"
         review = {
-            "schema": "ditto-proof-review/1",
+            "schema": "emulo-proof-review/1",
             "review_id": f"decision-{pair_index:02d}",
             "pair_id": pair["pair_id"],
             "family": pair["family"],
@@ -126,7 +126,7 @@ def _records(manifest, count=48):
             failures = ["unsupported_claim"] if index == 3 else []
             artifacts = [f"{index + 201:064x}"]
             attempt = {
-                "schema": "ditto-proof-attempt/1",
+                "schema": "emulo-proof-attempt/1",
                 **{
                     field: cell[field]
                     for field in (
@@ -142,7 +142,7 @@ def _records(manifest, count=48):
                 cell["cell_id"], "attempts", attempt
             )
             evaluation = {
-                "schema": "ditto-proof-evaluation/1",
+                "schema": "emulo-proof-evaluation/1",
                 "cell_id": cell["cell_id"],
                 "hard_failures": failures,
                 "artifact_hashes": artifacts,
@@ -206,10 +206,10 @@ class PublishTest(unittest.TestCase):
             )
 
     def test_preference_excludes_ties_and_keeps_tie_count(self):
-        result = aggregate_preferences(["ditto", "cold", "tie", "ditto"])
+        result = aggregate_preferences(["emulo", "cold", "tie", "emulo"])
         self.assertEqual(
             {
-                "ditto_wins": 2,
+                "emulo_wins": 2,
                 "cold_wins": 1,
                 "ties": 1,
                 "binary_denominator": 3,
@@ -217,7 +217,7 @@ class PublishTest(unittest.TestCase):
             },
             result["counts"],
         )
-        self.assertEqual(wilson_interval(2, 3), result["ditto_wilson_95"])
+        self.assertEqual(wilson_interval(2, 3), result["emulo_wilson_95"])
 
     def test_package_refuses_47_cells(self):
         manifest = _manifest()
@@ -241,7 +241,7 @@ class PublishTest(unittest.TestCase):
         for field, value in (
             ("pair_id", "pair-forged"),
             ("family", "write"),
-            ("condition", "ditto"),
+            ("condition", "emulo"),
         ):
             records = _records(manifest)
             target = next(
@@ -329,7 +329,7 @@ class PublishTest(unittest.TestCase):
 
         self.assertEqual(48, result["cell_count"])
         self.assertEqual(48, len(result["valid_cells"]))
-        self.assertEqual(1, result["hard_failures"]["cold"]["total"] + result["hard_failures"]["ditto"]["total"])
+        self.assertEqual(1, result["hard_failures"]["cold"]["total"] + result["hard_failures"]["emulo"]["total"])
         self.assertEqual(1, len(result["invalidations"]))
         self.assertEqual(1, len(result["exclusions"]))
         self.assertEqual(23, result["preferences"]["overall"]["counts"]["raw_denominator"])

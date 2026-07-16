@@ -1,6 +1,6 @@
-# Ditto Proof v1 implementation verification
+# Emulo Proof v1 implementation verification
 
-Observed on 2026-07-15 in the isolated `codex/ditto-benchmark-proof-release` worktree.
+Observed on 2026-07-15 in the isolated `codex/emulo-benchmark-proof-release` worktree.
 
 ## Receipt
 
@@ -23,6 +23,6 @@ The end-to-end synthetic test sealed six clean temporary Git fixtures outside th
 - no scored fixture execution
 - no public result
 - no Antigravity dependency
-- no modification to normal Ditto behavior
+- no modification to normal Emulo behavior
 
-The harmless argv values embedded in the synthetic manifest were never passed to `execute_cell`. The proof package remains standalone and is not imported by `ditto.py`. Live provider selection, cost approval, sealed private task content, reviewer consent, 48 scored executions, clips, claims, outreach, and publication remain separate gated work.
+The harmless argv values embedded in the synthetic manifest were never passed to `execute_cell`. The proof package remains standalone and is not imported by `emulo.py`. Live provider selection, cost approval, sealed private task content, reviewer consent, 48 scored executions, clips, claims, outreach, and publication remain separate gated work.

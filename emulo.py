@@ -1,26 +1,26 @@
 #!/usr/bin/env python3
 """
-ditto - turn your own AI coding sessions into a model of how you think.
+emulo - turn your own AI coding sessions into a model of how you think.
 
 It reads your local session logs (Codex / Claude Code / Copilot CLI / Antigravity jsonl),
 keeps ONLY the words you typed, redacts secrets + personal info, and writes one
 clean corpus + chunks. You then point a coding agent at the chunks with
 MINING_PROMPT.md to produce your `you.md`.
 
-Extraction and redaction happen locally, and ditto.py makes no network calls.
+Extraction and redaction happen locally, and emulo.py makes no network calls.
 Selected redacted text is processed by the model provider you choose. Stdlib only.
 
 Usage:
-    python ditto.py                     # auto-detect Codex + Claude + Copilot logs
-    python ditto.py --dry-run           # preview counts without writing files
-    python ditto.py --card              # render your profile card (after mining)
-    python ditto.py --install you.md --target codex
-    python ditto.py --source codex      # only ~/.codex/sessions
-    python ditto.py --source copilot    # only ~/.copilot/session-state
-    python ditto.py --source antigravity # only ~/.gemini/antigravity/brain
-    python ditto.py --path ./logs       # a folder of jsonl you point at
-    python ditto.py --chunks 20         # how many chunks to split into
-    python ditto.py --no-redact         # DANGER: skip redaction (not recommended)
+    python emulo.py                     # auto-detect Codex + Claude + Copilot logs
+    python emulo.py --dry-run           # preview counts without writing files
+    python emulo.py --card              # render your profile card (after mining)
+    python emulo.py --install you.md --target codex
+    python emulo.py --source codex      # only ~/.codex/sessions
+    python emulo.py --source copilot    # only ~/.copilot/session-state
+    python emulo.py --source antigravity # only ~/.gemini/antigravity/brain
+    python emulo.py --path ./logs       # a folder of jsonl you point at
+    python emulo.py --chunks 20         # how many chunks to split into
+    python emulo.py --no-redact         # DANGER: skip redaction (not recommended)
 """
 import argparse, base64, glob, hashlib, json, os, re, shutil, sqlite3, stat, sys, tempfile, time, unicodedata, uuid
 
@@ -44,8 +44,13 @@ SOURCES = {
 # discovered "file" for the SQLite store is one session, so counts, labels,
 # and cache identity stay per-session like every other source.
 OPENCODE_DB_SESSION_SEP = "::"
-DITTO_START = "<!-- ditto profile:start -->"
-DITTO_END = "<!-- ditto profile:end -->"
+EMULO_START = "<!-- emulo profile:start -->"
+EMULO_END = "<!-- emulo profile:end -->"
+# Markers written under this tool's previous name (Ditto, <= v0.4.x). Still
+# recognized everywhere blocks are read, so existing adapter files keep
+# working after the rename and get upgraded in place on the next write.
+LEGACY_DITTO_START = "<!-- ditto profile:start -->"
+LEGACY_DITTO_END = "<!-- ditto profile:end -->"
 
 EXTRACTION_SCHEMA_VERSION = "2"
 SEGMENT_SCHEMA_VERSION = "1"
@@ -795,16 +800,16 @@ def segment_text_for_metadata(segment, records_by_id):
         raise ValueError("segment text hash mismatch")
     return text
 
-def segment_file_path(ditto_home, segment_hash_value):
+def segment_file_path(emulo_home, segment_hash_value):
     return os.path.join(
-        private_paths(ditto_home)["segments"],
+        private_paths(emulo_home)["segments"],
         SEGMENT_SCHEMA_VERSION,
         segment_hash_value + ".txt",
     )
 
-def ensure_segment_file(segment, records_by_id, ditto_home, write=True):
+def ensure_segment_file(segment, records_by_id, emulo_home, write=True):
     expected = segment_text_for_metadata(segment, records_by_id)
-    path = segment_file_path(ditto_home, segment["segment_hash"])
+    path = segment_file_path(emulo_home, segment["segment_hash"])
     if os.path.isfile(path):
         try:
             with open(path, "r", encoding="utf-8", errors="strict", newline="") as handle:
@@ -824,10 +829,10 @@ def ensure_segment_file(segment, records_by_id, ditto_home, write=True):
         atomic_write_text(path, expected)
     return path
 
-def sync_segments(records, ditto_home, target_tokens, write=True):
-    ditto_home = resolve_ditto_home(ditto_home)
+def sync_segments(records, emulo_home, target_tokens, write=True):
+    emulo_home = resolve_emulo_home(emulo_home)
     index_path = os.path.join(
-        private_paths(ditto_home)["segment_indexes"],
+        private_paths(emulo_home)["segment_indexes"],
         f"v{SEGMENT_SCHEMA_VERSION}-{target_tokens}.json",
     )
     index = None
@@ -897,7 +902,7 @@ def sync_segments(records, ditto_home, target_tokens, write=True):
     }
     for segment in result["segments"]:
         if segment.get("active"):
-            ensure_segment_file(segment, records_by_id, ditto_home, write=write)
+            ensure_segment_file(segment, records_by_id, emulo_home, write=write)
     if write:
         atomic_write_text(index_path, canonical_json(result) + "\n")
     return result
@@ -964,9 +969,9 @@ def compute_report_set_hash(report_paths):
     }
     return sha256_text(canonical_json(identity))
 
-def report_cache_path(ditto_home, segment_hash_value):
+def report_cache_path(emulo_home, segment_hash_value):
     return os.path.join(
-        private_paths(ditto_home)["reports"],
+        private_paths(emulo_home)["reports"],
         PROMPT_SCHEMA_VERSION,
         segment_hash_value + ".json",
     )
@@ -988,10 +993,10 @@ GENERIC_RULES = {
     "write good code",
 }
 DOMAIN_FILES = {
-    "work": ("you.md", "ditto-work-profile"),
-    "design": ("you-designer.md", "ditto-design-profile"),
-    "write": ("you-writer.md", "ditto-write-profile"),
-    "video": ("you-video.md", "ditto-video-profile"),
+    "work": ("you.md", "emulo-work-profile"),
+    "design": ("you-designer.md", "emulo-design-profile"),
+    "write": ("you-writer.md", "emulo-write-profile"),
+    "video": ("you-video.md", "emulo-video-profile"),
 }
 REQUIRED_PACK_FILES = {"appendix.md", "card.json", "draft-manifest.json"}
 WINDOWS_RESERVED_NAMES = {
@@ -1110,7 +1115,7 @@ def validate_domain_draft(draft, domain, evidence_by_id, run_plan):
     if status == "inactive":
         if domain == "work":
             raise ValueError("work domain must remain active")
-        if draft.get("deepen_instruction") != f"run ditto and deepen {domain}":
+        if draft.get("deepen_instruction") != f"run emulo and deepen {domain}":
             raise ValueError("inactive domain requires exact deepen instruction")
         if draft.get("rules"):
             raise ValueError("inactive domain cannot install rules")
@@ -1145,17 +1150,17 @@ def validate_domain_draft(draft, domain, evidence_by_id, run_plan):
         raise ValueError("domain draft has unresolved contradictions")
     return draft
 
-def domain_draft_cache_path(ditto_home, domain, evidence_set_hash):
+def domain_draft_cache_path(emulo_home, domain, evidence_set_hash):
     if domain not in VALID_DOMAINS or not re.fullmatch(r"[a-f0-9]{64}", evidence_set_hash or ""):
         raise ValueError("invalid domain draft cache identity")
     return safe_private_child(
-        ditto_home, "cache", "domain-drafts", DOMAIN_DRAFT_SCHEMA_VERSION,
+        emulo_home, "cache", "domain-drafts", DOMAIN_DRAFT_SCHEMA_VERSION,
         domain, evidence_set_hash + ".json",
     )
 
-def store_domain_draft(draft, domain, evidence_by_id, run_plan, ditto_home):
+def store_domain_draft(draft, domain, evidence_by_id, run_plan, emulo_home):
     validate_domain_draft(draft, domain, evidence_by_id, run_plan)
-    path = domain_draft_cache_path(ditto_home, domain, draft["evidence_set_hash"])
+    path = domain_draft_cache_path(emulo_home, domain, draft["evidence_set_hash"])
     atomic_write_text(path, canonical_json(draft) + "\n")
     return path
 
@@ -1212,7 +1217,7 @@ def validate_profile_pack(pack_dir, evidence_by_id, run_plan):
             if (
                 domain == "work"
                 or state.get("reason") != "insufficient evidence"
-                or state.get("deepen_instruction") != f"run ditto and deepen {domain}"
+                or state.get("deepen_instruction") != f"run emulo and deepen {domain}"
                 or "file" in state
             ):
                 raise ValueError(f"invalid inactive {domain} domain state")
@@ -1289,8 +1294,8 @@ def render_domain_profile(domain, rules):
     _, skill_name = DOMAIN_FILES[domain]
     lines = [
         "---", f"name: {skill_name}",
-        f"description: Evidence-backed Ditto {domain} profile", "---", "",
-        f"# Ditto {domain} profile", "",
+        f"description: Evidence-backed Emulo {domain} profile", "---", "",
+        f"# Emulo {domain} profile", "",
     ]
     if domain == "write":
         lines.extend([
@@ -1309,14 +1314,14 @@ def render_domain_profile(domain, rules):
         lines.extend([f"- {rule['text']}", f"  - Action: {rule['implication']}"])
     return "\n".join(lines) + "\n"
 
-def assemble_profile_pack(ditto_home, run_plan, domain_drafts):
+def assemble_profile_pack(emulo_home, run_plan, domain_drafts):
     if set(domain_drafts) != VALID_DOMAINS:
         raise ValueError("assembly requires exactly four domain drafts")
     evidence = run_plan.get("evidence_by_id") or load_adaptive_evidence(run_plan)
     for domain in sorted(VALID_DOMAINS):
         validate_domain_draft(domain_drafts[domain], domain, evidence, run_plan)
     run_id = run_plan.get("run_id", "")
-    expected_run_dir = safe_private_child(ditto_home, "runs", run_id)
+    expected_run_dir = safe_private_child(emulo_home, "runs", run_id)
     run_dir = os.path.abspath(run_plan.get("run_dir", ""))
     pack_path = os.path.abspath(run_plan.get("pack_path", ""))
     expected_pack_path = os.path.join(run_dir, "pack")
@@ -1342,7 +1347,7 @@ def assemble_profile_pack(ditto_home, run_plan, domain_drafts):
         if draft["status"] == "inactive":
             domain_states[domain] = {
                 "status": "inactive", "reason": "insufficient evidence",
-                "deepen_instruction": f"run ditto and deepen {domain}",
+                "deepen_instruction": f"run emulo and deepen {domain}",
             }
             continue
         filename, _ = DOMAIN_FILES[domain]
@@ -1471,7 +1476,7 @@ def validate_version_directory(directory, expected_report_set_hash=None):
             elif (
                 domain == "work"
                 or state.get("reason") != "insufficient evidence"
-                or state.get("deepen_instruction") != f"run ditto and deepen {domain}"
+                or state.get("deepen_instruction") != f"run emulo and deepen {domain}"
                 or "file" in state
             ):
                 raise ValueError("profile manifest inactive domain state is invalid")
@@ -1499,8 +1504,8 @@ def restore_optional(path, data):
     else:
         atomic_write_bytes(path, data)
 
-def activate_profile_pack(ditto_home, pack_dir, evidence_by_id, run_plan, fail_after=None):
-    home = resolve_ditto_home(ditto_home)
+def activate_profile_pack(emulo_home, pack_dir, evidence_by_id, run_plan, fail_after=None):
+    home = resolve_emulo_home(emulo_home)
     draft = validate_profile_pack(pack_dir, evidence_by_id, run_plan)
     pack_names = {entry.name for entry in os.scandir(pack_dir) if entry.is_file(follow_symlinks=False)}
     file_hashes = file_sha256_map(pack_dir, pack_names)
@@ -1593,10 +1598,10 @@ def activate_profile_pack(ditto_home, pack_dir, evidence_by_id, run_plan, fail_a
         if os.path.isdir(staged):
             shutil.rmtree(staged)
 
-def activate_cached_reduction(ditto_home, report_set_hash):
+def activate_cached_reduction(emulo_home, report_set_hash):
     if not re.fullmatch(r"[a-f0-9]{64}", report_set_hash or ""):
         raise ValueError("invalid report set hash")
-    home = resolve_ditto_home(ditto_home)
+    home = resolve_emulo_home(emulo_home)
     cached = safe_private_child(
         home, "cache", "reductions", REDUCER_SCHEMA_VERSION, report_set_hash
     )
@@ -1647,18 +1652,18 @@ def encode_optional_bytes(data):
 def decode_optional_bytes(value):
     return None if value is None else base64.b64decode(value.encode("ascii"), validate=True)
 
-def migration_record_path(ditto_home, migration_id):
+def migration_record_path(emulo_home, migration_id):
     if not MIGRATION_ID_PATTERN.fullmatch(migration_id):
         raise ValueError("invalid migration id")
-    return safe_private_child(ditto_home, "migrations", migration_id + ".json")
+    return safe_private_child(emulo_home, "migrations", migration_id + ".json")
 
-def write_migration_record(ditto_home, record):
-    path = migration_record_path(ditto_home, record["migration_id"])
+def write_migration_record(emulo_home, record):
+    path = migration_record_path(emulo_home, record["migration_id"])
     atomic_write_text(path, canonical_json(record) + "\n")
     return record
 
-def load_migration_record(ditto_home, migration_id):
-    path = migration_record_path(ditto_home, migration_id)
+def load_migration_record(emulo_home, migration_id):
+    path = migration_record_path(emulo_home, migration_id)
     try:
         with open(path, "r", encoding="utf-8") as handle:
             record = json.load(handle)
@@ -1672,7 +1677,7 @@ def load_migration_record(ditto_home, migration_id):
         "legacy_hash": record.get("legacy_hash"),
     }
     expected_backup = safe_private_child(
-        ditto_home, "legacy", record.get("target", ""), migration_id, "you"
+        emulo_home, "legacy", record.get("target", ""), migration_id, "you"
     ) if record.get("target") in {"codex", "claude"} else None
     if (
         record.get("migration_id") != migration_id
@@ -1687,10 +1692,10 @@ def load_migration_record(ditto_home, migration_id):
         raise ValueError("migration record is invalid")
     return record
 
-def stage_legacy_migration(target, home_dir, ditto_home):
+def stage_legacy_migration(target, home_dir, emulo_home):
     if target not in {"codex", "claude"}:
         raise ValueError("legacy migration target must be codex or claude")
-    home = resolve_ditto_home(ditto_home)
+    home = resolve_emulo_home(emulo_home)
     legacy_path = os.path.abspath(
         os.path.join(os.path.expanduser(home_dir), f".{target}", "skills", "you", "SKILL.md")
     )
@@ -1702,7 +1707,8 @@ def stage_legacy_migration(target, home_dir, ditto_home):
         raise ValueError("legacy profile is missing or not UTF-8") from exc
     fields = parse_frontmatter(text)
     name = fields.get("name") if fields else None
-    if name not in {"you", "ditto-work-profile"} or not fields.get("description"):
+    # "ditto-work-profile" is the pre-rename id still present in users' files
+    if name not in {"you", "emulo-work-profile", "ditto-work-profile"} or not fields.get("description"):
         raise ValueError("legacy profile requires exact supported frontmatter")
     legacy_origin = "classic-you" if name == "you" else "skills-sh-core"
     legacy_hash = sha256_bytes(legacy_bytes)
@@ -1729,9 +1735,9 @@ def stage_legacy_migration(target, home_dir, ditto_home):
             "segment_hashes": [],
             "domains": {
                 "work": {"status": "active", "file": "you.md", "legacy_unverified": True},
-                "design": {"status": "inactive", "reason": "insufficient evidence", "deepen_instruction": "run ditto and deepen design"},
-                "write": {"status": "inactive", "reason": "insufficient evidence", "deepen_instruction": "run ditto and deepen write"},
-                "video": {"status": "inactive", "reason": "insufficient evidence", "deepen_instruction": "run ditto and deepen video"},
+                "design": {"status": "inactive", "reason": "insufficient evidence", "deepen_instruction": "run emulo and deepen design"},
+                "write": {"status": "inactive", "reason": "insufficient evidence", "deepen_instruction": "run emulo and deepen write"},
+                "video": {"status": "inactive", "reason": "insufficient evidence", "deepen_instruction": "run emulo and deepen video"},
             },
             "files": {"you.md": legacy_hash},
         }
@@ -1789,8 +1795,8 @@ def restore_migration_pointers(home, record):
     restore_optional(current_path, decode_optional_bytes(record["prior_current_base64"]))
     restore_optional(active_path, decode_optional_bytes(record["prior_active_base64"]))
 
-def cutover_legacy_migration(migration_id, ditto_home, fail_after=None):
-    home = resolve_ditto_home(ditto_home)
+def cutover_legacy_migration(migration_id, emulo_home, fail_after=None):
+    home = resolve_emulo_home(emulo_home)
     record = load_migration_record(home, migration_id)
     if record["status"] != "staged":
         raise ValueError("migration is not staged")
@@ -1802,7 +1808,7 @@ def cutover_legacy_migration(migration_id, ditto_home, fail_after=None):
     if os.path.exists(backup_dir):
         raise ValueError("legacy backup destination already exists")
     if os.path.splitdrive(source_dir)[0].lower() != os.path.splitdrive(backup_dir)[0].lower():
-        raise ValueError("legacy migration requires the profile and DITTO_HOME on the same volume")
+        raise ValueError("legacy migration requires the profile and EMULO_HOME on the same volume")
     os.makedirs(os.path.dirname(backup_dir), exist_ok=True)
     moved = False
     try:
@@ -1828,8 +1834,8 @@ def cutover_legacy_migration(migration_id, ditto_home, fail_after=None):
         restore_migration_pointers(home, record)
         raise
 
-def rollback_legacy_migration(migration_id, ditto_home):
-    home = resolve_ditto_home(ditto_home)
+def rollback_legacy_migration(migration_id, emulo_home):
+    home = resolve_emulo_home(emulo_home)
     record = load_migration_record(home, migration_id)
     if record["status"] != "cutover":
         raise ValueError("migration is not cut over")
@@ -1862,14 +1868,14 @@ def rollback_legacy_migration(migration_id, ditto_home):
                 atomic_write_bytes(path, data)
         raise
 
-def migrate_adapter_block(target, repo, ditto_home, mode):
+def migrate_adapter_block(target, repo, emulo_home, mode):
     if target not in {"agents", "gemini"}:
         raise ValueError("adapter target must be agents or gemini")
     if mode not in {"backup-remove", "restore"}:
         raise ValueError("adapter mode must be backup-remove or restore")
     filename = "AGENTS.md" if target == "agents" else "GEMINI.md"
     path = os.path.abspath(os.path.join(repo, filename))
-    home = resolve_ditto_home(ditto_home)
+    home = resolve_emulo_home(emulo_home)
     key = sha256_text(f"{target}:{os.path.normcase(path)}")[:20]
     record_path = safe_private_child(home, "migrations", "adapter-" + key + ".json")
     if mode == "restore":
@@ -1880,7 +1886,7 @@ def migrate_adapter_block(target, repo, ditto_home, mode):
             raise ValueError("adapter migration record is missing or corrupt") from exc
         current = optional_bytes(path) or b""
         if sha256_bytes(current) != record["removed_hash"]:
-            raise ValueError("adapter file changed after Ditto block removal")
+            raise ValueError("adapter file changed after Emulo block removal")
         with open(record["backup_path"], "rb") as handle:
             original = handle.read()
         if sha256_bytes(original) != record["original_hash"]:
@@ -1895,9 +1901,12 @@ def migrate_adapter_block(target, repo, ditto_home, mode):
         text = original.decode("utf-8")
     except (OSError, UnicodeError) as exc:
         raise ValueError("adapter file is missing or not UTF-8") from exc
-    if text.count(DITTO_START) != 1 or text.count(DITTO_END) != 1:
-        raise ValueError("adapter requires one complete Ditto marked block")
-    pattern = re.compile(r"(?:\r?\n)*" + re.escape(DITTO_START) + r".*?" + re.escape(DITTO_END) + r"(?:\r?\n)*", re.DOTALL)
+    start, end = EMULO_START, EMULO_END
+    if text.count(start) == 0 and text.count(LEGACY_DITTO_START) > 0:
+        start, end = LEGACY_DITTO_START, LEGACY_DITTO_END
+    if text.count(start) != 1 or text.count(end) != 1:
+        raise ValueError("adapter requires one complete Emulo marked block")
+    pattern = re.compile(r"(?:\r?\n)*" + re.escape(start) + r".*?" + re.escape(end) + r"(?:\r?\n)*", re.DOTALL)
     updated = pattern.sub("\n", text).rstrip() + "\n"
     original_hash = sha256_bytes(original)
     backup_path = safe_private_child(home, "legacy", "adapters", original_hash, filename)
@@ -2075,21 +2084,21 @@ def validate_scout_report(report, packet):
         raise ValueError("scout domain coverage does not match evidence")
     return report
 
-def scout_report_cache_path(ditto_home, packet_hash):
+def scout_report_cache_path(emulo_home, packet_hash):
     if not re.fullmatch(r"[a-f0-9]{64}", packet_hash or ""):
         raise ValueError("invalid scout packet hash")
     return safe_private_child(
-        ditto_home, "cache", "scout-reports", SCOUT_REPORT_SCHEMA_VERSION, packet_hash + ".json"
+        emulo_home, "cache", "scout-reports", SCOUT_REPORT_SCHEMA_VERSION, packet_hash + ".json"
     )
 
-def store_scout_report(report, ditto_home, packet):
+def store_scout_report(report, emulo_home, packet):
     validate_scout_report(report, packet)
-    path = scout_report_cache_path(ditto_home, packet["packet_hash"])
+    path = scout_report_cache_path(emulo_home, packet["packet_hash"])
     atomic_write_text(path, canonical_json(report) + "\n")
     return path
 
-def load_cached_scout_report(ditto_home, packet):
-    path = scout_report_cache_path(ditto_home, packet["packet_hash"])
+def load_cached_scout_report(emulo_home, packet):
+    path = scout_report_cache_path(emulo_home, packet["packet_hash"])
     if not os.path.isfile(path):
         return None
     try:
@@ -2099,10 +2108,10 @@ def load_cached_scout_report(ditto_home, packet):
     except (OSError, UnicodeError, ValueError, TypeError, json.JSONDecodeError):
         return None
 
-def hydrate_segment(ditto_home, segment):
+def hydrate_segment(emulo_home, segment):
     hydrated = dict(segment)
     if "text" not in hydrated:
-        path = segment_file_path(ditto_home, segment["segment_hash"])
+        path = segment_file_path(emulo_home, segment["segment_hash"])
         with open(path, "r", encoding="utf-8", errors="strict", newline="") as handle:
             hydrated["text"] = handle.read()
     text_hash = hydrated.get("text_hash")
@@ -2110,21 +2119,21 @@ def hydrate_segment(ditto_home, segment):
         raise ValueError("segment text hash mismatch")
     return hydrated
 
-def store_report(report, ditto_home, segment):
-    hydrated = hydrate_segment(ditto_home, segment)
+def store_report(report, emulo_home, segment):
+    hydrated = hydrate_segment(emulo_home, segment)
     validate_report(report, hydrated)
-    path = report_cache_path(ditto_home, segment["segment_hash"])
+    path = report_cache_path(emulo_home, segment["segment_hash"])
     atomic_write_text(path, canonical_json(report) + "\n")
     return path
 
-def load_cached_report(ditto_home, segment, quarantine=True):
-    path = report_cache_path(ditto_home, segment["segment_hash"])
+def load_cached_report(emulo_home, segment, quarantine=True):
+    path = report_cache_path(emulo_home, segment["segment_hash"])
     if not os.path.isfile(path):
         return None
     try:
         with open(path, "r", encoding="utf-8", errors="strict") as handle:
             report = json.load(handle)
-        validate_report(report, hydrate_segment(ditto_home, segment))
+        validate_report(report, hydrate_segment(emulo_home, segment))
         return report
     except (OSError, UnicodeError, ValueError, TypeError, AttributeError, json.JSONDecodeError):
         if quarantine and os.path.exists(path):
@@ -2135,27 +2144,27 @@ def load_cached_report(ditto_home, segment, quarantine=True):
             os.replace(path, quarantine_path)
         return None
 
-def reduction_cache_is_valid(ditto_home, report_set_hash):
+def reduction_cache_is_valid(emulo_home, report_set_hash):
     if not re.fullmatch(r"[a-f0-9]{64}", report_set_hash or ""):
         return False
     path = safe_private_child(
-        ditto_home, "cache", "reductions", REDUCER_SCHEMA_VERSION, report_set_hash
+        emulo_home, "cache", "reductions", REDUCER_SCHEMA_VERSION, report_set_hash
     )
     try:
         cached_manifest, _ = validate_version_directory(path, report_set_hash)
         version_path = safe_private_child(
-            ditto_home, "profiles", "default", "versions", cached_manifest["profile_version"]
+            emulo_home, "profiles", "default", "versions", cached_manifest["profile_version"]
         )
         version_manifest, _ = validate_version_directory(version_path, report_set_hash)
         return version_manifest == cached_manifest
     except (OSError, ValueError, TypeError, AttributeError, json.JSONDecodeError):
         return False
 
-def build_preflight(result, ditto_home, candidate_index, write=False):
+def build_preflight(result, emulo_home, candidate_index, write=False):
     config = candidate_config(candidate_index)
     index = sync_segments(
         result["records"],
-        ditto_home,
+        emulo_home,
         config["segment_tokens"],
         write=write,
     )
@@ -2171,8 +2180,8 @@ def build_preflight(result, ditto_home, candidate_index, write=False):
     selected_hashes = [segment["segment_hash"] for segment in selected]
     report_hits, report_paths = set(), []
     for segment in selected:
-        path = report_cache_path(ditto_home, segment["segment_hash"])
-        if load_cached_report(ditto_home, segment, quarantine=write) is not None:
+        path = report_cache_path(emulo_home, segment["segment_hash"])
+        if load_cached_report(emulo_home, segment, quarantine=write) is not None:
             report_hits.add(segment["segment_hash"])
             report_paths.append(path)
     report_set_hash = (
@@ -2180,7 +2189,7 @@ def build_preflight(result, ditto_home, candidate_index, write=False):
         if selected and len(report_paths) == len(selected)
         else None
     )
-    reduction_cache_hit = reduction_cache_is_valid(ditto_home, report_set_hash)
+    reduction_cache_hit = reduction_cache_is_valid(emulo_home, report_set_hash)
     worker_calls, reducer_calls = planned_call_counts(
         selected_hashes,
         report_hits,
@@ -2219,8 +2228,8 @@ def build_preflight(result, ditto_home, candidate_index, write=False):
         "deep_mode": {"available": True, "automatic": False, "selected": False},
     }
 
-def build_deep_preflight(result, ditto_home, write=False):
-    index = sync_segments(result["records"], ditto_home, DEEP_SEGMENT_TOKENS, write=write)
+def build_deep_preflight(result, emulo_home, write=False):
+    index = sync_segments(result["records"], emulo_home, DEEP_SEGMENT_TOKENS, write=write)
     selected = sorted(
         (segment for segment in index["segments"] if segment.get("active")),
         key=lambda item: (item["source"], item["first_date"], item["segment_hash"]),
@@ -2230,8 +2239,8 @@ def build_deep_preflight(result, ditto_home, write=False):
     hashes = [segment["segment_hash"] for segment in selected]
     hits, report_paths = set(), []
     for segment in selected:
-        path = report_cache_path(ditto_home, segment["segment_hash"])
-        if load_cached_report(ditto_home, segment, quarantine=write) is not None:
+        path = report_cache_path(emulo_home, segment["segment_hash"])
+        if load_cached_report(emulo_home, segment, quarantine=write) is not None:
             hits.add(segment["segment_hash"])
             report_paths.append(path)
     report_set_hash = (
@@ -2239,7 +2248,7 @@ def build_deep_preflight(result, ditto_home, write=False):
         if selected and len(report_paths) == len(selected)
         else None
     )
-    reduction_cache_hit = reduction_cache_is_valid(ditto_home, report_set_hash)
+    reduction_cache_hit = reduction_cache_is_valid(emulo_home, report_set_hash)
     worker_calls, reducer_calls = planned_call_counts(hashes, hits, reduction_cache_hit)
     return {
         "mode": "full",
@@ -2270,7 +2279,7 @@ def build_deep_preflight(result, ditto_home, write=False):
 def atomic_write_bytes(path, data):
     parent = os.path.dirname(path) or "."
     os.makedirs(parent, exist_ok=True)
-    fd, staged = tempfile.mkstemp(prefix=".ditto-", suffix=".tmp", dir=parent)
+    fd, staged = tempfile.mkstemp(prefix=".emulo-", suffix=".tmp", dir=parent)
     try:
         with os.fdopen(fd, "wb") as fh:
             fh.write(data)
@@ -2286,7 +2295,7 @@ def atomic_write_text(path, text):
     atomic_write_bytes(path, text.encode("utf-8"))
 
 def replace_directory(staged, target):
-    backup = target + ".ditto-backup-" + uuid.uuid4().hex
+    backup = target + ".emulo-backup-" + uuid.uuid4().hex
     if os.path.exists(target):
         os.replace(target, backup)
     try:
@@ -2304,7 +2313,7 @@ def replace_directory(staged, target):
 def write_outputs(blocks, out_dir, chunks, stats_result=None):
     os.makedirs(out_dir, exist_ok=True)
     chunks_dir = os.path.join(out_dir, "chunks")
-    staged_chunks = tempfile.mkdtemp(prefix=".ditto-chunks-", dir=out_dir)
+    staged_chunks = tempfile.mkdtemp(prefix=".emulo-chunks-", dir=out_dir)
 
     corpus = "\n".join(blocks)
     try:
@@ -2373,7 +2382,7 @@ def load_card(out_dir, card_path=None):
     path = card_path or os.path.join(out_dir, "card.json")
     if not os.path.exists(path):
         print(f"no card found at {path}")
-        print("the card is written by the mining step: run ditto.py, then paste")
+        print("the card is written by the mining step: run emulo.py, then paste")
         print("MINING_PROMPT.md into your agent - the reducer emits card.json.")
         sys.exit(1)
     with open(path, "r", encoding="utf-8", errors="replace") as fh:
@@ -2671,7 +2680,7 @@ def print_card(card, still=False):
 
     art = _CARD_ARTS[54]
     tagline = "your working profile, mined from your own sessions"
-    footer = "github.com/ohad6k/ditto · run it on your own logs"
+    footer = "github.com/ohad6k/emulo · run it on your own logs"
 
     def build(art_level=99, bar_frac=1.0, truth_n=None, show_data=True):
         lines = []
@@ -2731,7 +2740,7 @@ def print_card(card, still=False):
 
     lines = build()
     truth_total = len('"' + card.get("truth", "") + '"') if card.get("truth") else 0
-    animate = bool(c["reset"]) and not still and not os.environ.get("DITTO_NO_ANIM")
+    animate = bool(c["reset"]) and not still and not os.environ.get("EMULO_NO_ANIM")
     try:
         if animate and _animate_card(build, lines, c, stats, card, truth_total):
             pass
@@ -2749,7 +2758,7 @@ def _print_card_plain(card, stats, months):
         for part in textwrap.wrap(text, width - 2) or [""]:
             print("| " + part.ljust(width - 2) + " |")
     print(line)
-    row("ditto")
+    row("emulo")
     row()
     row(card.get("archetype", "").upper())
     row()
@@ -2777,7 +2786,7 @@ def _print_card_plain(card, stats, months):
 CARD_HTML = """<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ditto card</title>
+<title>emulo card</title>
 <style>
   * {{ margin: 0; box-sizing: border-box; }}
   body {{
@@ -2843,7 +2852,7 @@ CARD_HTML = """<!doctype html>
 <div class="slab">
   <div class="label">
     <div class="label-left">
-      <div class="brand">DITTO</div>
+      <div class="brand">EMULO</div>
       <div class="setline">working profile &middot; mined from my own sessions</div>
       <div class="certline">{certline}</div>
     </div>
@@ -2858,7 +2867,7 @@ CARD_HTML = """<!doctype html>
     <div class="laws"><div class="laws-head">laws &middot; {lawshead}</div>{laws}</div>
     {truth}
   </div>
-  <div class="foot"><div>github.com/ohad6k/ditto &middot; run it on your own logs</div><div class="bars"></div></div>
+  <div class="foot"><div>github.com/ohad6k/emulo &middot; run it on your own logs</div><div class="bars"></div></div>
 </div>
 """
 
@@ -2891,9 +2900,9 @@ def render_card_html(card):
     grade = esc(top_laws[0]["count"]) if top_laws and top_laws[0].get("count") else "&mdash;"
     lawshead = "ranked by distinct session receipts"
     certline = f"no. {stats['messages']:,} messages on record" if stats.get("messages") else "&nbsp;"
-    art_remote = "https://raw.githubusercontent.com/ohad6k/ditto/main/assets/ditto.png"
+    art_remote = "https://raw.githubusercontent.com/ohad6k/emulo/main/assets/emulo.png"
     art_local = art_remote
-    local_png = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "ditto.png")
+    local_png = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "emulo.png")
     if os.path.exists(local_png):
         try:
             out_dir = card.get("_out_dir", "")
@@ -2921,7 +2930,7 @@ def show_card(out_dir, card_path=None, no_open=False, still=False):
     with open(html_path, "w", encoding="utf-8") as w:
         w.write(render_card_html(card))
     print(f"\nwrote: {html_path}  (open it, screenshot it, post it)")
-    print("share what it found: https://github.com/ohad6k/ditto/issues/1")
+    print("share what it found: https://github.com/ohad6k/emulo/issues/1")
     if not no_open:
         try:
             import webbrowser
@@ -2974,7 +2983,7 @@ def has_skill_frontmatter(text, expected_name=None):
 
 def cursor_rule(profile):
     body = strip_frontmatter(profile)
-    return f"---\ndescription: ditto user profile\nalwaysApply: true\n---\n\n{body.strip()}\n"
+    return f"---\ndescription: emulo user profile\nalwaysApply: true\n---\n\n{body.strip()}\n"
 
 def install_destination(target, repo_dir, home_dir):
     if target == "claude":
@@ -3016,7 +3025,7 @@ def install_profile(profile_path, target, repo_dir, home_dir, yes=False, dry_run
 
     if dry_run:
         if target in ("agents", "gemini", "opencode"):
-            print("dry run: would append or update a marked ditto block")
+            print("dry run: would append or update a marked emulo block")
         else:
             print("dry run: would write profile file")
         return
@@ -3033,22 +3042,27 @@ def install_profile(profile_path, target, repo_dir, home_dir, yes=False, dry_run
         body = body.replace("\n", newline)
         block = (
             newline * 2
-            + DITTO_START + newline
-            + "# ditto profile" + newline * 2
+            + EMULO_START + newline
+            + "# emulo profile" + newline * 2
             + body + newline
-            + DITTO_END + newline
+            + EMULO_END + newline
         )
-        has_start = DITTO_START in existing
-        has_end = DITTO_END in existing
-        if has_start != has_end:
-            print("existing Ditto block is incomplete; refusing to modify it", file=sys.stderr)
+        has_start = EMULO_START in existing
+        has_end = EMULO_END in existing
+        legacy_start = LEGACY_DITTO_START in existing
+        legacy_end = LEGACY_DITTO_END in existing
+        if has_start != has_end or legacy_start != legacy_end:
+            print("existing Emulo block is incomplete; refusing to modify it", file=sys.stderr)
             sys.exit(1)
-        if has_start and has_end:
+        if has_start or legacy_start:
             if not yes:
-                print("ditto profile block already exists. pass --yes to replace it.")
+                print("emulo profile block already exists. pass --yes to replace it.")
                 sys.exit(1)
+            # a pre-rename block is replaced with the new markers in one pass
+            start = EMULO_START if has_start else LEGACY_DITTO_START
+            end = EMULO_END if has_start else LEGACY_DITTO_END
             pattern = re.compile(
-                re.escape(DITTO_START) + r".*?" + re.escape(DITTO_END),
+                re.escape(start) + r".*?" + re.escape(end),
                 re.DOTALL,
             )
             updated = pattern.sub(block.strip(), existing)
@@ -3076,108 +3090,118 @@ def configure_console():
             except (AttributeError, ValueError):
                 pass
 
-def resolve_ditto_home(value=None):
-    raw = value or os.environ.get("DITTO_HOME") or os.path.join(HOME, ".ditto")
+def resolve_emulo_home(value=None):
+    # EMULO_HOME wins; DITTO_HOME (pre-rename) still honored; and an existing
+    # ~/.ditto keeps working in place when no ~/.emulo exists yet, so nobody's
+    # mined profile disappears after the rename. No data is moved.
+    raw = value or os.environ.get("EMULO_HOME") or os.environ.get("DITTO_HOME")
+    if not raw:
+        new_home = os.path.join(HOME, ".emulo")
+        legacy_home = os.path.join(HOME, ".ditto")
+        if not os.path.isdir(new_home) and os.path.isdir(legacy_home):
+            raw = legacy_home
+        else:
+            raw = new_home
     return os.path.abspath(os.path.expanduser(raw))
 
-def private_paths(ditto_home):
+def private_paths(emulo_home):
     return {
-        "root": ditto_home,
-        "active": os.path.join(ditto_home, "active-profile.json"),
-        "profiles": os.path.join(ditto_home, "profiles"),
-        "segments": os.path.join(ditto_home, "cache", "segments"),
-        "segment_indexes": os.path.join(ditto_home, "cache", "segment-indexes"),
-        "reports": os.path.join(ditto_home, "cache", "reports"),
-        "reductions": os.path.join(ditto_home, "cache", "reductions"),
-        "receipts": os.path.join(ditto_home, "cache", "receipts"),
-        "salience": os.path.join(ditto_home, "cache", "salience"),
-        "packets": os.path.join(ditto_home, "cache", "packets"),
-        "scout_reports": os.path.join(ditto_home, "cache", "scout-reports"),
-        "domain_drafts": os.path.join(ditto_home, "cache", "domain-drafts"),
-        "runs": os.path.join(ditto_home, "runs"),
-        "migrations": os.path.join(ditto_home, "migrations"),
-        "legacy": os.path.join(ditto_home, "legacy"),
+        "root": emulo_home,
+        "active": os.path.join(emulo_home, "active-profile.json"),
+        "profiles": os.path.join(emulo_home, "profiles"),
+        "segments": os.path.join(emulo_home, "cache", "segments"),
+        "segment_indexes": os.path.join(emulo_home, "cache", "segment-indexes"),
+        "reports": os.path.join(emulo_home, "cache", "reports"),
+        "reductions": os.path.join(emulo_home, "cache", "reductions"),
+        "receipts": os.path.join(emulo_home, "cache", "receipts"),
+        "salience": os.path.join(emulo_home, "cache", "salience"),
+        "packets": os.path.join(emulo_home, "cache", "packets"),
+        "scout_reports": os.path.join(emulo_home, "cache", "scout-reports"),
+        "domain_drafts": os.path.join(emulo_home, "cache", "domain-drafts"),
+        "runs": os.path.join(emulo_home, "runs"),
+        "migrations": os.path.join(emulo_home, "migrations"),
+        "legacy": os.path.join(emulo_home, "legacy"),
     }
 
-def safe_private_child(ditto_home, *parts):
+def safe_private_child(emulo_home, *parts):
     if any(".." in re.split(r"[\\/]+", os.fspath(part)) for part in parts):
-        raise ValueError("path escapes Ditto private state")
-    root = os.path.realpath(resolve_ditto_home(ditto_home))
+        raise ValueError("path escapes Emulo private state")
+    root = os.path.realpath(resolve_emulo_home(emulo_home))
     candidate = os.path.realpath(os.path.join(root, *parts))
     try:
         contained = os.path.commonpath((root, candidate)) == root
     except ValueError:
         contained = False
     if not contained:
-        raise ValueError("path escapes Ditto private state")
+        raise ValueError("path escapes Emulo private state")
     return candidate
 
 def build_plugin_parser():
-    parser = argparse.ArgumentParser(prog="ditto.py plugin")
+    parser = argparse.ArgumentParser(prog="emulo.py plugin")
     sub = parser.add_subparsers(dest="command", required=True)
     status = sub.add_parser("status")
-    status.add_argument("--ditto-home")
+    status.add_argument("--emulo-home")
     validate_report_command = sub.add_parser("validate-report")
     validate_report_command.add_argument("--run-id", required=True)
     validate_report_command.add_argument("--report", required=True)
-    validate_report_command.add_argument("--ditto-home")
+    validate_report_command.add_argument("--emulo-home")
     for name in ("validate-scout", "cache-scout"):
         scout_command = sub.add_parser(name)
         scout_command.add_argument("--run-id", required=True)
         scout_command.add_argument("--packet-hash", required=True)
         scout_command.add_argument("--report", required=True)
-        scout_command.add_argument("--ditto-home")
+        scout_command.add_argument("--emulo-home")
     for name in ("validate-domain", "cache-domain"):
         domain_command = sub.add_parser(name)
         domain_command.add_argument("--run-id", required=True)
         domain_command.add_argument("--domain", required=True, choices=sorted(VALID_DOMAINS))
         domain_command.add_argument("--draft", required=True)
-        domain_command.add_argument("--ditto-home")
+        domain_command.add_argument("--emulo-home")
     validate_pack_command = sub.add_parser("validate-pack")
     validate_pack_command.add_argument("--run-id", required=True)
     validate_pack_command.add_argument("--pack", required=True)
-    validate_pack_command.add_argument("--ditto-home")
+    validate_pack_command.add_argument("--emulo-home")
     assemble_command = sub.add_parser("assemble")
     assemble_command.add_argument("--run-id", required=True)
-    assemble_command.add_argument("--ditto-home")
+    assemble_command.add_argument("--emulo-home")
     next_stage_command = sub.add_parser("next-stage")
     next_stage_command.add_argument("--run-id", required=True)
-    next_stage_command.add_argument("--ditto-home")
+    next_stage_command.add_argument("--emulo-home")
     cache_report = sub.add_parser("cache-report")
     cache_report.add_argument("--run-id", required=True)
     cache_report.add_argument("--report", required=True)
-    cache_report.add_argument("--ditto-home")
+    cache_report.add_argument("--emulo-home")
     activate = sub.add_parser("activate")
     activate.add_argument("--run-id", required=True)
     activation_source = activate.add_mutually_exclusive_group(required=True)
     activation_source.add_argument("--pack")
     activation_source.add_argument("--cached", action="store_true")
-    activate.add_argument("--ditto-home")
+    activate.add_argument("--emulo-home")
     profile_path = sub.add_parser("profile-path")
     profile_path.add_argument("--domain", required=True, choices=["work", "design", "write", "video"])
-    profile_path.add_argument("--ditto-home")
+    profile_path.add_argument("--emulo-home")
     migrate_stage = sub.add_parser("migrate-stage")
     migrate_stage.add_argument("--target", required=True, choices=["codex", "claude"])
     migrate_stage.add_argument("--home", default=HOME)
-    migrate_stage.add_argument("--ditto-home")
+    migrate_stage.add_argument("--emulo-home")
     migrate_cutover = sub.add_parser("migrate-cutover")
     migrate_cutover.add_argument("--migration-id", required=True)
-    migrate_cutover.add_argument("--ditto-home")
+    migrate_cutover.add_argument("--emulo-home")
     migrate_rollback = sub.add_parser("migrate-rollback")
     migrate_rollback.add_argument("--migration-id", required=True)
-    migrate_rollback.add_argument("--ditto-home")
+    migrate_rollback.add_argument("--emulo-home")
     migrate_adapter = sub.add_parser("migrate-adapter")
     migrate_adapter.add_argument("--target", required=True, choices=["agents", "gemini"])
     migrate_adapter.add_argument("--repo", required=True)
     migrate_adapter.add_argument("--mode", required=True, choices=["backup-remove", "restore"])
-    migrate_adapter.add_argument("--ditto-home")
+    migrate_adapter.add_argument("--emulo-home")
     for name in ("preflight", "prepare"):
         command = sub.add_parser(name)
         command.add_argument("--source", choices=["auto", "codex", "claude", "copilot", "opencode", "antigravity"], default="auto")
         command.add_argument("--path")
         command.add_argument("--no-redact", action="store_true")
         command.add_argument("--no-dedupe", action="store_true")
-        command.add_argument("--ditto-home")
+        command.add_argument("--emulo-home")
         mode = command.add_mutually_exclusive_group()
         mode.add_argument("--stage", choices=sorted(STAGE_CONFIGS), help="EXPERIMENTAL adaptive recall stage")
         mode.add_argument("--preview", action="store_true", help="create a bounded starter profile, not the full profile")
@@ -3190,17 +3214,17 @@ def build_plugin_parser():
 
 RUN_ID_PATTERN = re.compile(r"^[0-9]{8}T[0-9]{6}Z-[a-f0-9]{8}(?:-[0-9]{2})?$")
 
-def load_run_plan(ditto_home, run_id):
+def load_run_plan(emulo_home, run_id):
     if not RUN_ID_PATTERN.fullmatch(run_id):
-        raise ValueError("invalid Ditto run id")
-    path = safe_private_child(ditto_home, "runs", run_id, "plan.json")
+        raise ValueError("invalid Emulo run id")
+    path = safe_private_child(emulo_home, "runs", run_id, "plan.json")
     try:
         with open(path, "r", encoding="utf-8") as handle:
             plan = json.load(handle)
     except (OSError, ValueError) as exc:
-        raise ValueError("Ditto run plan is missing or corrupt") from exc
+        raise ValueError("Emulo run plan is missing or corrupt") from exc
     if plan.get("run_id") != run_id:
-        raise ValueError("Ditto run plan id mismatch")
+        raise ValueError("Emulo run plan id mismatch")
     return path, plan
 
 def load_assigned_run_report(home, run_id, report_path):
@@ -3215,7 +3239,7 @@ def load_assigned_run_report(home, run_id, report_path):
         None,
     )
     if selected is None:
-        raise ValueError("report path was not assigned to this Ditto run")
+        raise ValueError("report path was not assigned to this Emulo run")
     reports_root = os.path.realpath(os.path.join(plan["run_dir"], "reports"))
     if (
         os.path.realpath(requested) != requested
@@ -3223,14 +3247,14 @@ def load_assigned_run_report(home, run_id, report_path):
         or not os.path.isfile(requested)
         or os.path.islink(requested)
     ):
-        raise ValueError("assigned report must be a regular file inside this Ditto run")
+        raise ValueError("assigned report must be a regular file inside this Emulo run")
     try:
         with open(requested, "r", encoding="utf-8", errors="strict") as handle:
             report = json.load(handle)
     except (OSError, UnicodeError, ValueError) as exc:
         raise ValueError("assigned report is not valid JSON") from exc
     if report.get("segment_hash") != selected["segment_hash"]:
-        raise ValueError("report segment was not selected by this Ditto run")
+        raise ValueError("report segment was not selected by this Emulo run")
     segment = dict(selected)
     with open(selected["segment_path"], "r", encoding="utf-8", errors="strict", newline="") as handle:
         segment["text"] = handle.read()
@@ -3238,7 +3262,7 @@ def load_assigned_run_report(home, run_id, report_path):
     return plan_path, plan, selected, report, segment
 
 def validate_run_report(args):
-    home = resolve_ditto_home(args.ditto_home)
+    home = resolve_emulo_home(args.emulo_home)
     _, _, selected, _, _ = load_assigned_run_report(home, args.run_id, args.report)
     return {
         "status": "valid",
@@ -3263,7 +3287,7 @@ def load_run_packet(home, run_id, packet_hash):
     return plan_path, plan, dict(selected, receipts=receipts)
 
 def validate_run_scout(args, cache=False):
-    home = resolve_ditto_home(args.ditto_home)
+    home = resolve_emulo_home(args.emulo_home)
     plan_path, plan, packet = load_run_packet(home, args.run_id, args.packet_hash)
     try:
         with open(args.report, "r", encoding="utf-8", errors="strict") as handle:
@@ -3301,7 +3325,7 @@ def load_adaptive_evidence(plan):
         except (OSError, ValueError, json.JSONDecodeError) as exc:
             raise ValueError("cached scout report is missing or corrupt") from exc
         if report.get("schema_version") != SCOUT_REPORT_SCHEMA_VERSION:
-            raise ValueError("cached scout report uses an outdated schema; run ditto again to re-mine")
+            raise ValueError("cached scout report uses an outdated schema; run emulo again to re-mine")
         for item in report.get("evidence", []):
             evidence_id = item["evidence_id"]
             if evidence_id in flattened:
@@ -3327,7 +3351,7 @@ def load_adaptive_evidence(plan):
     return flattened
 
 def validate_run_domain(args, cache=False):
-    home = resolve_ditto_home(args.ditto_home)
+    home = resolve_emulo_home(args.emulo_home)
     plan_path, plan = load_run_plan(home, args.run_id)
     evidence = load_adaptive_evidence(plan)
     try:
@@ -3348,7 +3372,7 @@ def validate_run_domain(args, cache=False):
     return payload
 
 def assemble_plugin_run(args):
-    home = resolve_ditto_home(args.ditto_home)
+    home = resolve_emulo_home(args.emulo_home)
     _, plan = load_run_plan(home, args.run_id)
     paths = plan.get("domain_draft_paths", {})
     if set(paths) != VALID_DOMAINS:
@@ -3363,7 +3387,7 @@ def assemble_plugin_run(args):
     return assemble_profile_pack(home, plan, drafts)
 
 def cache_run_report(args):
-    home = resolve_ditto_home(args.ditto_home)
+    home = resolve_emulo_home(args.emulo_home)
     plan_path, plan, selected, report, segment = load_assigned_run_report(
         home,
         args.run_id,
@@ -3390,8 +3414,8 @@ def cache_run_report(args):
         "report_set_hash": plan.get("report_set_hash"),
     }
 
-def active_profile_state(ditto_home):
-    home = resolve_ditto_home(ditto_home)
+def active_profile_state(emulo_home):
+    home = resolve_emulo_home(emulo_home)
     active_path = safe_private_child(home, "active-profile.json")
     if not os.path.exists(active_path):
         return None
@@ -3415,25 +3439,25 @@ def active_profile_state(ditto_home):
         if manifest["profile_version"] != version or pointer.get("manifest_hash") != manifest_hash:
             raise ValueError
     except (OSError, ValueError, TypeError, json.JSONDecodeError):
-        raise ValueError("corrupt active profile; run ditto to recover") from None
+        raise ValueError("corrupt active profile; run emulo to recover") from None
     return {"home": home, "version_dir": version_dir, "manifest": manifest, "pointer": pointer}
 
-def resolve_profile_paths(ditto_home, domain):
-    state = active_profile_state(ditto_home)
+def resolve_profile_paths(emulo_home, domain):
+    state = active_profile_state(emulo_home)
     if state is None:
-        raise ValueError("no active Ditto profile; run ditto")
+        raise ValueError("no active Emulo profile; run emulo")
     domain_state = state["manifest"]["domains"].get(domain)
     if domain_state is None:
-        raise ValueError("run ditto and deepen " + domain)
+        raise ValueError("run emulo and deepen " + domain)
     if domain_state.get("status") != "active":
-        raise ValueError(domain_state.get("deepen_instruction") or "run ditto")
+        raise ValueError(domain_state.get("deepen_instruction") or "run emulo")
     names = [DOMAIN_FILES["work"][0]]
     if domain != "work":
         names.append(DOMAIN_FILES[domain][0])
     paths = [os.path.join(state["version_dir"], name) for name in names]
     for path in paths:
         if not os.path.isfile(path) or sha256_file(path) != state["manifest"]["files"].get(os.path.basename(path)):
-            raise ValueError("corrupt active profile; run ditto to recover")
+            raise ValueError("corrupt active profile; run emulo to recover")
     payload = {
         "status": "active",
         "domain": domain,
@@ -3443,7 +3467,7 @@ def resolve_profile_paths(ditto_home, domain):
     if state["manifest"].get("origin") == "legacy-migration":
         payload.update({
             "legacy_unverified": True,
-            "recovery_instruction": "update ditto to generate an evidence-backed profile",
+            "recovery_instruction": "update emulo to generate an evidence-backed profile",
         })
     return payload
 
@@ -3451,7 +3475,7 @@ def load_plugin_pack_context(home, run_id, pack_path, quarantine):
     _, plan = load_run_plan(home, run_id)
     expected_pack = os.path.realpath(plan["pack_path"])
     if os.path.realpath(os.path.abspath(pack_path)) != expected_pack:
-        raise ValueError("pack path was not assigned to this Ditto run")
+        raise ValueError("pack path was not assigned to this Emulo run")
     reports = []
     for segment in plan["selected_segments"]:
         report = load_cached_report(home, segment, quarantine=quarantine)
@@ -3462,7 +3486,7 @@ def load_plugin_pack_context(home, run_id, pack_path, quarantine):
     return plan, expected_pack, evidence
 
 def validate_plugin_pack(args):
-    home = resolve_ditto_home(args.ditto_home)
+    home = resolve_emulo_home(args.emulo_home)
     plan, expected_pack, evidence = load_plugin_pack_context(
         home,
         args.run_id,
@@ -3473,7 +3497,7 @@ def validate_plugin_pack(args):
     return {"status": "valid", "report_set_hash": plan["report_set_hash"]}
 
 def activate_plugin_run(args):
-    home = resolve_ditto_home(args.ditto_home)
+    home = resolve_emulo_home(args.emulo_home)
     _, plan = load_run_plan(home, args.run_id)
     if args.cached:
         if not plan.get("report_set_hash"):
@@ -3551,7 +3575,7 @@ def render_receipt_packet(packet):
     return "\n\n".join(sections) + "\n"
 
 def prepare_adaptive_run(args):
-    home = resolve_ditto_home(args.ditto_home)
+    home = resolve_emulo_home(args.emulo_home)
     result = plugin_source_result(args)
     stage = args.stage or "A"
     prepared = build_adaptive_plan(result, stage)
@@ -3618,8 +3642,8 @@ def domain_needs_deepening(draft):
         or coverage.get("unresolved_contradictions", 0) > 0
     )
 
-def build_next_stage_plan(ditto_home, run_id):
-    home = resolve_ditto_home(ditto_home)
+def build_next_stage_plan(emulo_home, run_id):
+    home = resolve_emulo_home(emulo_home)
     _, prior = load_run_plan(home, run_id)
     if prior.get("stage") != "A":
         raise ValueError("next-stage requires a completed adaptive Stage A run")
@@ -3679,10 +3703,10 @@ def build_next_stage_plan(ditto_home, run_id):
 
 def plugin_plan_for_args(args, write=False):
     result = plugin_source_result(args)
-    home = resolve_ditto_home(args.ditto_home)
+    home = resolve_emulo_home(args.emulo_home)
     if args.deepen_domain:
         raise ValueError(
-            "targeted deepening requires an active profile; run the full Ditto setup first"
+            "targeted deepening requires an active profile; run the full Emulo setup first"
         )
     if args.stage is not None:
         return adaptive_preflight(result, args.stage)
@@ -3697,7 +3721,7 @@ def plugin_plan_for_args(args, write=False):
 def prepare_plugin_run(args):
     if args.stage is not None:
         return prepare_adaptive_run(args)
-    home = resolve_ditto_home(args.ditto_home)
+    home = resolve_emulo_home(args.emulo_home)
     approved = plugin_plan_for_args(args, write=False)
     if args.approved_plan_hash != approved["approval_hash"]:
         raise ValueError("prepared plan does not match the approved preflight hash; rerun preflight and reapprove")
@@ -3784,14 +3808,14 @@ def plugin_main(argv):
     args = parser.parse_args(argv)
     try:
         if args.command == "status":
-            home = resolve_ditto_home(args.ditto_home)
+            home = resolve_emulo_home(args.emulo_home)
             active = active_profile_state(home)
             payload = (
-                {"status": "missing", "ditto_home": home}
+                {"status": "missing", "emulo_home": home}
                 if active is None
                 else {
                     "status": "active",
-                    "ditto_home": home,
+                    "emulo_home": home,
                     "profile_version": active["manifest"]["profile_version"],
                     "domains": active["manifest"]["domains"],
                     "card_path": (
@@ -3804,7 +3828,7 @@ def plugin_main(argv):
             if active is not None and active["manifest"].get("origin") == "legacy-migration":
                 payload.update({
                     "legacy_unverified": True,
-                    "recovery_instruction": "update ditto to generate an evidence-backed profile",
+                    "recovery_instruction": "update emulo to generate an evidence-backed profile",
                 })
         elif args.command == "preflight":
             payload = plugin_plan_for_args(args, write=False)
@@ -3825,21 +3849,21 @@ def plugin_main(argv):
         elif args.command == "assemble":
             payload = assemble_plugin_run(args)
         elif args.command == "next-stage":
-            payload = build_next_stage_plan(args.ditto_home, args.run_id)
+            payload = build_next_stage_plan(args.emulo_home, args.run_id)
         elif args.command == "cache-report":
             payload = cache_run_report(args)
         elif args.command == "activate":
             payload = activate_plugin_run(args)
         elif args.command == "profile-path":
-            payload = resolve_profile_paths(args.ditto_home, args.domain)
+            payload = resolve_profile_paths(args.emulo_home, args.domain)
         elif args.command == "migrate-stage":
-            payload = stage_legacy_migration(args.target, args.home, args.ditto_home)
+            payload = stage_legacy_migration(args.target, args.home, args.emulo_home)
         elif args.command == "migrate-cutover":
-            payload = cutover_legacy_migration(args.migration_id, args.ditto_home)
+            payload = cutover_legacy_migration(args.migration_id, args.emulo_home)
         elif args.command == "migrate-rollback":
-            payload = rollback_legacy_migration(args.migration_id, args.ditto_home)
+            payload = rollback_legacy_migration(args.migration_id, args.emulo_home)
         elif args.command == "migrate-adapter":
-            payload = migrate_adapter_block(args.target, args.repo, args.ditto_home, args.mode)
+            payload = migrate_adapter_block(args.target, args.repo, args.emulo_home, args.mode)
         else:
             raise ValueError("unsupported plugin command")
     except ValueError as exc:
@@ -3847,15 +3871,15 @@ def plugin_main(argv):
         raise SystemExit(1) from None
     print(json.dumps(payload, sort_keys=True))
 
-DITTO_VERSION = "0.4.0"
+EMULO_VERSION = "0.5.0"
 MCP_PROTOCOL_VERSION = "2025-06-18"
 
 def mcp_tool_definitions():
     return [
         {
-            "name": "load_ditto_profile",
+            "name": "load_emulo_profile",
             "description": (
-                "Load the user's Ditto profile so you act like them instead of starting cold. "
+                "Load the user's Emulo profile so you act like them instead of starting cold. "
                 "Call this before working on their task. domain 'work' covers execution, "
                 "debugging, planning, and shipping; 'design' covers UI/UX and visual taste; "
                 "'write' covers their writing voice. Returns the mined profile text, or a "
@@ -3875,15 +3899,15 @@ def mcp_tool_definitions():
         }
     ]
 
-def mcp_load_profile_text(ditto_home, domain):
-    payload = resolve_profile_paths(ditto_home, domain)
+def mcp_load_profile_text(emulo_home, domain):
+    payload = resolve_profile_paths(emulo_home, domain)
     parts = []
     for path in payload["paths"]:
         with open(path, "r", encoding="utf-8", errors="replace") as handle:
             text = handle.read().strip()
         if text:
             parts.append(text)
-    header = "# Ditto {0} profile (version {1})".format(domain, payload["profile_version"])
+    header = "# Emulo {0} profile (version {1})".format(domain, payload["profile_version"])
     body = "\n\n".join(parts)
     if payload.get("legacy_unverified"):
         body += "\n\n(legacy-migration profile, unverified: {0})".format(
@@ -3900,7 +3924,7 @@ def mcp_error(msg_id, code, message):
 def mcp_tool_text(msg_id, text, is_error=False):
     return mcp_result(msg_id, {"content": [{"type": "text", "text": text}], "isError": is_error})
 
-def mcp_handle(message, ditto_home):
+def mcp_handle(message, emulo_home):
     if not isinstance(message, dict) or message.get("jsonrpc") != "2.0":
         return mcp_error(None, -32600, "invalid request")
     if "id" not in message:
@@ -3914,32 +3938,32 @@ def mcp_handle(message, ditto_home):
         return mcp_result(msg_id, {
             "protocolVersion": protocol,
             "capabilities": {"tools": {}},
-            "serverInfo": {"name": "ditto", "version": DITTO_VERSION},
+            "serverInfo": {"name": "emulo", "version": EMULO_VERSION},
         })
     if method == "ping":
         return mcp_result(msg_id, {})
     if method == "tools/list":
         return mcp_result(msg_id, {"tools": mcp_tool_definitions()})
     if method == "tools/call":
-        if params.get("name") != "load_ditto_profile":
+        if params.get("name") != "load_emulo_profile":
             return mcp_error(msg_id, -32602, "unknown tool: {0}".format(params.get("name")))
         domain = (params.get("arguments") or {}).get("domain") or "work"
         if domain not in VALID_DOMAINS:
             return mcp_tool_text(msg_id, "unknown domain: {0}".format(domain), is_error=True)
         try:
-            text = mcp_load_profile_text(ditto_home, domain)
+            text = mcp_load_profile_text(emulo_home, domain)
         except ValueError as exc:
             return mcp_tool_text(msg_id, str(exc), is_error=True)
         except OSError:
-            return mcp_tool_text(msg_id, "corrupt active profile; run ditto to recover", is_error=True)
+            return mcp_tool_text(msg_id, "corrupt active profile; run emulo to recover", is_error=True)
         return mcp_tool_text(msg_id, text)
     return mcp_error(msg_id, -32601, "method not found: {0}".format(method))
 
 def mcp_main(argv):
-    parser = argparse.ArgumentParser(prog="ditto.py mcp")
-    parser.add_argument("--ditto-home")
+    parser = argparse.ArgumentParser(prog="emulo.py mcp")
+    parser.add_argument("--emulo-home")
     args = parser.parse_args(argv)
-    ditto_home = resolve_ditto_home(args.ditto_home)
+    emulo_home = resolve_emulo_home(args.emulo_home)
     out = sys.stdout
     for raw in sys.stdin:
         line = raw.strip()
@@ -3951,7 +3975,7 @@ def mcp_main(argv):
             out.write(json.dumps(mcp_error(None, -32700, "parse error")) + "\n")
             out.flush()
             continue
-        response = mcp_handle(message, ditto_home)
+        response = mcp_handle(message, emulo_home)
         if response is not None:
             out.write(json.dumps(response) + "\n")
             out.flush()
@@ -3960,13 +3984,13 @@ def legacy_main():
     ap = argparse.ArgumentParser(description="mine your AI sessions into a model of you")
     ap.add_argument("--source", choices=["auto", "codex", "claude", "copilot", "opencode", "antigravity"], default="auto")
     ap.add_argument("--path", help="a folder of .jsonl session logs to read instead")
-    ap.add_argument("--out", default="ditto-out")
+    ap.add_argument("--out", default="emulo-out")
     ap.add_argument("--chunks", type=int, default=20)
     ap.add_argument("--dry-run", action="store_true", help="show counts and output paths without writing files")
     ap.add_argument("--no-redact", action="store_true", help="skip redaction (NOT recommended)")
     ap.add_argument("--no-dedupe", action="store_true", help="keep verbatim-duplicate long messages (re-pasted specs / injected rules)")
     ap.add_argument("--card", nargs="?", const="", metavar="CARD_JSON",
-                    help="render your profile card (terminal + card.html) from ditto-out/card.json")
+                    help="render your profile card (terminal + card.html) from emulo-out/card.json")
     ap.add_argument("--no-open", action="store_true", help="don't open card.html in the browser")
     ap.add_argument("--still", action="store_true", help="print the card without the reveal animation")
     ap.add_argument("--install", metavar="PROFILE", help="install an existing generated you.md profile")

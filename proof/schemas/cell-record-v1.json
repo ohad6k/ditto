@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "Ditto Proof v1 cell record",
+  "title": "Emulo Proof v1 cell record",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -14,13 +14,13 @@
     "publication_status"
   ],
   "properties": {
-    "schema": {"const": "ditto-proof-cell/1"},
+    "schema": {"const": "emulo-proof-cell/1"},
     "cell_id": {"type": "string"}, "pair_id": {"type": "string"},
     "attempt": {"type": "integer", "minimum": 1, "maximum": 2},
     "system_id": {"type": "string"}, "host": {"enum": ["codex", "claude"]},
     "task_id": {"type": "string"}, "family": {"enum": ["work", "design", "write"]},
     "variant": {"enum": ["primary", "held-out"]}, "trial": {"enum": [1, 2]},
-    "condition": {"enum": ["cold", "ditto"]}, "order": {"enum": [1, 2]},
+    "condition": {"enum": ["cold", "emulo"]}, "order": {"enum": [1, 2]},
     "review_id": {"type": "string"}, "fixture_sha256": {"type": "string"},
     "instruction_sha256": {"type": "string"},
     "profile_manifest_sha256": {"type": ["string", "null"]},

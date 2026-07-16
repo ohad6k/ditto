@@ -54,7 +54,7 @@ def publication_records(manifest, evidence_root):
     for index, pair in enumerate(manifest["pairs"]):
         ordered = sorted(pair["cells"], key=lambda item: item["order"])
         review = {
-            "schema": "ditto-proof-review/1",
+            "schema": "emulo-proof-review/1",
             "review_id": f"decision-{index}",
             "pair_id": pair["pair_id"],
             "family": pair["family"],
@@ -74,7 +74,7 @@ def publication_records(manifest, evidence_root):
             attempt_receipt = store.record_attempt(
                 cell["cell_id"],
                 {
-                    "schema": "ditto-proof-attempt/1",
+                    "schema": "emulo-proof-attempt/1",
                     **{
                         field: cell[field]
                         for field in (
@@ -90,7 +90,7 @@ def publication_records(manifest, evidence_root):
             evaluation_sha256 = store.record_evaluation(
                 cell["cell_id"],
                 {
-                    "schema": "ditto-proof-evaluation/1",
+                    "schema": "emulo-proof-evaluation/1",
                     "cell_id": cell["cell_id"],
                     "hard_failures": [],
                     "artifact_hashes": artifacts,

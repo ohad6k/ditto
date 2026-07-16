@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "Ditto Proof v1 review record",
+  "title": "Emulo Proof v1 review record",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -10,7 +10,7 @@
     "invalidation_reason", "created_at"
   ],
   "properties": {
-    "schema": {"const": "ditto-proof-review/1"}, "review_id": {"type": "string"},
+    "schema": {"const": "emulo-proof-review/1"}, "review_id": {"type": "string"},
     "pair_id": {"type": "string"}, "family": {"enum": ["work", "design", "write"]},
     "reviewer_role": {"enum": ["independent"]}, "consent_reference": {"type": "string"},
     "eligibility_attestation": {"type": "string"},

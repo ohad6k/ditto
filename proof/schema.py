@@ -1,8 +1,8 @@
-"""Strict structural contracts for Ditto Proof v1 records."""
+"""Strict structural contracts for Emulo Proof v1 records."""
 
 from datetime import datetime
 
-from proof import BENCHMARK_NAME, BENCHMARK_SCHEMA, DITTO_COMMIT, DITTO_REF
+from proof import BENCHMARK_NAME, BENCHMARK_SCHEMA, EMULO_COMMIT, EMULO_REF
 
 UNCERTAINTY_POLICY = (
     "small-n, directional only; Wilson 95%; no significance claims"
@@ -12,8 +12,8 @@ MANIFEST_KEYS = {
     "schema",
     "benchmark",
     "benchmark_version",
-    "ditto_ref",
-    "ditto_commit",
+    "emulo_ref",
+    "emulo_commit",
     "profile_manifest_sha256",
     "private_rubric_sha256",
     "public_rubric_sha256",
@@ -97,7 +97,7 @@ PUBLICATION_KEYS = {
 
 SYSTEM_KEYS = {
     "system_id", "host", "menu_label", "model_id", "host_version",
-    "run_argv", "ditto_install_argv", "selection_screenshot_sha256",
+    "run_argv", "emulo_install_argv", "selection_screenshot_sha256",
     "tool_policy_sha256", "permission_policy_sha256", "quota_snapshot",
     "expected_cost",
 }
@@ -168,8 +168,8 @@ def validate_manifest(value):
         raise ValueError("wrong benchmark name")
     if value["benchmark_version"] != "1.0.0":
         raise ValueError("unsupported benchmark version")
-    if value["ditto_ref"] != DITTO_REF or value["ditto_commit"] != DITTO_COMMIT:
-        raise ValueError("mixed Ditto version")
+    if value["emulo_ref"] != EMULO_REF or value["emulo_commit"] != EMULO_COMMIT:
+        raise ValueError("mixed Emulo version")
     for key in (
         "profile_manifest_sha256",
         "private_rubric_sha256",
@@ -203,7 +203,7 @@ def validate_manifest(value):
         if system["model_id"] is not None:
             _require_text(system["model_id"], "model_id")
         _require_argv(system["run_argv"], "run_argv")
-        _require_argv(system["ditto_install_argv"], "ditto_install_argv")
+        _require_argv(system["emulo_install_argv"], "emulo_install_argv")
         for key in (
             "selection_screenshot_sha256", "tool_policy_sha256",
             "permission_policy_sha256",
@@ -259,8 +259,8 @@ def validate_manifest(value):
         observed_matrix.add(identity)
         if not isinstance(pair["cells"], list) or len(pair["cells"]) != 2:
             raise ValueError("each pair requires exactly two cells")
-        if {cell.get("condition") for cell in pair["cells"]} != {"cold", "ditto"}:
-            raise ValueError("each pair requires cold and ditto cells")
+        if {cell.get("condition") for cell in pair["cells"]} != {"cold", "emulo"}:
+            raise ValueError("each pair requires cold and emulo cells")
         if {cell.get("order") for cell in pair["cells"]} != {1, 2}:
             raise ValueError("each pair requires unique blind order")
         for cell in pair["cells"]:
@@ -282,7 +282,7 @@ def validate_manifest(value):
             review_ids.add(cell["review_id"])
             expected_profile = (
                 value["profile_manifest_sha256"]
-                if cell["condition"] == "ditto"
+                if cell["condition"] == "emulo"
                 else None
             )
             if cell["profile_manifest_sha256"] != expected_profile:
@@ -293,7 +293,7 @@ def validate_manifest(value):
 
 
 def validate_cell(value):
-    if value.get("schema") != "ditto-proof-cell/1":
+    if value.get("schema") != "emulo-proof-cell/1":
         raise ValueError("unsupported cell schema")
     if value.get("host_persistent_context") != "absent":
         raise ValueError("host persistent context must be absent")
@@ -303,7 +303,7 @@ def validate_cell(value):
 
 def validate_review_record(value):
     require_exact_keys(value, REVIEW_KEYS, "review record")
-    if value["schema"] != "ditto-proof-review/1":
+    if value["schema"] != "emulo-proof-review/1":
         raise ValueError("unsupported review schema")
     return value
 
@@ -312,6 +312,6 @@ def validate_publication_record(value):
     if value.get("headline_metric") == "profile_rubric_adherence":
         raise ValueError("profile rubric adherence is mechanism only")
     require_exact_keys(value, PUBLICATION_KEYS, "publication record")
-    if value["schema"] != "ditto-proof-publication/1":
+    if value["schema"] != "emulo-proof-publication/1":
         raise ValueError("unsupported publication schema")
     return value

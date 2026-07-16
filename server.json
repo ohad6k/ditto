@@ -1,17 +1,17 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
-  "name": "io.github.ohad6k/ditto",
+  "name": "io.github.ohad6k/emulo",
   "description": "Mine your local AI coding session logs into a profile your agent loads before every task.",
   "repository": {
-    "url": "https://github.com/ohad6k/ditto",
+    "url": "https://github.com/ohad6k/emulo",
     "source": "github"
   },
-  "version": "0.3.6",
+  "version": "0.5.0",
   "packages": [
     {
       "registryType": "pypi",
-      "identifier": "ditto-cli",
-      "version": "0.3.6",
+      "identifier": "emulo-cli",
+      "version": "0.5.0",
       "transport": {
         "type": "stdio"
       },
