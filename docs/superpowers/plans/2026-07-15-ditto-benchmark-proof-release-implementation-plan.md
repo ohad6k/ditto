@@ -909,7 +909,7 @@ git commit -m "feat: validate proof outcomes and blind reviews"
 class PrivacyTest(unittest.TestCase):
     def test_every_seeded_private_marker_blocks_packaging(self):
         markers = {
-            "secret": "sk-proof-canary-1234567890",
+            "secret": _FAKE_SECRET  # assembled at runtime, see tests,
             "username": "private-user-canary",
             "windows_path": r"C:\\Users\\private-canary\\vault",
             "unix_path": "/home/private-canary/vault",
