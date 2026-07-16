@@ -260,6 +260,41 @@ describe("GitHub OAuth", () => {
     expect(JSON.stringify(diagnostic)).not.toContain("test-token");
   });
 
+  it("records a sanitized identity-write diagnostic for internal failures", async () => {
+    await seedFlow();
+    const fetcher = vi
+      .fn()
+      .mockResolvedValueOnce(Response.json({ access_token: "test-token" }))
+      .mockResolvedValueOnce(Response.json({ id: 12345678 }));
+    const brokenDependencies = dependencies(fetcher);
+    brokenDependencies.randomBytes = () => new Uint8Array(0);
+    const response = await completeGitHubOAuth(
+      new Request(
+        `https://api.example/v1/auth/github/callback?code=temporary-code&state=${STATE}`,
+        { headers: { cookie: `__Host-emulo_oauth=${BROWSER_BINDING}` } },
+      ),
+      testEnv,
+      brokenDependencies,
+    );
+    expect(response.status).toBe(502);
+    const diagnostic = await testEnv.DB.prepare(
+      `SELECT provider, stage, status_code, error_code
+       FROM oauth_diagnostics ORDER BY diagnostic_id DESC LIMIT 1`,
+    ).first<{
+      provider: string;
+      stage: string;
+      status_code: number | null;
+      error_code: string | null;
+    }>();
+    expect(diagnostic).toEqual({
+      provider: "github",
+      stage: "identity_write",
+      status_code: null,
+      error_code: "Error",
+    });
+    expect(JSON.stringify(diagnostic)).not.toContain("temporary-code");
+  });
+
   it("rejects a callback from a different browser without consuming the flow", async () => {
     await seedFlow();
     const fetcher = vi

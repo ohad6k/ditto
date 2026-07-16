@@ -176,8 +176,8 @@ async function upstreamJson(
 async function recordOAuthDiagnostic(
   env: Env,
   input: {
-    stage: "token_exchange" | "user_lookup";
-    statusCode: number;
+    stage: "token_exchange" | "user_lookup" | "identity_write" | "session_write";
+    statusCode: number | null;
     errorCode: string | null;
     createdAt: string;
   },
@@ -239,6 +239,8 @@ export async function completeGitHubOAuth(
     return clearFlowCookie(safeResponse(400, "Sign-in could not be completed."));
   }
 
+  let currentStage: "token_exchange" | "user_lookup" | "identity_write" | "session_write" =
+    "token_exchange";
   try {
     const tokenResponse = await dependencies.fetch(
       "https://github.com/login/oauth/access_token",
@@ -274,6 +276,7 @@ export async function completeGitHubOAuth(
       return clearFlowCookie(safeResponse(502, "GitHub sign-in is temporarily unavailable."));
     }
 
+    currentStage = "user_lookup";
     const userResponse = await dependencies.fetch("https://api.github.com/user", {
       headers: {
         accept: "application/vnd.github+json",
@@ -301,11 +304,13 @@ export async function completeGitHubOAuth(
       return clearFlowCookie(safeResponse(502, "GitHub sign-in is temporarily unavailable."));
     }
 
+    currentStage = "identity_write";
     const resolvedAccountId = await resolveOrCreateGitHubIdentity(env.DB, {
       providerUserId: String(user.id),
       proposedAccountId: accountId(dependencies.randomBytes(16)),
       createdAt: now.toISOString(),
     });
+    currentStage = "session_write";
     const sessionToken = base64Url(dependencies.randomBytes(32));
     await createBrowserSession(env.DB, {
       sessionHash: await hexDigest(sessionToken),
@@ -329,9 +334,23 @@ export async function completeGitHubOAuth(
     );
     return clearFlowCookie(response);
   } catch (error) {
+    const errorName =
+      error instanceof Error && /^[A-Za-z][A-Za-z0-9_]{0,63}$/.test(error.name)
+        ? error.name
+        : "unknown";
+    try {
+      await recordOAuthDiagnostic(env, {
+        stage: currentStage,
+        statusCode: null,
+        errorCode: errorName,
+        createdAt: now.toISOString(),
+      });
+    } catch {
+      // The authentication response must remain safe even if diagnostics storage fails.
+    }
     console.warn("github_oauth_failure", {
-      stage: "internal",
-      error: error instanceof Error ? error.name : "unknown",
+      stage: currentStage,
+      error: errorName,
     });
     return clearFlowCookie(safeResponse(502, "GitHub sign-in is temporarily unavailable."));
   }
