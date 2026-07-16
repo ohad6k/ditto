@@ -95,6 +95,11 @@ function safeResponse(status: number, message: string): Response {
   );
 }
 
+function upstreamErrorCode(payload: Record<string, unknown> | null): string | null {
+  const value = payload?.error;
+  return typeof value === "string" && /^[a-z_]{1,64}$/.test(value) ? value : null;
+}
+
 function cookieValue(request: Request, name: string): string | null {
   const header = request.headers.get("cookie");
   if (header === null) {
@@ -231,6 +236,11 @@ export async function completeGitHubOAuth(
     const tokenPayload = await upstreamJson(tokenResponse);
     const accessToken = tokenPayload?.access_token;
     if (typeof accessToken !== "string" || accessToken.length < 8 || accessToken.length > 512) {
+      console.warn("github_oauth_failure", {
+        stage: "token_exchange",
+        status: tokenResponse.status,
+        error: upstreamErrorCode(tokenPayload),
+      });
       return clearFlowCookie(safeResponse(502, "GitHub sign-in is temporarily unavailable."));
     }
 
@@ -248,6 +258,10 @@ export async function completeGitHubOAuth(
       !Number.isSafeInteger(user.id) ||
       user.id <= 0
     ) {
+      console.warn("github_oauth_failure", {
+        stage: "user_lookup",
+        status: userResponse.status,
+      });
       return clearFlowCookie(safeResponse(502, "GitHub sign-in is temporarily unavailable."));
     }
 
@@ -278,7 +292,11 @@ export async function completeGitHubOAuth(
       `${SESSION_COOKIE}=${sessionToken}; Path=/; Max-Age=${SESSION_LIFETIME_SECONDS}; Secure; HttpOnly; SameSite=Lax`,
     );
     return clearFlowCookie(response);
-  } catch {
+  } catch (error) {
+    console.warn("github_oauth_failure", {
+      stage: "internal",
+      error: error instanceof Error ? error.name : "unknown",
+    });
     return clearFlowCookie(safeResponse(502, "GitHub sign-in is temporarily unavailable."));
   }
 }
