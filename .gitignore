@@ -51,3 +51,11 @@ mcp-publisher.exe
 
 # render temp (puppeteer profiles, compiled comps)
 .scratch/
+
+# Cloudflare Worker local state and secrets
+cloud/worker/node_modules/
+cloud/worker/.wrangler/
+cloud/worker/.dev.vars
+cloud/worker/.dev.vars.*
+!cloud/worker/.dev.vars.example
+cloud/worker/worker-configuration.d.ts

@@ -29,11 +29,11 @@
 - Create: `cloud/worker/test/billing.test.ts`
 - Modify: `.gitignore`
 
-- [ ] Write failing table tests for active, trialing, past-due, scheduled cancellation, uncancel, revoked/ended, unknown state, unknown product, and effective timestamp selection.
-- [ ] Implement strict event parsing and provider-neutral `NormalizedEntitlement`; allow only the configured monthly/yearly product IDs.
-- [ ] Pin current compatible versions of Wrangler, Vitest, Cloudflare's Vitest pool, TypeScript, Workers types, and `@polar-sh/sdk`.
-- [ ] Declare secret names only, sandbox-safe nonsecret defaults, D1 binding, local migrations, disabled observability, and `.dev.vars`/`.wrangler` ignores.
-- [ ] Run typecheck and focused tests; commit `feat: normalize Polar entitlement events`.
+- [x] Write failing table tests for active, trialing, past-due, scheduled cancellation, uncancel, revoked/ended, unknown state, unknown product, and effective timestamp selection.
+- [x] Implement strict event parsing and provider-neutral `NormalizedEntitlement`; allow only the configured monthly/yearly product IDs.
+- [x] Pin current compatible versions of Wrangler, Vitest, Cloudflare's Vitest pool, TypeScript, Workers types, and `@polar-sh/sdk`.
+- [x] Declare secret names only, sandbox-safe nonsecret defaults, D1 binding, local migrations, disabled observability, and `.dev.vars`/`.wrangler` ignores.
+- [x] Run typecheck and focused tests; commit `feat: normalize Polar entitlement events`.
 
 ### Task 2: D1 idempotency and convergence repository
 
