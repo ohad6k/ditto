@@ -165,12 +165,12 @@ The Claude Code plugin exposes the same four skills. Install it from inside Clau
 
 Emulo also ships a Model Context Protocol (MCP) server, so any MCP client — Claude Desktop, Cursor, and other agents — can load your profile before a task. The server implements MCP over stdio and exposes one tool, `load_emulo_profile`, which returns your mined work, design, or writing profile over the Model Context Protocol.
 
-Run it from the published package with `uvx emulo-cli mcp`, or from a checkout with `python emulo.py mcp`, and point an MCP client at it:
+Run it from the published package with `uvx emulo mcp`, or from a checkout with `python emulo.py mcp`, and point an MCP client at it:
 
 ```json
 {
   "mcpServers": {
-    "emulo": { "command": "uvx", "args": ["emulo-cli", "mcp"] }
+    "emulo": { "command": "uvx", "args": ["emulo", "mcp"] }
   }
 }
 ```

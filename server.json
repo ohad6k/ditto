@@ -10,7 +10,7 @@
   "packages": [
     {
       "registryType": "pypi",
-      "identifier": "emulo-cli",
+      "identifier": "emulo",
       "version": "0.5.0",
       "transport": {
         "type": "stdio"

@@ -4,7 +4,7 @@
 
 ### Changed
 
-- **Ditto is now Emulo.** The name collided with several existing products (heyditto.ai, ditto.live, and a `ditto` skill already on ClawHub), so the project renamed rather than fight three namespaces. Everything ships under the new name: the module is `emulo.py`, the CLI commands are `emulo` / `emulo-cli`, the MCP server is `emulo` with the `load_emulo_profile` tool, the plugin and marketplace manifests are `emulo`, the bootstrap skill lives at `.agents/skills/emulo/`, and new profile blocks are written between `<!-- emulo profile:start/end -->` markers.
+- **Ditto is now Emulo.** The name collided with several existing products (heyditto.ai, ditto.live, and a `ditto` skill already on ClawHub), so the project renamed rather than fight three namespaces. Everything ships under the new name: the module is `emulo.py`, the CLI command is `emulo` (with `emulo-cli` kept as a deprecated alias), the PyPI package is now `emulo` rather than `ditto-cli`, the MCP server is `emulo` with the `load_emulo_profile` tool, the plugin and marketplace manifests are `emulo`, the bootstrap skill lives at `.agents/skills/emulo/`, and new profile blocks are written between `<!-- emulo profile:start/end -->` markers.
 - Nothing about existing installs breaks. `EMULO_HOME` wins, but `DITTO_HOME` is still honored, and an existing `~/.ditto` home keeps working in place when no `~/.emulo` exists (no data is moved). Old `<!-- ditto profile:start/end -->` adapter blocks are still recognized everywhere blocks are read, and are upgraded to the new markers on the next write. The legacy profile id `ditto-work-profile` remains accepted.
 - Historical records (older CHANGELOG entries, planning docs under `docs/`) keep the old name; they describe the project as it was.
 

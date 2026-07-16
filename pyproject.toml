@@ -3,7 +3,7 @@ requires = ["setuptools>=64"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "emulo-cli"
+name = "emulo"
 dynamic = ["version"]
 description = "Mine your local AI coding session logs into a personal profile your agent loads before every task."
 readme = "README.md"
@@ -25,7 +25,7 @@ Repository = "https://github.com/ohad6k/emulo"
 
 [project.scripts]
 emulo = "emulo:main"
-emulo-cli = "emulo:main"
+emulo-cli = "emulo:main"  # deprecated alias, kept so existing scripts keep working
 
 [tool.setuptools]
 py-modules = ["emulo"]
