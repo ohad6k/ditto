@@ -42,9 +42,13 @@
 ## Verification Receipts
 
 - Emulo billing experience commits `10509adc`, `79f504c1`, `92120af2`, and `05cb3947`: `npm run typecheck` exited 0; `npm test` passed 90 tests across 9 files; Wrangler dry-run bundled 1,500.32 KiB (153.39 KiB gzip) with `PAID_CHECKOUT_ENABLED=false` and `POLAR_SERVER=sandbox`.
+- Worker version `600e1d92-4c3f-45c4-b5be-ea2466ed00d7`: live account, CSS, JavaScript, and SVG routes returned `200` with exact content types; unauthenticated status returned `401`; disabled checkout returned `503`; unsigned webhook returned `403`. Remote D1 still showed one active `founding-monthly` entitlement and three applied lifecycle events (`created`, `active`, `updated`).
 
 - Commit `e49a3317f87ac547496a28588774acbdb02069f1`: `python -m unittest discover -s tests -v` passed 249 tests in 24.568s on Python 3.11.4; one Windows symlink privilege test skipped while the junction/reparse rejection test passed.
 - Synthetic pilot package: `e08c4e23921065839a234530261aae3f466c517fa0b93214669990f4dbdbe9ab`.
 - Commit `7b584430dc6f0df33cd6ce3453e70f496d1ca3e0`: full suite passed 266 tests in 26.333s; fresh Windows clone passed 90 proof tests in 8.015s.
 
 ## Open Provider Or Human Actions
+
+- Open the deployed `/account` and `/v1/billing/complete` in the already authenticated browser and provide a redacted visual receipt that the active plan and branded surfaces render. Do not share cookies, query codes, account IDs, or provider IDs.
+- Polar production organization/payout status, products, scoped OAT, raw webhook, and real purchase/cancellation/refund lifecycle remain unproven and checkout remains disabled.
