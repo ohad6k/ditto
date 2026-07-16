@@ -156,7 +156,7 @@ describe("authenticated Worker integration", () => {
     });
     const accountBody = await account.text();
     expect(accountBody).toContain('data-account-state="active"');
-    expect(accountBody).toContain("Founding Beta is active");
+    expect(accountBody).toContain("Emulo Pro is active");
     expect(accountBody).toContain("data-portal-form");
     expect(accountBody).not.toContain("data-checkout-form");
 
@@ -166,7 +166,7 @@ describe("authenticated Worker integration", () => {
     );
     const completeBody = await complete.text();
     expect(completeBody).toContain('data-payment-state="active"');
-    expect(completeBody).toContain("Founding Beta activated");
+    expect(completeBody).toContain("Emulo Pro activated");
     expect(completeBody).not.toContain("Waiting for Polar confirmation");
   });
 

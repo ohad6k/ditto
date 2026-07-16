@@ -413,8 +413,8 @@ function updatePaymentSurface(root, state) {
   if (state === "active" || state === "trialing") {
     badge.textContent = "Active";
     badge.dataset.tone = "";
-    title.textContent = "Founding Beta activated";
-    copy.textContent = "Polar's signed confirmation is applied. Your founding access is now active.";
+    title.textContent = "Emulo Pro activated";
+    copy.textContent = "Polar's signed confirmation is applied. Your Emulo Pro access is now active.";
     return true;
   }
   if (state === "past_due" || state === "grace") {
@@ -534,7 +534,7 @@ function productLabel(entitlement: EntitlementSummary): string {
 function activeSurface(entitlement: EntitlementSummary): string {
   return `<article class="account-surface" data-account-state="${entitlement.state}">
     <div class="surface-kicker"><span>Emulo account</span><span class="state-badge">Active</span></div>
-    <h2>Founding Beta is active</h2>
+    <h2>Emulo Pro is active</h2>
     <p class="lede">Your verified Polar subscription is connected. Autopilot controls remain in the local Emulo control center.</p>
     <dl class="plan-facts"><div class="plan-fact"><dt>Plan</dt><dd>${productLabel(entitlement)}</dd></div><div class="plan-fact"><dt>Access</dt><dd>Cloud continuity</dd></div></dl>
     <div class="action-stack"><form data-portal-form><button class="primary-action" type="submit">Manage subscription</button></form><a class="secondary-action" href="/account">Refresh account</a></div>
@@ -623,8 +623,8 @@ function paymentSurface(status: AccountStatus): string {
   if (status.entitlement.state === "active" || status.entitlement.state === "trialing") {
     return `<article class="account-surface" data-payment-state="active" data-authenticated="true" aria-live="polite">
       <div class="surface-kicker"><span>Payment verification</span><span class="state-badge" data-status-badge>Active</span></div>
-      <h2 data-status-title>Founding Beta activated</h2>
-      <p class="lede" data-status-copy>Your verified Polar confirmation is applied. Emulo now recognizes the ${productLabel(status.entitlement).toLowerCase()} founding plan.</p>
+      <h2 data-status-title>Emulo Pro activated</h2>
+      <p class="lede" data-status-copy>Your verified Polar confirmation is applied. Emulo now recognizes the ${productLabel(status.entitlement).toLowerCase()} Emulo Pro plan.</p>
       <div class="action-stack"><a class="primary-action" data-status-action href="/account">Open Emulo account</a></div>
       <p class="proof-line">Access was confirmed from the signed webhook state stored by Emulo.</p>
     </article>`;

@@ -2,6 +2,17 @@
 
 ## Current Release / Change Window
 
+### 2026-07-17 - Emulo Pro production products
+
+- Change: Create and bind the two private recurring Emulo Pro products in Polar production.
+- Evidence: Polar production MCP listed organization `Emulo` (`e060a9bd-275b-4235-878e-bfa49deac711`) with zero products before creation, then read back `Emulo Pro Monthly` (`ce99808b-4e11-4cec-bc31-d9654d558e08`) at `$9 USD` every month and `Emulo Pro Annual` (`b6535378-b1bd-40ee-bd37-96a03abec2f2`) at `$79 USD` every year; both are private with interval count `1` and no trial.
+- Boundary: The repository stores only nonsecret product UUIDs. Polar remains the product source of truth, and committed production checkout remains disabled.
+- Danger: Duplicate products, public checkout links, partial product configuration, or enabling checkout before secrets/webhooks/deployment are proven could create billing confusion or live-money risk.
+- Repo fix: Bind both verified UUIDs together, rename active paid-plan UI copy to Emulo Pro, and keep `PAID_CHECKOUT_ENABLED=false`.
+- Verification: Focused Emulo account tests pass 16/16; full Worker tests pass 91/91 plus 6/6 production-config guards; typecheck exits `0`; production config reports `nonsecret-config-ready`; the production Wrangler dry-run bundles with `PAID_CHECKOUT_ENABLED=false`; the production dependency audit reports 0 vulnerabilities.
+- Provider/MCP proof: Both products were absent, created once, and independently listed after creation with exact names, cents, currency, cadence, privacy, and null trial state. No checkout link, customer, subscription, webhook, discount, benefit, or charge was created.
+- Open action: Install the scoped production Polar access token and webhook secret, deploy the application with checkout disabled, prove auth/webhook behavior, and require separate approval before any real-money lifecycle test.
+
 ### 2026-07-17 - Production Polar routing correction
 
 - Change: Route the server-side Polar SDK through the validated `POLAR_SERVER` value for both Sandbox and production.
@@ -74,5 +85,5 @@
 ## Open Provider Or Human Actions
 
 - Open the deployed `/account` and `/v1/billing/complete` in the already authenticated browser and provide a redacted visual receipt that the active plan and branded surfaces render. Do not share cookies, query codes, account IDs, or provider IDs.
-- Polar production organization/payout status, products, scoped OAT, raw webhook, and real purchase/cancellation/refund lifecycle remain unproven and checkout remains disabled.
-- Production Worker deployment is intentionally waiting for the exact GitHub client ID and both nonsecret Polar product IDs; committed placeholders keep auth and billing unavailable rather than guessing provider state.
+- Polar production organization and both private products are proven through MCP. Payout status, scoped OAT, raw webhook, and real purchase/cancellation/refund lifecycle remain unproven, and checkout remains disabled.
+- Production Worker deployment is intentionally waiting for the scoped Polar token and webhook secret; the GitHub client ID and both nonsecret Polar product IDs are now configured.

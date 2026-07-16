@@ -61,7 +61,7 @@ describe("Emulo account UI", () => {
 
   it("makes the portal primary for active customers without duplicate checkout", async () => {
     const html = await body(renderAccountPage(status("active")));
-    expect(html).toContain("Founding Beta is active");
+    expect(html).toContain("Emulo Pro is active");
     expect(html).toContain("Monthly");
     expect(html).toContain("data-portal-form");
     expect(html).not.toContain("data-checkout-form");
@@ -97,7 +97,7 @@ describe("Emulo account UI", () => {
   it("renders webhook-confirmed activation immediately", async () => {
     const html = await body(renderPaymentPage(status("active")));
     expect(html).toContain('data-payment-state="active"');
-    expect(html).toContain("Founding Beta activated");
+    expect(html).toContain("Emulo Pro activated");
     expect(html).not.toContain("Waiting for Polar confirmation");
   });
 });

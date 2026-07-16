@@ -168,7 +168,7 @@ creation, so inspect before saving.
 
 ### Monthly
 
-- Name: `Emulo Founding Beta - Monthly`
+- Name: `Emulo Pro Monthly`
 - Recurring interval: monthly
 - Price: `$9 USD`
 - Trial: none
@@ -179,7 +179,7 @@ creation, so inspect before saving.
 
 ### Annual
 
-- Name: `Emulo Founding Beta - Annual`
+- Name: `Emulo Pro Annual`
 - Recurring interval: yearly
 - Price: `$79 USD`
 - Trial: none
