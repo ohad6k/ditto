@@ -28,17 +28,17 @@
 - Modify: `emulo_autopilot/contracts.py`
 - Modify: `tests/test_autopilot_contracts.py`
 
-- [ ] **Step 1: Write a failing test**
+- [x] **Step 1: Write a failing test**
 
 Test candidate statements containing `\n`, `\r`, NUL, and other ASCII control characters. Recompute candidate identity before validation and require a `candidate statement` error.
 
-- [ ] **Step 2: Run and verify red state**
+- [x] **Step 2: Run and verify red state**
 
 Run: `python -m unittest tests.test_autopilot_contracts -v`
 
 Expected: FAIL because multiline statements are currently accepted.
 
-- [ ] **Step 3: Reject non-renderable statements**
+- [x] **Step 3: Reject non-renderable statements**
 
 Immediately after `_string(value["statement"], ...)`, add:
 
@@ -48,13 +48,13 @@ if any(ord(character) < 32 or ord(character) == 127
     raise ValueError("candidate statement contains a control character")
 ```
 
-- [ ] **Step 4: Run contract and policy tests**
+- [x] **Step 4: Run contract and policy tests**
 
 Run: `python -m unittest tests.test_autopilot_contracts tests.test_autopilot_policy -v`
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```powershell
 git add emulo_autopilot/contracts.py tests/test_autopilot_contracts.py

@@ -130,6 +130,9 @@ def validate_candidate(value):
     if value["domain"] not in DOMAINS:
         raise ValueError("candidate domain is invalid")
     _string(value["statement"], "candidate statement", 1, 2000)
+    if any(ord(character) < 32 or ord(character) == 127
+           for character in value["statement"]):
+        raise ValueError("candidate statement contains a control character")
     if not isinstance(value["scope"], list) or len(value["scope"]) > 16:
         raise ValueError("candidate scope is invalid")
     if any(

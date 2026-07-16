@@ -76,6 +76,15 @@ class CandidateContractTest(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, field):
                     contracts.validate_candidate(candidate)
 
+    def test_statement_control_characters_are_rejected(self):
+        for control in ("\n", "\r", "\x00", "\x1f", "\x7f"):
+            candidate = candidate_fixture()
+            candidate["statement"] = "Keep the rule" + control + "bounded"
+            candidate["candidate_id"] = contracts.candidate_identity(candidate)
+            with self.subTest(control=repr(control)):
+                with self.assertRaisesRegex(ValueError, "candidate statement"):
+                    contracts.validate_candidate(candidate)
+
     def test_duplicate_receipts_are_rejected(self):
         candidate = candidate_fixture()
         candidate["evidence"] = [candidate["evidence"][0], candidate["evidence"][0]]
