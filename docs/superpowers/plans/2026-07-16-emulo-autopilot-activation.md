@@ -200,8 +200,9 @@ git commit -m "feat: activate reversible Autopilot overlays"
 **Files:**
 - Modify: `emulo.py`
 - Modify: `tests/test_mcp_server.py`
+- Modify: `.agents/skills/emulo/runtime.json`
 
-- [ ] **Step 1: Write failing MCP tests**
+- [x] **Step 1: Write failing MCP tests**
 
 Prove:
 
@@ -212,13 +213,13 @@ Prove:
 - corrupt head, manifest, extra file, or artifact hash returns an MCP tool error and never partial profile text;
 - the one-file `emulo.py` path works without importing `emulo_autopilot`.
 
-- [ ] **Step 2: Run and verify red state**
+- [x] **Step 2: Run and verify red state**
 
 Run: `python -m unittest tests.test_mcp_server -v`
 
 Expected: new overlay assertions fail.
 
-- [ ] **Step 3: Add a duplicated bounded reader to `emulo.py`**
+- [x] **Step 3: Add a duplicated bounded reader to `emulo.py`**
 
 Add constants for head/generation schemas and implement `load_autopilot_overlay(emulo_home, domain)` without importing the optional package. It must repeat the exact head keys, generation keys, content-bound generation ID, domain metadata, expected-file set, regular-path checks, SHA-256 verification, and strict UTF-8 decoding from Task 2.
 
@@ -233,7 +234,7 @@ Modify `mcp_load_profile_text` only after existing base/legacy composition:
 
 Missing `head.json` returns `None`. Any present invalid state raises `ValueError("corrupt Autopilot overlay; inspect local Autopilot status")`, which the existing MCP handler converts to an error result.
 
-- [ ] **Step 4: Run MCP and complete regressions**
+- [x] **Step 4: Run MCP and complete regressions**
 
 Run:
 
@@ -244,10 +245,10 @@ python -m unittest discover -s tests -v
 
 Expected: full suite passes; existing Windows symlink skips may remain.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```powershell
-git add emulo.py tests/test_mcp_server.py
+git add emulo.py tests/test_mcp_server.py .agents/skills/emulo/runtime.json
 git commit -m "feat: expose active Autopilot overlay through MCP"
 ```
 

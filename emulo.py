@@ -3884,6 +3884,151 @@ def plugin_main(argv):
 
 EMULO_VERSION = "0.5.0"
 MCP_PROTOCOL_VERSION = "2025-06-18"
+AUTOPILOT_HEAD_SCHEMA = "emulo.autopilot-head/v1"
+AUTOPILOT_GENERATION_SCHEMA = "emulo.autopilot-generation/v1"
+
+def _autopilot_overlay_child(emulo_home, *parts):
+    for part in parts:
+        if (
+            not isinstance(part, str)
+            or not part
+            or part in {".", ".."}
+            or os.path.isabs(part)
+            or "/" in part
+            or "\\" in part
+        ):
+            raise ValueError("unsafe Autopilot overlay path")
+    home = os.path.realpath(resolve_emulo_home(emulo_home))
+    candidate = os.path.abspath(os.path.join(home, "autopilot", *parts))
+    try:
+        if os.path.commonpath((home, candidate)) != home:
+            raise ValueError("unsafe Autopilot overlay path")
+    except ValueError as exc:
+        raise ValueError("unsafe Autopilot overlay path") from exc
+    probe = home
+    for part in ("autopilot",) + parts:
+        probe = os.path.join(probe, part)
+        if os.path.lexists(probe) and is_link_or_reparse(probe):
+            raise ValueError("unsafe Autopilot overlay path")
+    return candidate
+
+def _validate_autopilot_generation(value, generation_id):
+    keys = {
+        "schema_version", "generation_id", "parent_generation_id",
+        "operation", "candidate_ids", "domains", "created_at",
+    }
+    if not isinstance(value, dict) or set(value) != keys:
+        raise ValueError("invalid Autopilot generation")
+    if value["schema_version"] != AUTOPILOT_GENERATION_SCHEMA:
+        raise ValueError("invalid Autopilot generation")
+    if value["generation_id"] != generation_id or not re.fullmatch(
+        r"gen_[a-f0-9]{20}", generation_id
+    ):
+        raise ValueError("invalid Autopilot generation")
+    parent = value["parent_generation_id"]
+    if parent is not None and not re.fullmatch(r"gen_[a-f0-9]{20}", parent or ""):
+        raise ValueError("invalid Autopilot generation")
+    if value["operation"] not in {"activate", "rollback"}:
+        raise ValueError("invalid Autopilot generation")
+    candidate_ids = value["candidate_ids"]
+    if (
+        not isinstance(candidate_ids, list)
+        or candidate_ids != sorted(set(candidate_ids))
+        or any(
+            not isinstance(candidate_id, str)
+            or not re.fullmatch(r"cand_[a-f0-9]{20}", candidate_id)
+            for candidate_id in candidate_ids
+        )
+    ):
+        raise ValueError("invalid Autopilot generation")
+    domains = value["domains"]
+    if not isinstance(domains, dict) or not set(domains).issubset(VALID_DOMAINS):
+        raise ValueError("invalid Autopilot generation")
+    for domain, metadata in domains.items():
+        if (
+            not isinstance(metadata, dict)
+            or set(metadata) != {"artifact", "sha256"}
+            or metadata["artifact"] != domain + ".md"
+            or not isinstance(metadata["sha256"], str)
+            or not re.fullmatch(r"[a-f0-9]{64}", metadata["sha256"])
+        ):
+            raise ValueError("invalid Autopilot generation")
+    if not isinstance(value["created_at"], str):
+        raise ValueError("invalid Autopilot generation")
+    try:
+        time.strptime(value["created_at"], "%Y-%m-%dT%H:%M:%SZ")
+    except ValueError as exc:
+        raise ValueError("invalid Autopilot generation") from exc
+    identity = {key: item for key, item in value.items() if key != "generation_id"}
+    expected_id = "gen_" + sha256_text(canonical_json(identity))[:20]
+    if generation_id != expected_id:
+        raise ValueError("invalid Autopilot generation")
+    return value
+
+def load_autopilot_overlay(emulo_home, domain):
+    if domain not in VALID_DOMAINS:
+        raise ValueError("unknown Autopilot overlay domain")
+    try:
+        head_path = _autopilot_overlay_child(emulo_home, "head.json")
+        if not os.path.lexists(head_path):
+            return None
+        if not os.path.isfile(head_path) or is_link_or_reparse(head_path):
+            raise ValueError("invalid Autopilot head")
+        with open(head_path, "r", encoding="utf-8", errors="strict") as handle:
+            head = json.load(handle)
+        if (
+            not isinstance(head, dict)
+            or set(head) != {"schema_version", "generation_id"}
+            or head["schema_version"] != AUTOPILOT_HEAD_SCHEMA
+            or not isinstance(head["generation_id"], str)
+            or not re.fullmatch(r"gen_[a-f0-9]{20}", head["generation_id"])
+        ):
+            raise ValueError("invalid Autopilot head")
+
+        generation_id = head["generation_id"]
+        root = _autopilot_overlay_child(emulo_home, "generations", generation_id)
+        if not os.path.isdir(root) or is_link_or_reparse(root):
+            raise ValueError("invalid Autopilot generation directory")
+        manifest_path = _autopilot_overlay_child(
+            emulo_home, "generations", generation_id, "generation.json"
+        )
+        if not os.path.isfile(manifest_path) or is_link_or_reparse(manifest_path):
+            raise ValueError("invalid Autopilot generation manifest")
+        with open(
+            manifest_path, "r", encoding="utf-8", errors="strict"
+        ) as handle:
+            generation = _validate_autopilot_generation(
+                json.load(handle), generation_id
+            )
+
+        expected_files = {"generation.json"}
+        payloads = {}
+        for selected_domain, metadata in generation["domains"].items():
+            artifact_name = metadata["artifact"]
+            expected_files.add(artifact_name)
+            artifact_path = _autopilot_overlay_child(
+                emulo_home, "generations", generation_id, artifact_name
+            )
+            if not os.path.isfile(artifact_path) or is_link_or_reparse(artifact_path):
+                raise ValueError("invalid Autopilot generation artifact")
+            with open(artifact_path, "rb") as handle:
+                payload = handle.read()
+            if hashlib.sha256(payload).hexdigest() != metadata["sha256"]:
+                raise ValueError("invalid Autopilot generation artifact")
+            payloads[selected_domain] = payload.decode("utf-8", errors="strict")
+        entries = list(os.scandir(root))
+        if {entry.name for entry in entries} != expected_files or any(
+            entry.is_symlink()
+            or is_link_or_reparse(entry.path)
+            or not entry.is_file(follow_symlinks=False)
+            for entry in entries
+        ):
+            raise ValueError("invalid Autopilot generation contents")
+        return payloads.get(domain)
+    except (OSError, UnicodeError, ValueError, TypeError, json.JSONDecodeError):
+        raise ValueError(
+            "corrupt Autopilot overlay; inspect local Autopilot status"
+        ) from None
 
 def mcp_tool_definitions():
     return [
@@ -3924,6 +4069,9 @@ def mcp_load_profile_text(emulo_home, domain):
         body += "\n\n(legacy-migration profile, unverified: {0})".format(
             payload.get("recovery_instruction", "")
         )
+    overlay = load_autopilot_overlay(emulo_home, domain)
+    if overlay:
+        body += "\n\n" + overlay.rstrip()
     return header + "\n\n" + body
 
 def mcp_result(msg_id, result):

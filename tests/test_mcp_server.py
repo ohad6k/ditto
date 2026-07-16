@@ -1,11 +1,16 @@
 import importlib.util
 import json
+import os
 import subprocess
 import sys
 import tempfile
 import unittest
 from pathlib import Path
 from unittest import mock
+
+from emulo_autopilot import contracts
+from emulo_autopilot.store import AutopilotStore
+from tests.autopilot_helpers import candidate_fixture, decision_fixture
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -23,6 +28,31 @@ def rpc(**kw):
 
 class McpHandlerTest(unittest.TestCase):
     HOME = "/tmp/emulo-home-unused"
+
+    @staticmethod
+    def _approve(store, statement, domain="work"):
+        candidate = candidate_fixture(statement=statement)
+        candidate["domain"] = domain
+        candidate["candidate_id"] = contracts.candidate_identity(candidate)
+        store.put_candidate(candidate)
+        store.append_decision(decision_fixture(candidate["candidate_id"]))
+        return candidate
+
+    @staticmethod
+    def _fake_profile(home, domain="work"):
+        work = Path(home) / "you.md"
+        work.write_text("BASE WORK PROFILE", encoding="utf-8")
+        paths = [str(work)]
+        if domain != "work":
+            selected = Path(home) / ("you-" + domain + ".md")
+            selected.write_text("BASE " + domain.upper() + " PROFILE", encoding="utf-8")
+            paths.append(str(selected))
+        return {
+            "status": "active",
+            "domain": domain,
+            "profile_version": "abcd1234abcd1234abcd",
+            "paths": paths,
+        }
 
     def test_initialize_echoes_a_supported_protocol_and_names_the_server(self):
         response = emulo.mcp_handle(
@@ -113,6 +143,124 @@ class McpHandlerTest(unittest.TestCase):
                 self.HOME,
             )
         self.assertEqual("work", captured["domain"])
+
+    def test_absent_autopilot_head_preserves_profile_bytes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            fake = self._fake_profile(tmp)
+            with mock.patch.object(emulo, "resolve_profile_paths", return_value=fake):
+                self.assertEqual(
+                    "# Emulo work profile (version abcd1234abcd1234abcd)\n\n"
+                    "BASE WORK PROFILE",
+                    emulo.mcp_load_profile_text(tmp, "work"),
+                )
+
+    def test_mcp_appends_only_the_selected_autopilot_domain(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            store = AutopilotStore(tmp)
+            work = self._approve(store, "Use live proof for release claims.")
+            design = self._approve(
+                store, "Change visual structure before polish.", domain="design"
+            )
+            store.activate(
+                [work["candidate_id"], design["candidate_id"]],
+                "2026-07-16T13:00:00Z",
+            )
+            fake = self._fake_profile(tmp)
+            with mock.patch.object(emulo, "resolve_profile_paths", return_value=fake):
+                text = emulo.mcp_load_profile_text(tmp, "work")
+        self.assertIn("BASE WORK PROFILE", text)
+        self.assertIn("Use live proof for release claims.", text)
+        self.assertNotIn("Change visual structure before polish.", text)
+        self.assertGreater(
+            text.index("Use live proof for release claims."),
+            text.index("BASE WORK PROFILE"),
+        )
+
+    def test_mcp_reflects_append_only_rollback(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            store = AutopilotStore(tmp)
+            first_candidate = self._approve(store, "Keep the stable rule.")
+            first = store.activate(
+                [first_candidate["candidate_id"]], "2026-07-16T13:00:00Z"
+            )
+            second_candidate = self._approve(store, "Try the experimental rule.")
+            store.activate(
+                [second_candidate["candidate_id"]], "2026-07-16T13:01:00Z"
+            )
+            store.rollback(first["generation_id"], "2026-07-16T13:02:00Z")
+            fake = self._fake_profile(tmp)
+            with mock.patch.object(emulo, "resolve_profile_paths", return_value=fake):
+                text = emulo.mcp_load_profile_text(tmp, "work")
+        self.assertIn("Keep the stable rule.", text)
+        self.assertNotIn("Try the experimental rule.", text)
+
+    def test_corrupt_autopilot_state_returns_error_without_partial_profile(self):
+        for corruption in ("head", "manifest", "artifact", "extra"):
+            with self.subTest(corruption=corruption), tempfile.TemporaryDirectory() as tmp:
+                store = AutopilotStore(tmp)
+                candidate = self._approve(store, "Keep this reviewed rule.")
+                generation = store.activate(
+                    [candidate["candidate_id"]], "2026-07-16T13:00:00Z"
+                )
+                root = (
+                    Path(tmp)
+                    / "autopilot"
+                    / "generations"
+                    / generation["generation_id"]
+                )
+                if corruption == "head":
+                    (Path(tmp) / "autopilot" / "head.json").write_text(
+                        "{}\n", encoding="utf-8"
+                    )
+                elif corruption == "manifest":
+                    (root / "generation.json").write_text("{}\n", encoding="utf-8")
+                elif corruption == "artifact":
+                    (root / "work.md").write_text("tampered\n", encoding="utf-8")
+                else:
+                    (root / "extra.txt").write_text("unexpected", encoding="utf-8")
+                fake = self._fake_profile(tmp)
+                with mock.patch.object(emulo, "resolve_profile_paths", return_value=fake):
+                    response = emulo.mcp_handle(
+                        rpc(
+                            id=8,
+                            method="tools/call",
+                            params={
+                                "name": "load_emulo_profile",
+                                "arguments": {"domain": "work"},
+                            },
+                        ),
+                        tmp,
+                    )
+                self.assertTrue(response["result"]["isError"])
+                error = response["result"]["content"][0]["text"]
+                self.assertIn("corrupt Autopilot overlay", error)
+                self.assertNotIn("BASE WORK PROFILE", error)
+
+    def test_one_file_overlay_reader_needs_no_autopilot_package(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp) / "home"
+            store = AutopilotStore(str(home))
+            candidate = self._approve(store, "One-file MCP keeps this rule.")
+            store.activate(
+                [candidate["candidate_id"]], "2026-07-16T13:00:00Z"
+            )
+            isolated = Path(tmp) / "emulo.py"
+            isolated.write_bytes(EMULO.read_bytes())
+            script = (
+                "import importlib.util;"
+                "s=importlib.util.spec_from_file_location('isolated_emulo',r'{}');"
+                "m=importlib.util.module_from_spec(s);s.loader.exec_module(m);"
+                "print(m.load_autopilot_overlay(r'{}','work'))"
+            ).format(isolated, home)
+            result = subprocess.run(
+                [sys.executable, "-I", "-c", script],
+                cwd=tmp,
+                env={key: value for key, value in os.environ.items() if key != "PYTHONPATH"},
+                capture_output=True,
+                text=True,
+            )
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertIn("One-file MCP keeps this rule.", result.stdout)
 
 
 class McpStdioTest(unittest.TestCase):
