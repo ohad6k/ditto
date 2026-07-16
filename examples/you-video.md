@@ -58,6 +58,8 @@ description: Evidence-backed Emulo video profile
   - Action: Speak proper nouns at exaggeration 0.42 to 0.5, never hook energy, and put them in a "called X" frame; fix a mangled name by changing the energy and the carrier phrase, never by respelling it phonetically, since every respelling only produces a different wrong word.
 - tiny.en scores a mangled proper noun as clear, so the clarity gate silently passes a wrong brand name.
   - Action: Gate any line containing a product name with whisper base.en and assert the name appears as an exact token in the transcript, rejecting the take outright when it does not.
+- A line can be clean in the voice track and still be smeared in the final mix, because a short sidechain release lets the music swell back over the last syllable; emulo survived the take but became emulog once the bed was under it.
+  - Action: Set the music duck release to about 750ms so it outlasts a word tail, and always re-verify the important line by transcribing it back out of the finished mix, not just the voice track; the mix is audio only, so fixing it costs a remux and never a re-render.
 - A word the transcriber keeps mishearing is a real ambiguity for viewers too; tax came back as text in 3 of 4 takes.
   - Action: When a take is clean but a word is still misheard, change the word rather than reroll; cost for tax scored 1.00 immediately.
 - A rename can land while a video is in flight, so the product name in a cut goes stale silently.
