@@ -9,9 +9,9 @@
     "enabled": false
   },
   "vars": {
-    "APP_ENV": "local",
+    "APP_ENV": "beta",
     "GITHUB_CLIENT_ID": "not-configured",
-    "PUBLIC_BASE_URL": "https://not-configured.invalid/",
+    "PUBLIC_BASE_URL": "https://emulo-autopilot-api.ohad1306.workers.dev/",
     "PAID_CHECKOUT_ENABLED": "false",
     "POLAR_SERVER": "sandbox",
     "POLAR_MONTHLY_PRODUCT_ID": "not-configured",
