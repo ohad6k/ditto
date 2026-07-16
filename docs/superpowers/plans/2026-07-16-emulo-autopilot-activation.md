@@ -67,7 +67,7 @@ git commit -m "fix: bound activatable Autopilot statements"
 - Modify: `emulo_autopilot/store.py`
 - Modify: `tests/test_autopilot_store.py`
 
-- [ ] **Step 1: Write failing generation tests**
+- [x] **Step 1: Write failing generation tests**
 
 Cover:
 
@@ -87,13 +87,13 @@ Cover:
 
 Use one minimal `mock.patch.object(store, "atomic_write_json", ...)` only for the head-write failure. Let generation/artifact writes execute for real and assert the previous head bytes remain exact.
 
-- [ ] **Step 2: Run and verify red state**
+- [x] **Step 2: Run and verify red state**
 
 Run: `python -m unittest tests.test_autopilot_store -v`
 
 Expected: FAIL because generation methods do not exist.
 
-- [ ] **Step 3: Implement strict head and generation reads**
+- [x] **Step 3: Implement strict head and generation reads**
 
 Add imports for `hashlib`, `shutil`, and generation/head validators and identities. Add these public methods:
 
@@ -149,7 +149,7 @@ Add imports for `hashlib`, `shutil`, and generation/head validators and identiti
 
 Require the generation directory itself and every artifact to be regular non-link/non-reparse paths before reading.
 
-- [ ] **Step 4: Implement deterministic generation writing**
+- [x] **Step 4: Implement deterministic generation writing**
 
 Helpers and rendering:
 
@@ -182,13 +182,13 @@ Implement `_write_generation(candidate_ids, parent_generation_id, operation, cre
 
 `rollback(target_generation_id, created_at)` acquires `lock("rollback")`, walks parent links from current head to prove ancestry, and writes a new generation using the target's candidate IDs with `operation="rollback"` and parent equal to the former head.
 
-- [ ] **Step 5: Run generation and profile-store tests**
+- [x] **Step 5: Run generation and profile-store tests**
 
 Run: `python -m unittest tests.test_autopilot_store tests.test_profile_store -v`
 
 Expected: PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```powershell
 git add emulo_autopilot/store.py tests/test_autopilot_store.py

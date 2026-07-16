@@ -5,6 +5,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
+from emulo_autopilot import contracts
 from emulo_autopilot.contracts import canonical_json
 from emulo_autopilot.store import AutopilotStore
 from tests.autopilot_helpers import (
@@ -21,6 +22,27 @@ class AutopilotStoreTest(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.home = Path(self.temp.name) / "private"
         self.store = AutopilotStore(str(self.home))
+
+    def _approved_candidate(
+        self,
+        statement="Verify the live URL before claiming deployment is complete.",
+        domain="work",
+        decision="approve",
+        policy_class="review",
+    ):
+        candidate = candidate_fixture(statement=statement)
+        candidate["domain"] = domain
+        candidate["candidate_id"] = contracts.candidate_identity(candidate)
+        self.store.put_candidate(candidate)
+        self.store.append_decision(
+            decision_fixture(
+                candidate["candidate_id"],
+                decision=decision,
+                reason="founder-review" if decision == "approve" else "contradiction",
+                policy_class=policy_class,
+            )
+        )
+        return candidate
 
     def test_initialize_creates_only_private_store_directories(self):
         root = Path(self.store.initialize())
@@ -232,6 +254,165 @@ class AutopilotStoreTest(unittest.TestCase):
         self.assertNotIn(private_path, payload)
         self.assertNotIn(raw_text, payload)
         self.assertNotIn(redacted_text, payload)
+
+    def test_generation_head_is_absent_until_activation(self):
+        self.assertIsNone(self.store.get_head())
+
+    def test_activation_requires_newest_explicit_approval(self):
+        missing = candidate_fixture()["candidate_id"]
+        with self.assertRaisesRegex(ValueError, "candidate"):
+            self.store.activate([missing], "2026-07-16T12:00:00Z")
+
+        candidate = candidate_fixture(statement="Keep release claims evidence-bound.")
+        self.store.put_candidate(candidate)
+        with self.assertRaisesRegex(ValueError, "approval"):
+            self.store.activate(
+                [candidate["candidate_id"]], "2026-07-16T12:00:00Z"
+            )
+
+        self.store.append_decision(
+            decision_fixture(
+                candidate["candidate_id"],
+                decision="reject",
+                reason="contradiction",
+                policy_class="review",
+            )
+        )
+        with self.assertRaisesRegex(ValueError, "approval"):
+            self.store.activate(
+                [candidate["candidate_id"]], "2026-07-16T12:00:00Z"
+            )
+
+        unsafe = self._approved_candidate(
+            statement="Publish without review.", policy_class="reject"
+        )
+        with self.assertRaisesRegex(ValueError, "policy"):
+            self.store.activate(
+                [unsafe["candidate_id"]], "2026-07-16T12:00:00Z"
+            )
+
+    def test_activation_is_deterministic_additive_and_idempotent(self):
+        work_b = self._approved_candidate(statement="Run tests before release.")
+        work_a = self._approved_candidate(statement="Keep a rollback checkpoint.")
+        design = self._approved_candidate(
+            statement="Change structure before visual polish.", domain="design"
+        )
+
+        first = self.store.activate(
+            [work_b["candidate_id"], work_a["candidate_id"]],
+            "2026-07-16T12:00:00Z",
+        )
+        self.assertEqual(
+            sorted([work_a["candidate_id"], work_b["candidate_id"]]),
+            first["candidate_ids"],
+        )
+        expected_work = (
+            "# Emulo Autopilot overlay: work\n\n"
+            "Evidence-backed personal rules supplementing the active Emulo profile:\n\n"
+            + "".join(
+                "- " + candidate["statement"] + "\n"
+                for candidate in sorted(
+                    [work_a, work_b], key=lambda item: item["candidate_id"]
+                )
+            )
+        )
+        self.assertEqual(expected_work, self.store.read_active_domain("work"))
+        self.assertIsNone(self.store.read_active_domain("design"))
+
+        same = self.store.activate(
+            [work_a["candidate_id"]], "2026-07-16T12:01:00Z"
+        )
+        self.assertEqual(first, same)
+
+        second = self.store.activate(
+            [design["candidate_id"]], "2026-07-16T12:02:00Z"
+        )
+        self.assertEqual(first["generation_id"], second["parent_generation_id"])
+        self.assertEqual(expected_work, self.store.read_active_domain("work"))
+        self.assertIn(design["statement"], self.store.read_active_domain("design"))
+
+    def test_generation_reads_fail_closed_on_tampering(self):
+        candidate = self._approved_candidate()
+        generation = self.store.activate(
+            [candidate["candidate_id"]], "2026-07-16T12:00:00Z"
+        )
+        root = self.home / "autopilot" / "generations" / generation["generation_id"]
+
+        head_path = self.home / "autopilot" / "head.json"
+        head_bytes = head_path.read_bytes()
+        head_path.write_text("{}\n", encoding="utf-8")
+        with self.assertRaisesRegex(ValueError, "head is corrupt"):
+            self.store.get_head()
+        head_path.write_bytes(head_bytes)
+
+        artifact = root / "work.md"
+        artifact_bytes = artifact.read_bytes()
+        artifact.write_text("tampered\n", encoding="utf-8")
+        with self.assertRaisesRegex(ValueError, "generation is corrupt"):
+            self.store.get_generation(generation["generation_id"])
+        artifact.write_bytes(artifact_bytes)
+
+        manifest = root / "generation.json"
+        manifest_bytes = manifest.read_bytes()
+        manifest.write_text("{}\n", encoding="utf-8")
+        with self.assertRaisesRegex(ValueError, "generation is corrupt"):
+            self.store.get_generation(generation["generation_id"])
+        manifest.write_bytes(manifest_bytes)
+
+        (root / "extra.txt").write_text("unexpected", encoding="utf-8")
+        with self.assertRaisesRegex(ValueError, "generation is corrupt"):
+            self.store.get_generation(generation["generation_id"])
+
+    def test_failed_head_write_preserves_previous_pointer(self):
+        first_candidate = self._approved_candidate(statement="Keep the first rule.")
+        first = self.store.activate(
+            [first_candidate["candidate_id"]], "2026-07-16T12:00:00Z"
+        )
+        head_path = self.home / "autopilot" / "head.json"
+        before = head_path.read_bytes()
+        second_candidate = self._approved_candidate(statement="Keep the second rule.")
+        real_write = self.store.atomic_write_json
+
+        def fail_head(path, value):
+            if Path(path).name == "head.json":
+                raise OSError("injected head failure")
+            return real_write(path, value)
+
+        with mock.patch.object(self.store, "atomic_write_json", side_effect=fail_head):
+            with self.assertRaisesRegex(OSError, "injected head failure"):
+                self.store.activate(
+                    [second_candidate["candidate_id"]],
+                    "2026-07-16T12:01:00Z",
+                )
+
+        self.assertEqual(before, head_path.read_bytes())
+        self.assertEqual(first["generation_id"], self.store.get_head()["generation_id"])
+
+    def test_rollback_is_append_only_and_restores_exact_target(self):
+        first_candidate = self._approved_candidate(statement="Keep the first rule.")
+        first = self.store.activate(
+            [first_candidate["candidate_id"]], "2026-07-16T12:00:00Z"
+        )
+        first_bytes = self.store.read_domain(first["generation_id"], "work")
+        second_candidate = self._approved_candidate(statement="Keep the second rule.")
+        second = self.store.activate(
+            [second_candidate["candidate_id"]], "2026-07-16T12:01:00Z"
+        )
+
+        with self.assertRaisesRegex(ValueError, "ancestor"):
+            self.store.rollback("gen_" + "f" * 20, "2026-07-16T12:02:00Z")
+
+        rolled_back = self.store.rollback(
+            first["generation_id"], "2026-07-16T12:03:00Z"
+        )
+        self.assertEqual("rollback", rolled_back["operation"])
+        self.assertEqual(second["generation_id"], rolled_back["parent_generation_id"])
+        self.assertEqual(first["candidate_ids"], rolled_back["candidate_ids"])
+        self.assertEqual(first_bytes, self.store.read_active_domain("work"))
+        generations = self.home / "autopilot" / "generations"
+        self.assertTrue((generations / first["generation_id"]).is_dir())
+        self.assertTrue((generations / second["generation_id"]).is_dir())
+        self.assertTrue((generations / rolled_back["generation_id"]).is_dir())
 
 
 if __name__ == "__main__":

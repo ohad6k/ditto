@@ -1,7 +1,9 @@
 import contextlib
+import hashlib
 import json
 import os
 import re
+import shutil
 import socket
 import stat
 import tempfile
@@ -9,10 +11,16 @@ import time
 import uuid
 
 from .contracts import (
+    DOMAINS,
+    GENERATION_SCHEMA,
+    HEAD_SCHEMA,
     canonical_json,
+    generation_identity,
     validate_candidate,
     validate_checkpoint,
     validate_decision,
+    validate_generation,
+    validate_head,
     validate_inbox,
 )
 
@@ -26,6 +34,20 @@ LOCK_KEYS = {
     "hostname",
     "created_at",
 }
+
+
+def render_domain(domain, candidates):
+    if domain not in DOMAINS:
+        raise ValueError("generation domain is invalid")
+    lines = [
+        "# Emulo Autopilot overlay: " + domain,
+        "",
+        "Evidence-backed personal rules supplementing the active Emulo profile:",
+        "",
+    ]
+    for candidate in sorted(candidates, key=lambda item: item["candidate_id"]):
+        lines.append("- " + candidate["statement"])
+    return "\n".join(lines).rstrip() + "\n"
 
 
 class AutopilotStore:
@@ -308,3 +330,231 @@ class AutopilotStore:
             except (OSError, UnicodeError, ValueError, json.JSONDecodeError) as exc:
                 raise ValueError("inbox is corrupt") from exc
         return sorted(values, key=lambda item: item["inbox_id"])
+
+    def get_head(self):
+        path = self._child("head.json")
+        if not os.path.exists(path):
+            return None
+        self._assert_not_link(path)
+        if not os.path.isfile(path):
+            raise ValueError("Autopilot head is corrupt")
+        try:
+            with open(path, "r", encoding="utf-8", errors="strict") as handle:
+                return validate_head(json.load(handle))
+        except (OSError, UnicodeError, ValueError, json.JSONDecodeError) as exc:
+            raise ValueError("Autopilot head is corrupt") from exc
+
+    def get_generation(self, generation_id):
+        if not isinstance(generation_id, str) or not re.fullmatch(
+            r"gen_[a-f0-9]{20}", generation_id
+        ):
+            raise ValueError("generation_id is invalid")
+        root = self._child("generations", generation_id)
+        try:
+            self._assert_path_chain(root)
+            self._assert_not_link(root)
+            if not os.path.isdir(root):
+                raise ValueError("generation directory is missing")
+            manifest_path = self._child(
+                "generations", generation_id, "generation.json"
+            )
+            self._assert_not_link(manifest_path)
+            if not os.path.isfile(manifest_path):
+                raise ValueError("generation manifest is missing")
+            with open(
+                manifest_path, "r", encoding="utf-8", errors="strict"
+            ) as handle:
+                generation = validate_generation(json.load(handle))
+            if generation["generation_id"] != generation_id:
+                raise ValueError("generation identity mismatch")
+            expected_files = {"generation.json"}
+            for domain, metadata in generation["domains"].items():
+                artifact_name = metadata["artifact"]
+                expected_files.add(artifact_name)
+                path = self._child("generations", generation_id, artifact_name)
+                self._assert_not_link(path)
+                if not os.path.isfile(path):
+                    raise ValueError("generation artifact is missing")
+                with open(path, "rb") as handle:
+                    payload = handle.read()
+                if hashlib.sha256(payload).hexdigest() != metadata["sha256"]:
+                    raise ValueError("generation artifact hash mismatch")
+                payload.decode("utf-8", errors="strict")
+            if set(os.listdir(root)) != expected_files:
+                raise ValueError("generation contains unexpected files")
+            return generation
+        except (OSError, UnicodeError, ValueError, json.JSONDecodeError) as exc:
+            raise ValueError("Autopilot generation is corrupt") from exc
+
+    def read_domain(self, generation_id, domain):
+        if domain not in DOMAINS:
+            raise ValueError("generation domain is invalid")
+        generation = self.get_generation(generation_id)
+        metadata = generation["domains"].get(domain)
+        if metadata is None:
+            return None
+        path = self._child("generations", generation_id, metadata["artifact"])
+        try:
+            self._assert_not_link(path)
+            if not os.path.isfile(path):
+                raise ValueError("generation artifact is missing")
+            with open(path, "rb") as handle:
+                payload = handle.read()
+            if hashlib.sha256(payload).hexdigest() != metadata["sha256"]:
+                raise ValueError("generation artifact hash mismatch")
+            return payload.decode("utf-8", errors="strict")
+        except (OSError, UnicodeError, ValueError) as exc:
+            raise ValueError("Autopilot generation is corrupt") from exc
+
+    def read_active_domain(self, domain):
+        head = self.get_head()
+        if head is None:
+            return None
+        return self.read_domain(head["generation_id"], domain)
+
+    @staticmethod
+    def _write_file_bytes(path, payload):
+        descriptor = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+        try:
+            with os.fdopen(descriptor, "wb") as handle:
+                descriptor = None
+                handle.write(payload)
+                handle.flush()
+                os.fsync(handle.fileno())
+        finally:
+            if descriptor is not None:
+                os.close(descriptor)
+
+    def _write_generation(
+        self,
+        candidate_ids,
+        parent_generation_id,
+        operation,
+        created_at,
+    ):
+        candidates = []
+        for candidate_id in sorted(set(candidate_ids)):
+            candidate = self.get_candidate(candidate_id)
+            decision = self.latest_decision(candidate_id)
+            if decision is None or decision["decision"] != "approve":
+                raise ValueError(
+                    "candidate requires a newest explicit approval decision"
+                )
+            if decision["policy_class"] not in {"safe", "review"}:
+                raise ValueError("candidate policy class blocks activation")
+            candidates.append(candidate)
+
+        by_domain = {}
+        for candidate in candidates:
+            by_domain.setdefault(candidate["domain"], []).append(candidate)
+
+        artifacts = {}
+        domains = {}
+        for domain in sorted(by_domain):
+            payload = render_domain(domain, by_domain[domain]).encode("utf-8")
+            artifact_name = domain + ".md"
+            artifacts[artifact_name] = payload
+            domains[domain] = {
+                "artifact": artifact_name,
+                "sha256": hashlib.sha256(payload).hexdigest(),
+            }
+
+        generation = {
+            "schema_version": GENERATION_SCHEMA,
+            "generation_id": "",
+            "parent_generation_id": parent_generation_id,
+            "operation": operation,
+            "candidate_ids": sorted(set(candidate_ids)),
+            "domains": domains,
+            "created_at": created_at,
+        }
+        generation["generation_id"] = generation_identity(generation)
+        generation = validate_generation(generation)
+
+        self.initialize()
+        staged_name = ".staged-" + uuid.uuid4().hex
+        staged = self._child("generations", staged_name)
+        target = self._child("generations", generation["generation_id"])
+        os.mkdir(staged, mode=0o700)
+        try:
+            for artifact_name, payload in artifacts.items():
+                self._write_file_bytes(os.path.join(staged, artifact_name), payload)
+            manifest = (canonical_json(generation) + "\n").encode("utf-8")
+            self._write_file_bytes(os.path.join(staged, "generation.json"), manifest)
+
+            if os.path.exists(target):
+                existing = self.get_generation(generation["generation_id"])
+                if existing != generation:
+                    raise ValueError("existing generation does not match identity")
+            else:
+                os.replace(staged, target)
+
+            verified = self.get_generation(generation["generation_id"])
+            head = validate_head(
+                {
+                    "schema_version": HEAD_SCHEMA,
+                    "generation_id": generation["generation_id"],
+                }
+            )
+            self.atomic_write_json(self._child("head.json"), head)
+            return verified
+        finally:
+            if os.path.isdir(staged):
+                shutil.rmtree(staged)
+
+    def activate(self, candidate_ids, created_at):
+        if not isinstance(candidate_ids, list) or not candidate_ids:
+            raise ValueError("candidate_ids must be a non-empty list")
+        if any(
+            not isinstance(candidate_id, str)
+            or not re.fullmatch(r"cand_[a-f0-9]{20}", candidate_id)
+            for candidate_id in candidate_ids
+        ):
+            raise ValueError("candidate_id is invalid")
+        with self.lock("activate"):
+            head = self.get_head()
+            current = None
+            active_ids = set()
+            if head is not None:
+                current = self.get_generation(head["generation_id"])
+                active_ids.update(current["candidate_ids"])
+            combined = sorted(active_ids.union(candidate_ids))
+            if current is not None and combined == current["candidate_ids"]:
+                return current
+            return self._write_generation(
+                combined,
+                None if current is None else current["generation_id"],
+                "activate",
+                created_at,
+            )
+
+    def rollback(self, target_generation_id, created_at):
+        if not isinstance(target_generation_id, str) or not re.fullmatch(
+            r"gen_[a-f0-9]{20}", target_generation_id
+        ):
+            raise ValueError("target generation is not an ancestor")
+        with self.lock("rollback"):
+            head = self.get_head()
+            if head is None:
+                raise ValueError("target generation is not an ancestor")
+            current = self.get_generation(head["generation_id"])
+            parent_id = current["parent_generation_id"]
+            visited = {current["generation_id"]}
+            target = None
+            while parent_id is not None:
+                if parent_id in visited:
+                    raise ValueError("Autopilot generation is corrupt")
+                visited.add(parent_id)
+                generation = self.get_generation(parent_id)
+                if generation["generation_id"] == target_generation_id:
+                    target = generation
+                    break
+                parent_id = generation["parent_generation_id"]
+            if target is None:
+                raise ValueError("target generation is not an ancestor")
+            return self._write_generation(
+                target["candidate_ids"],
+                current["generation_id"],
+                "rollback",
+                created_at,
+            )
