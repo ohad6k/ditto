@@ -224,7 +224,7 @@ Tasks:
 - [x] Send Pro intent to the production Worker `/account` route. Do not embed Polar product IDs, tokens, customer IDs, or a direct checkout link in the site.
 - [x] Keep the GitHub action as the primary free path and add truthful disabled/beta language until public checkout is enabled.
 - [x] Add a focused source-level regression test for pricing, URLs, open-source guarantees, and absence of secret-shaped values or direct Polar checkout URLs.
-- [ ] Verify desktop and mobile rendering from a local static server, then verify the Vercel preview after push. Local desktop and 390px checks are complete; preview proof remains open.
+- [x] Verify desktop and mobile rendering from a local static server, then verify the Vercel preview after push. Local desktop and 390px layouts pass without horizontal overflow; the authenticated Vercel preview returns the pricing markup and approved links.
 
 Acceptance: the public site clearly separates free local Emulo from paid Emulo Pro, all billing authority remains server-side, tests prevent price/link/privacy drift, and no CTA claims a purchase is live while production checkout is disabled.
 
