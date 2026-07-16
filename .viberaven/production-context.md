@@ -2,6 +2,17 @@
 
 ## Current Release / Change Window
 
+### 2026-07-16 - Emulo founding-beta billing experience
+
+- Change: Replace placeholder account/payment pages with an authenticated, state-aware Emulo experience while keeping checkout disabled by default.
+- Evidence: Polar Sandbox delivered `subscription.created`, `subscription.active`, and `subscription.updated`; all three were recorded as `applied`, producing one active `founding-monthly` entitlement. Worker version `3ec1a0d8-184d-491e-8a90-66c3018cf577` exposes `PAID_CHECKOUT_ENABLED=false`; live checkout returned `503` and an unsigned webhook returned `403`.
+- Boundary: D1 entitlement state after a verified signed webhook is the only customer-visible billing truth. A Polar checkout redirect never activates access.
+- Danger: Static success copy, unauthenticated account claims, sandbox/production credential crossover, duplicate checkout, or enabling checkout during UI work could mislead users or create live-money risk.
+- Repo fix: Add a provider-neutral authenticated account-status read, state-aware account/receipt UI, and safe checkout/portal interactions without changing local open-source behavior.
+- Verification: Require focused red/green tests, full Worker tests/typecheck, config and secret review, safe deployment, live route checks, authenticated visual proof, and D1 state proof.
+- Provider/MCP proof: Polar Sandbox lifecycle is proven. Polar production organization, products, token, webhook, payout/KYC state, and real purchase/refund remain unknown.
+- Open action: Deploy the polished UI with checkout disabled; prepare exact owner-only Polar production activation steps without requesting secrets in chat.
+
 ### 2026-07-15 - Ditto Proof v1 harness
 
 - Change: Build a disabled-by-default benchmark harness on `codex/ditto-benchmark-proof-release`.
