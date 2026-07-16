@@ -4,7 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "vitest run",
+    "test": "vitest run && npm run test:production-config",
+    "test:production-config": "node --test test/production-config-validation.node.mjs",
+    "verify:production-config": "node scripts/validate-production-config.mjs wrangler.production.jsonc",
     "typecheck": "tsc --noEmit",
     "cf:types": "wrangler types worker-configuration.d.ts",
     "db:migrate:local": "wrangler d1 migrations apply emulo-autopilot-beta --local"

@@ -90,6 +90,18 @@ No password, OAT, client secret, webhook secret, cookie, bank detail, tax ID, or
 identity document may be pasted into chat, committed, placed in command
 arguments, or shown in screenshots.
 
+### Current production preparation receipt
+
+- Cloudflare D1 `emulo-autopilot-production` exists in the EEUR region.
+- All five repository migrations are applied.
+- Count-only verification shows 0 accounts, 0 entitlements, and 0 billing
+  events, so no Sandbox identity or purchase crossed the boundary.
+- `wrangler.production.jsonc` points only to the production D1 resource, uses
+  `POLAR_SERVER=production`, and keeps `PAID_CHECKOUT_ENABLED=false`.
+- The config validates and bundles in a Wrangler dry-run.
+- GitHub client ID, Polar product IDs, and all three production secrets remain
+  deliberately unconfigured pending the owner/provider steps below.
+
 ## Phase 1: owner/provider readiness
 
 Ohad performs these authenticated dashboard actions because they may require
@@ -115,12 +127,15 @@ blocking error, or its visible seller identity is incorrect.
 
 Codex may perform these steps after Phase 1 has a redacted receipt:
 
-1. Create a separate production D1 database.
-2. Add a production Wrangler configuration that contains only nonsecret values:
+1. Confirm the existing separate production D1 database and its five applied
+   migrations.
+2. Complete the production Wrangler configuration with only nonsecret values:
    production service name, production D1 binding/ID, exact production base URL,
    production GitHub client ID, production Polar product IDs, and
    `PAID_CHECKOUT_ENABLED=false`.
-3. Apply all migrations to the empty production D1 database.
+3. Run `npm run verify:production-config` and confirm the result changes from
+   `provider-actions-required` to `nonsecret-config-ready` only after the
+   GitHub client ID and both Polar product IDs are present.
 4. Deploy the production Worker while preserving Cloudflare secrets.
 5. Verify `/healthz`, signed-out `/account`, `/account.css`, `/account.js`, and
    `/emulo.svg` without enabling checkout.

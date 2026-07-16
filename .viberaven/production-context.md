@@ -43,6 +43,7 @@
 
 - Emulo billing experience commits `10509adc`, `79f504c1`, `92120af2`, and `05cb3947`: `npm run typecheck` exited 0; `npm test` passed 90 tests across 9 files; Wrangler dry-run bundled 1,500.32 KiB (153.39 KiB gzip) with `PAID_CHECKOUT_ENABLED=false` and `POLAR_SERVER=sandbox`.
 - Worker version `600e1d92-4c3f-45c4-b5be-ea2466ed00d7`: live account, CSS, JavaScript, and SVG routes returned `200` with exact content types; unauthenticated status returned `401`; disabled checkout returned `503`; unsigned webhook returned `403`. Remote D1 still showed one active `founding-monthly` entitlement and three applied lifecycle events (`created`, `active`, `updated`).
+- Production isolation receipt: D1 `emulo-autopilot-production` was created in EEUR, all five migrations applied, and count-only queries returned 0 accounts, 0 entitlements, and 0 billing events. `wrangler.production.jsonc` validates with checkout disabled and bundles against the production D1 binding; six Node config-guard tests reject Sandbox drift, secrets in vars, partial products, and committed enablement.
 
 - Commit `e49a3317f87ac547496a28588774acbdb02069f1`: `python -m unittest discover -s tests -v` passed 249 tests in 24.568s on Python 3.11.4; one Windows symlink privilege test skipped while the junction/reparse rejection test passed.
 - Synthetic pilot package: `e08c4e23921065839a234530261aae3f466c517fa0b93214669990f4dbdbe9ab`.
@@ -52,3 +53,4 @@
 
 - Open the deployed `/account` and `/v1/billing/complete` in the already authenticated browser and provide a redacted visual receipt that the active plan and branded surfaces render. Do not share cookies, query codes, account IDs, or provider IDs.
 - Polar production organization/payout status, products, scoped OAT, raw webhook, and real purchase/cancellation/refund lifecycle remain unproven and checkout remains disabled.
+- Production Worker deployment is intentionally waiting for the exact GitHub client ID and both nonsecret Polar product IDs; committed placeholders keep auth and billing unavailable rather than guessing provider state.

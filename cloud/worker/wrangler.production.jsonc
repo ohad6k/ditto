@@ -1,0 +1,31 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "emulo-production",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-07-16",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "observability": {
+    "enabled": false
+  },
+  "vars": {
+    "APP_ENV": "production",
+    "GITHUB_CLIENT_ID": "not-configured",
+    "PUBLIC_BASE_URL": "https://emulo-production.ohad1306.workers.dev/",
+    "PAID_CHECKOUT_ENABLED": "false",
+    "POLAR_SERVER": "production",
+    "POLAR_MONTHLY_PRODUCT_ID": "not-configured",
+    "POLAR_YEARLY_PRODUCT_ID": "not-configured"
+  },
+  "secrets": {
+    "required": ["POLAR_WEBHOOK_SECRET", "GITHUB_CLIENT_SECRET", "POLAR_ACCESS_TOKEN"]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "emulo-autopilot-production",
+      "database_id": "62061306-a925-4497-9813-2d64ec572f18",
+      "migrations_dir": "migrations"
+    }
+  ]
+}

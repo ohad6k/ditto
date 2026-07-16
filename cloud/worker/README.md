@@ -80,6 +80,19 @@ arguments, screenshots, issues, or documentation.
 
 ## Safe deployment order
 
+The repository contains `wrangler.production.jsonc` for the isolated
+`emulo-production` service and D1 database. Its committed provider identifiers
+remain `not-configured` and checkout remains `false` until the owner completes
+the production GitHub and Polar actions. Validate it with:
+
+```powershell
+npm run verify:production-config
+npx wrangler deploy --dry-run --config wrangler.production.jsonc
+```
+
+The config guard rejects Sandbox service/database drift, committed secret
+values, partial product configuration, and checkout enablement.
+
 1. Keep `POLAR_SERVER=sandbox` and `PAID_CHECKOUT_ENABLED=false`.
 2. Apply D1 migrations, deploy with existing secret bindings preserved, and
    verify the signed-out account page plus fail-closed routes.
