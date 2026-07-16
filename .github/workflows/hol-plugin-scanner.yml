@@ -24,3 +24,4 @@ jobs:
           fail_on_severity: high
           format: sarif
           upload_sarif: true
+

@@ -54,6 +54,10 @@ description: Evidence-backed Emulo video profile
   - Action: Open on a wound, a number, or a mistake in the first frame, not a title card; keep the lead-in under about 0.6s so no dead black opens the retention graph.
 - Freezes are provable, not a matter of opinion, and the end card is the easiest one to miss because its motion is authored to a fixed length.
   - Action: Run ffmpeg freezedetect over every finished cut and treat any reported run as a bug; carry the closing motion all the way to the composition total, not a hardcoded few seconds.
+- The cloned voice cannot say the product name; emulo comes out as MLue, MOLO, or Emilio, and phonetic respellings only turn it into a different wrong word.
+  - Action: Never make the voiceover say a brand-new proper noun. Carry the name on screen on a card and write the line around it, then verify the take with whisper base.en, because tiny.en scores a mangled name as clear.
+- A rename can land while a video is in flight, so the product name in a cut goes stale silently.
+  - Action: Before every render, re-read the install command and product name from the repo README and manifests rather than from memory or an earlier session.
 - The install CTA and handle must be exact; a guessed command on a public video is a failure.
   - Action: Show /plugin install emulo@emulo or npx skills add ohad6k/emulo@emulo, never a pip guess, and end on the @biosrios handle.
 - The mascot is the channel identity: a polished manga boy, white spiky hair, white hoodie, reading as solid white on black where the light fills are the character.
