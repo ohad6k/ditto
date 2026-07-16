@@ -33,6 +33,44 @@ def generation_fixture(candidate_id):
     return value
 
 
+def checkpoint_fixture():
+    return {
+        "schema_version": contracts.CHECKPOINT_SCHEMA,
+        "path_hash": "d" * 64,
+        "source": "codex",
+        "identity": {"size": 1234, "mtime_ns": 1784192400000000000},
+        "unchanged_since": 1784192400,
+        "processed_fingerprint": None,
+    }
+
+
+def inbox_fixture():
+    session_id = "1" * 16
+    receipts = [
+        {
+            "receipt_id": "rcpt_" + format(index + 1, "020x"),
+            "session_id": session_id,
+            "message_sha256": format(index + 1, "064x"),
+            "observed_at": "2026-0{0}-16T00:00:00Z".format(index + 6),
+            "time_stratum": "2026-0{0}".format(index + 6),
+        }
+        for index in range(2)
+    ]
+    value = {
+        "schema_version": contracts.INBOX_SCHEMA,
+        "inbox_id": "",
+        "session_id": session_id,
+        "source": "codex",
+        "session_fingerprint": "e" * 64,
+        "receipts": receipts,
+        "message_count": len(receipts),
+        "truncated_message_count": 0,
+        "created_at": "2026-07-16T10:00:00Z",
+    }
+    value["inbox_id"] = contracts.inbox_identity(value)
+    return value
+
+
 class CandidateContractTest(unittest.TestCase):
     def test_candidate_identity_is_content_bound(self):
         candidate = candidate_fixture()
@@ -151,6 +189,90 @@ class GenerationContractTest(unittest.TestCase):
         self.assertEqual(head, contracts.validate_head(head))
         with self.assertRaisesRegex(ValueError, "head keys"):
             contracts.validate_head(dict(head, current=True))
+
+
+class CheckpointContractTest(unittest.TestCase):
+    def test_valid_checkpoint_round_trips_as_deep_copy(self):
+        checkpoint = checkpoint_fixture()
+        validated = contracts.validate_checkpoint(checkpoint)
+        self.assertEqual(checkpoint, validated)
+        validated["identity"]["size"] = 999
+        self.assertEqual(1234, checkpoint["identity"]["size"])
+
+    def test_checkpoint_rejects_path_and_non_integer_identity(self):
+        with_path = dict(checkpoint_fixture(), path="C:/private/session.jsonl")
+        with self.assertRaisesRegex(ValueError, "checkpoint keys"):
+            contracts.validate_checkpoint(with_path)
+
+        boolean_size = checkpoint_fixture()
+        boolean_size["identity"]["size"] = True
+        with self.assertRaisesRegex(ValueError, "identity"):
+            contracts.validate_checkpoint(boolean_size)
+
+    def test_checkpoint_rejects_unknown_source_and_bad_fingerprint(self):
+        unknown = dict(checkpoint_fixture(), source="assistant")
+        with self.assertRaisesRegex(ValueError, "source"):
+            contracts.validate_checkpoint(unknown)
+
+        bad_fingerprint = dict(checkpoint_fixture(), processed_fingerprint="ABC")
+        with self.assertRaisesRegex(ValueError, "processed_fingerprint"):
+            contracts.validate_checkpoint(bad_fingerprint)
+
+
+class InboxContractTest(unittest.TestCase):
+    def test_valid_inbox_is_content_bound(self):
+        inbox = inbox_fixture()
+        self.assertEqual(inbox, contracts.validate_inbox(inbox))
+        changed = dict(inbox, truncated_message_count=1)
+        with self.assertRaisesRegex(ValueError, "inbox_id"):
+            contracts.validate_inbox(changed)
+
+    def test_inbox_rejects_persisted_text_fields(self):
+        for field in ("text", "quote", "redacted_text"):
+            inbox = inbox_fixture()
+            inbox["receipts"][0][field] = "do not persist me"
+            with self.subTest(field=field):
+                with self.assertRaisesRegex(ValueError, "receipt keys"):
+                    contracts.validate_inbox(inbox)
+
+    def test_inbox_rejects_wrong_session_and_time_stratum(self):
+        wrong_session = inbox_fixture()
+        wrong_session["receipts"][0]["session_id"] = "2" * 16
+        wrong_session["inbox_id"] = contracts.inbox_identity(wrong_session)
+        with self.assertRaisesRegex(ValueError, "session_id"):
+            contracts.validate_inbox(wrong_session)
+
+        wrong_stratum = inbox_fixture()
+        wrong_stratum["receipts"][0]["time_stratum"] = "2025-01"
+        wrong_stratum["inbox_id"] = contracts.inbox_identity(wrong_stratum)
+        with self.assertRaisesRegex(ValueError, "time_stratum"):
+            contracts.validate_inbox(wrong_stratum)
+
+    def test_inbox_requires_sorted_unique_receipts_and_matching_count(self):
+        duplicate = inbox_fixture()
+        duplicate["receipts"] = [duplicate["receipts"][0], duplicate["receipts"][0]]
+        duplicate["inbox_id"] = contracts.inbox_identity(duplicate)
+        with self.assertRaisesRegex(ValueError, "sorted and unique"):
+            contracts.validate_inbox(duplicate)
+
+        wrong_count = inbox_fixture()
+        wrong_count["message_count"] = 99
+        wrong_count["inbox_id"] = contracts.inbox_identity(wrong_count)
+        with self.assertRaisesRegex(ValueError, "message_count"):
+            contracts.validate_inbox(wrong_count)
+
+    def test_inbox_rejects_boolean_counts_and_unknown_source(self):
+        boolean = inbox_fixture()
+        boolean["truncated_message_count"] = True
+        boolean["inbox_id"] = contracts.inbox_identity(boolean)
+        with self.assertRaisesRegex(ValueError, "truncated_message_count"):
+            contracts.validate_inbox(boolean)
+
+        unknown = inbox_fixture()
+        unknown["source"] = "assistant"
+        unknown["inbox_id"] = contracts.inbox_identity(unknown)
+        with self.assertRaisesRegex(ValueError, "source"):
+            contracts.validate_inbox(unknown)
 
 
 if __name__ == "__main__":

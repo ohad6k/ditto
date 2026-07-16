@@ -10,11 +10,15 @@ DECISION_SCHEMA = "emulo.autopilot-decision/v1"
 GENERATION_SCHEMA = "emulo.autopilot-generation/v1"
 HEAD_SCHEMA = "emulo.autopilot-head/v1"
 INBOX_SCHEMA = "emulo.autopilot-inbox/v1"
+CHECKPOINT_SCHEMA = "emulo.autopilot-checkpoint/v1"
 
 KINDS = frozenset(
     {"directive", "correction", "preference", "workflow", "retirement"}
 )
 DOMAINS = frozenset({"work", "design", "write", "video"})
+SOURCES = frozenset(
+    {"codex", "claude", "copilot", "opencode", "antigravity", "custom"}
+)
 ID_PATTERNS = {
     "candidate": re.compile(r"^cand_[a-f0-9]{20}$"),
     "decision": re.compile(r"^dec_[a-f0-9]{20}$"),
@@ -90,6 +94,15 @@ def generation_identity(generation):
         key: value for key, value in generation.items() if key != "generation_id"
     }
     return "gen_" + sha256_text(canonical_json(identity))[:20]
+
+
+def inbox_identity(inbox):
+    identity = {
+        key: value
+        for key, value in inbox.items()
+        if key not in {"inbox_id", "created_at"}
+    }
+    return "inbox_" + sha256_text(canonical_json(identity))[:20]
 
 
 def validate_candidate(value):
@@ -263,4 +276,123 @@ def validate_head(value):
     if value["schema_version"] != HEAD_SCHEMA:
         raise ValueError("unsupported head schema")
     _identifier(value["generation_id"], "generation", "head generation_id")
+    return value
+
+
+def validate_checkpoint(value):
+    value = _mapping(copy.deepcopy(value), "checkpoint")
+    _exact_keys(
+        value,
+        {
+            "schema_version",
+            "path_hash",
+            "source",
+            "identity",
+            "unchanged_since",
+            "processed_fingerprint",
+        },
+        "checkpoint",
+    )
+    if value["schema_version"] != CHECKPOINT_SCHEMA:
+        raise ValueError("unsupported checkpoint schema")
+    _identifier(value["path_hash"], "sha256", "checkpoint path_hash")
+    if value["source"] not in SOURCES:
+        raise ValueError("checkpoint source is invalid")
+    identity = _mapping(value["identity"], "checkpoint identity")
+    _exact_keys(identity, {"size", "mtime_ns"}, "checkpoint identity")
+    for key in ("size", "mtime_ns"):
+        if (
+            isinstance(identity[key], bool)
+            or not isinstance(identity[key], int)
+            or identity[key] < 0
+        ):
+            raise ValueError("checkpoint identity is invalid")
+    if (
+        isinstance(value["unchanged_since"], bool)
+        or not isinstance(value["unchanged_since"], int)
+        or value["unchanged_since"] < 0
+    ):
+        raise ValueError("checkpoint unchanged_since is invalid")
+    if value["processed_fingerprint"] is not None:
+        _identifier(
+            value["processed_fingerprint"],
+            "sha256",
+            "processed_fingerprint",
+        )
+    return value
+
+
+def validate_inbox(value):
+    value = _mapping(copy.deepcopy(value), "inbox")
+    _exact_keys(
+        value,
+        {
+            "schema_version",
+            "inbox_id",
+            "session_id",
+            "source",
+            "session_fingerprint",
+            "receipts",
+            "message_count",
+            "truncated_message_count",
+            "created_at",
+        },
+        "inbox",
+    )
+    if value["schema_version"] != INBOX_SCHEMA:
+        raise ValueError("unsupported inbox schema")
+    if not isinstance(value["inbox_id"], str) or not re.fullmatch(
+        r"inbox_[a-f0-9]{20}", value["inbox_id"]
+    ):
+        raise ValueError("inbox_id is invalid")
+    _identifier(value["session_id"], "session", "inbox session_id")
+    if value["source"] not in SOURCES:
+        raise ValueError("inbox source is invalid")
+    _identifier(
+        value["session_fingerprint"],
+        "sha256",
+        "session_fingerprint",
+    )
+    if (
+        not isinstance(value["receipts"], list)
+        or not value["receipts"]
+        or len(value["receipts"]) > 256
+    ):
+        raise ValueError("inbox receipts are invalid")
+    receipt_ids = []
+    for receipt in value["receipts"]:
+        receipt = _mapping(receipt, "inbox receipt")
+        _exact_keys(
+            receipt,
+            {
+                "receipt_id",
+                "session_id",
+                "message_sha256",
+                "observed_at",
+                "time_stratum",
+            },
+            "inbox receipt",
+        )
+        _identifier(receipt["receipt_id"], "receipt", "receipt_id")
+        _identifier(receipt["message_sha256"], "sha256", "message_sha256")
+        if receipt["session_id"] != value["session_id"]:
+            raise ValueError("receipt session_id does not match inbox")
+        _timestamp(receipt["observed_at"], "receipt observed_at")
+        if receipt["time_stratum"] != receipt["observed_at"][:7]:
+            raise ValueError("receipt time_stratum does not match observed_at")
+        receipt_ids.append(receipt["receipt_id"])
+    if receipt_ids != sorted(set(receipt_ids)):
+        raise ValueError("receipt IDs must be sorted and unique")
+    for key in ("message_count", "truncated_message_count"):
+        if (
+            isinstance(value[key], bool)
+            or not isinstance(value[key], int)
+            or value[key] < 0
+        ):
+            raise ValueError(key + " is invalid")
+    if value["message_count"] != len(value["receipts"]):
+        raise ValueError("message_count does not match receipts")
+    _timestamp(value["created_at"], "inbox created_at")
+    if value["inbox_id"] != inbox_identity(value):
+        raise ValueError("inbox_id does not match content")
     return value

@@ -67,7 +67,7 @@ Inbox identity is SHA-256 over canonical content excluding `inbox_id` and `creat
 - Modify: `emulo_autopilot/contracts.py`
 - Modify: `tests/test_autopilot_contracts.py`
 
-- [ ] **Step 1: Write failing contract tests**
+- [x] **Step 1: Write failing contract tests**
 
 Add valid builders inside the test module and test exact-key validation, real integer requirements, supported sources, path and message hashes, matching receipt session IDs, sorted unique receipts, count consistency, time-stratum consistency, and content-bound inbox identity. Add explicit rejection tests for `path`, `text`, `quote`, and `redacted_text` keys anywhere in persisted records.
 
@@ -79,13 +79,13 @@ def test_inbox_rejects_persisted_text(self):
         contracts.validate_inbox(inbox)
 ```
 
-- [ ] **Step 2: Run and verify red state**
+- [x] **Step 2: Run and verify red state**
 
 Run: `python -m unittest tests.test_autopilot_contracts -v`
 
 Expected: FAIL because checkpoint/inbox validators do not exist.
 
-- [ ] **Step 3: Implement exact validators and identity**
+- [x] **Step 3: Implement exact validators and identity**
 
 Add:
 
@@ -161,13 +161,13 @@ def validate_inbox(value):
     return value
 ```
 
-- [ ] **Step 4: Run focused tests**
+- [x] **Step 4: Run focused tests**
 
 Run: `python -m unittest tests.test_autopilot_contracts -v`
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```powershell
 git add emulo_autopilot/contracts.py tests/test_autopilot_contracts.py
