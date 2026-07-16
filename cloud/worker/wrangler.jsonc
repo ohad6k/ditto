@@ -10,7 +10,7 @@
   },
   "vars": {
     "APP_ENV": "beta",
-    "GITHUB_CLIENT_ID": "not-configured",
+    "GITHUB_CLIENT_ID": "Ov23li0ZeKoEBS5iQky5",
     "PUBLIC_BASE_URL": "https://emulo.ohad1306.workers.dev/",
     "PAID_CHECKOUT_ENABLED": "false",
     "POLAR_SERVER": "sandbox",
