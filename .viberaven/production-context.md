@@ -2,6 +2,17 @@
 
 ## Current Release / Change Window
 
+### 2026-07-17 - Production Polar routing correction
+
+- Change: Route the server-side Polar SDK through the validated `POLAR_SERVER` value for both Sandbox and production.
+- Evidence: A production-checkout regression test failed with `503` before the fix because readiness accepted only Sandbox; after the fix it returned `200` only for a `https://polar.sh` checkout URL.
+- Boundary: Sandbox credentials and URLs must remain in Sandbox; production credentials and URLs must remain in production. Checkout remains disabled in committed production configuration.
+- Danger: The previous Sandbox-only client would make production configuration unusable and could send a production flow to the wrong provider environment.
+- Repo fix: Use one allowlisted server selector for readiness and SDK construction; preserve strict hosted-URL origin validation.
+- Verification: Focused Polar billing tests pass 10/10; full Worker suite passes 91/91 plus 6/6 production-guard tests; typecheck, pinned high-severity scanner, production config validation, and Wrangler dry-run all exit 0.
+- Provider/MCP proof: No Polar production mutation occurred while the unsafe routing was present.
+- Open action: After the fix is green, create production products with a production-scoped token and keep public checkout disabled.
+
 ### 2026-07-17 - Production GitHub OAuth registration
 
 - Change: Bind the owner-created Emulo Production OAuth application's public Client ID into the isolated production Worker configuration.

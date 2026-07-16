@@ -35,12 +35,13 @@ function enabledEnv(changes: Partial<Env> = {}): Env {
   };
 }
 
-function billingDependencies() {
+function billingDependencies(server: "sandbox" | "production" = "sandbox") {
+  const origin = server === "sandbox" ? "https://sandbox.polar.sh" : "https://polar.sh";
   const createCheckout = vi.fn().mockResolvedValue({
-    url: "https://sandbox.polar.sh/checkout/test-checkout",
+    url: `${origin}/checkout/test-checkout`,
   });
   const createPortal = vi.fn().mockResolvedValue({
-    customerPortalUrl: "https://sandbox.polar.sh/customer-portal/test-session",
+    customerPortalUrl: `${origin}/customer-portal/test-session`,
   });
   const dependencies: PolarBillingDependencies = {
     now: () => new Date(NOW),
@@ -152,6 +153,23 @@ describe("authenticated Polar billing", () => {
       returnUrl: "https://api.example/account",
     });
     expect(response.headers.get("cache-control")).toBe("no-store");
+  });
+
+  it("accepts a production checkout only from the production Polar origin", async () => {
+    const { dependencies, createCheckout } = billingDependencies("production");
+    const response = await handlePolarCheckout(
+      request("/v1/billing/checkout", { plan: "monthly" }),
+      enabledEnv({
+        POLAR_SERVER: "production",
+        PUBLIC_BASE_URL: "https://emulo-production.ohad1306.workers.dev/",
+      }),
+      dependencies,
+    );
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      url: "https://polar.sh/checkout/test-checkout",
+    });
+    expect(createCheckout).toHaveBeenCalledOnce();
   });
 
   it("selects only the configured yearly product", async () => {

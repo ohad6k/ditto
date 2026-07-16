@@ -21,6 +21,12 @@ interface PolarBillingClient {
   createPortal(input: PortalInput): Promise<{ customerPortalUrl: string }>;
 }
 
+function polarServer(env: Env): "sandbox" | "production" | null {
+  return env.POLAR_SERVER === "sandbox" || env.POLAR_SERVER === "production"
+    ? env.POLAR_SERVER
+    : null;
+}
+
 export interface PolarBillingDependencies {
   now: () => Date;
   createClient: (env: Env) => PolarBillingClient;
@@ -29,9 +35,13 @@ export interface PolarBillingDependencies {
 const defaultDependencies: PolarBillingDependencies = {
   now: () => new Date(),
   createClient: (env) => {
+    const server = polarServer(env);
+    if (server === null) {
+      throw new Error("Polar server is not configured");
+    }
     const client = new Polar({
       accessToken: env.POLAR_ACCESS_TOKEN,
-      server: "sandbox",
+      server,
     });
     return {
       createCheckout: (input) => client.checkouts.create(input),
@@ -71,7 +81,7 @@ function publicBase(env: Env): URL | null {
 
 function billingConfigured(env: Env): boolean {
   return (
-    env.POLAR_SERVER === "sandbox" &&
+    polarServer(env) !== null &&
     typeof env.POLAR_ACCESS_TOKEN === "string" &&
     env.POLAR_ACCESS_TOKEN.length >= 8 &&
     PRODUCT_ID_PATTERN.test(env.POLAR_MONTHLY_PRODUCT_ID) &&
