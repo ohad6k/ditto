@@ -94,6 +94,12 @@ describe("authenticated Worker integration", () => {
     expect(accountBody).toContain('class="brand-mark"');
     expect(accountBody).toContain('href="/emulo.png"');
     expect(accountBody).toContain('href="/account.css"');
+    expect(accountBody).toContain('class="brand-nav"');
+    expect(accountBody).toContain('href="https://emulo.vercel.app/" aria-label="Emulo home"');
+    expect(accountBody).toContain('href="https://emulo.vercel.app/bench"');
+    expect(accountBody).toContain('href="https://emulo.vercel.app/#pricing"');
+    expect(accountBody).toContain('href="https://github.com/ohad6k/emulo"');
+    expect(accountBody).toContain('href="https://discord.gg/QMnYtVcxk2"');
     expect(accountBody).toContain('data-account-state="signed-out"');
     expect(accountBody).toContain('href="/privacy.html"');
     for (const rejected of [
@@ -129,7 +135,14 @@ describe("authenticated Worker integration", () => {
     const styles = await SELF.fetch("https://api.example/account.css");
     expect(styles.status).toBe(200);
     expect(styles.headers.get("content-type")).toBe("text/css; charset=utf-8");
-    expect(await styles.text()).toContain("prefers-reduced-motion");
+    const stylesheet = await styles.text();
+    expect(stylesheet).toContain("prefers-reduced-motion");
+    expect(stylesheet).toContain('--display: Georgia, "Times New Roman", serif');
+    expect(stylesheet).toContain('--text: Georgia, "Times New Roman", serif');
+    expect(stylesheet).toContain("--mono: ui-monospace");
+    expect(stylesheet).toContain("font-size: clamp(2.55rem, 6vw, 3.7rem)");
+    expect(stylesheet).toContain("font-family: var(--mono)");
+    expect(stylesheet).not.toContain("font-size: clamp(2.7rem, 9vw, 4.55rem)");
 
     expect((await SELF.fetch("https://api.example/emulo.svg")).status).toBe(404);
 

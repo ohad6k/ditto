@@ -46,6 +46,12 @@ describe("Emulo account UI", () => {
     expect(html).toContain('href="/privacy.html"');
     expect(html).toContain('href="/terms.html"');
     expect(html).toContain('href="/refunds.html"');
+    expect(html).toContain('class="brand-nav"');
+    expect(html).toContain('href="https://emulo.vercel.app/" aria-label="Emulo home"');
+    expect(html).toContain('href="https://emulo.vercel.app/bench"');
+    expect(html).toContain('href="https://emulo.vercel.app/#pricing"');
+    expect(html).toContain('href="https://github.com/ohad6k/emulo"');
+    expect(html).toContain('href="https://discord.gg/QMnYtVcxk2"');
     expect(html).not.toContain("account is connected");
     for (const rejected of [
       "Private account",

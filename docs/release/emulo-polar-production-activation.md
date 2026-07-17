@@ -1,6 +1,6 @@
 # Emulo Polar Production Activation
 
-**Status:** Production shell and webhook prepared, checkout not activated
+**Status:** Zero-money production lifecycle verified; checkout disabled
 **Last checked:** 2026-07-17
 **Owner:** Ohad  
 **Safety default:** Production checkout disabled
@@ -131,6 +131,14 @@ arguments, or shown in screenshots.
   `5c62bb13-5f9c-4217-aba7-562e84eb2886` restored checkout-disabled `503`.
   Post-abort D1 and Polar reads remained at zero billing/customer lifecycle
   records.
+- The successful verification used a private free recurring product. Hosted
+  checkout required no card, created one `$0` order, and attached no payment
+  method. Signed update/cancellation/revocation deliveries returned HTTP `202`;
+  D1 converged from active to `ended` without a manual database edit. The test
+  subscription is canceled and the verification product is archived.
+- Worker version `adcda887-2a43-47bb-8d27-e0eb992b5b6f` restores the real
+  monthly and annual product IDs with checkout disabled. A live POST returns
+  `503 checkout-disabled`; the Raw seven-event endpoint remains enabled.
 
 ## Phase 1: owner/provider readiness
 
@@ -256,15 +264,15 @@ an entitlement for an unknown account.
 
 ## Phase 6: explicitly approved zero-money production lifecycle
 
-This phase first uses a 100% production verification discount and requires
-Ohad's explicit approval at that moment. Do not test with real card details;
-Polar documents that such tests can trigger processor and account reviews.
+This phase was completed with a private free recurring product after the first
+bounded discount proved temporary. No card was entered. Polar documents that
+real-card production tests can trigger processor and account reviews.
 
 1. Confirm full tests/typecheck and the production deploy version.
 2. Enable checkout only for the bounded private test window.
 3. Sign in with the production GitHub account.
-4. Complete the monthly checkout with the bounded 100% verification discount so
-   no money changes hands.
+4. Complete the monthly checkout with the private free product so no money
+   changes hands and no payment method is required.
 5. Confirm the completion page stays pending until a signed webhook applies.
 6. Confirm D1 shows one active production entitlement and applied lifecycle
    events using count/state-only queries.
@@ -285,13 +293,13 @@ Public founding checkout may be enabled only when all boxes are true:
   are enabled.
 - [x] Production monthly and annual products show exact prices/intervals.
 - [ ] Production OAT has only the two required scopes.
-- [ ] Production webhook is Raw and subscribed to exactly the seven events.
+- [x] Production webhook is Raw and subscribed to exactly the seven events.
 - [x] GitHub production callback and sign-in work.
 - [ ] Real purchase creates an active entitlement only after signed webhook.
 - [ ] Hosted portal opens for the authenticated external customer.
-- [ ] Zero-money cancellation/revocation lifecycle converges without manual D1
-  edits; refund controls and public policy are separately verified.
-- [ ] Checkout can be disabled without disabling webhook processing.
+- [x] Zero-money cancellation/revocation lifecycle converges without manual D1
+  edits; refund controls and public policy are separately unverified.
+- [x] Checkout can be disabled without disabling webhook processing.
 - [ ] Customer-facing promise, privacy, refund, support, and beta limitations
   are visible before purchase.
 - [ ] Ohad explicitly approves public enablement.

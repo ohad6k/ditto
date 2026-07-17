@@ -657,7 +657,15 @@ function htmlDocument(
   <link rel="stylesheet" href="/account.css">
 </head>
 <body>
-  <header class="brand-header"><a class="brand-lockup" href="/account" aria-label="Emulo account home"><img class="brand-mark" src="/emulo.png" alt=""><span class="wordmark">Emulo</span></a></header>
+  <header class="brand-header">
+    <a class="brand-lockup" href="https://emulo.vercel.app/" aria-label="Emulo home"><img class="brand-mark" src="/emulo.png" alt=""><span class="wordmark">Emulo</span></a>
+    <nav class="brand-nav" aria-label="Emulo">
+      <a href="https://emulo.vercel.app/bench">Bench</a>
+      <a href="https://emulo.vercel.app/#pricing">Pricing</a>
+      <a href="https://github.com/ohad6k/emulo">GitHub</a>
+      <a href="https://discord.gg/QMnYtVcxk2">Discord</a>
+    </nav>
+  </header>
   <main class="account-main">${surface}</main>
   <footer class="account-footer"><a href="/privacy.html">Privacy</a><a href="/terms.html">Terms</a><a href="/refunds.html">Refunds</a><a href="mailto:ohadkrispin@gmail.com">Contact</a></footer>
   <script src="/account.js" defer></script>
