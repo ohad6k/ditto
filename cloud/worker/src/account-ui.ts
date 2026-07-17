@@ -230,7 +230,8 @@ button { font: inherit; }
 }
 
 .plan-fact { padding: 18px 0; }
-.plan-fact + .plan-fact { padding-left: 22px; border-left: 1px solid var(--line); }
+.plan-fact:nth-child(even) { padding-left: 22px; border-left: 1px solid var(--line); }
+.plan-fact:nth-child(n + 3) { border-top: 1px solid var(--line); }
 .plan-fact dt { color: var(--ink-muted); font-size: .72rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
 .plan-fact dd { margin: 7px 0 0; font-weight: 760; }
 
@@ -310,7 +311,8 @@ button { font: inherit; }
   .account-surface { padding: 28px 22px 32px; }
   .surface-kicker { align-items: flex-start; flex-direction: column; margin-bottom: 28px; }
   .plan-facts { grid-template-columns: 1fr; }
-  .plan-fact + .plan-fact { padding-left: 0; border-top: 1px solid var(--line); border-left: 0; }
+  .plan-fact:nth-child(even) { padding-left: 0; border-left: 0; }
+  .plan-fact + .plan-fact { border-top: 1px solid var(--line); }
   .plan-choice { grid-template-columns: 1fr; }
   .plan-choice button { width: 100%; }
 }

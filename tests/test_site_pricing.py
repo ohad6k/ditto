@@ -53,6 +53,8 @@ class SitePricingTests(unittest.TestCase):
             "Raw session logs and decryption keys stay local",
         ):
             self.assertIn(text, pricing)
+        self.assertIn(".price-pro .price-list li", self.html)
+        self.assertIn("color:var(--cream-dim)", self.html)
 
     def test_open_source_local_product_is_not_weakened(self):
         pricing = self.html.split('id="pricing"', 1)[1].split("</section>", 1)[0]
