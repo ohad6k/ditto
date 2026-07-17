@@ -1,6 +1,6 @@
 # Emulo Polar Production Activation
 
-**Status:** Prepared, not activated  
+**Status:** Production shell and webhook prepared, checkout not activated  
 **Last checked:** 2026-07-17
 **Owner:** Ohad  
 **Safety default:** Production checkout disabled
@@ -93,25 +93,33 @@ arguments, or shown in screenshots.
 ### Current production preparation receipt
 
 - Cloudflare D1 `emulo-autopilot-production` exists in the EEUR region.
-- All five repository migrations are applied.
-- Count-only verification shows 0 accounts, 0 entitlements, and 0 billing
-  events, so no Sandbox identity or purchase crossed the boundary.
+- All eight repository migrations are applied; Wrangler reports no pending
+  migrations.
+- After the owner-authorized production GitHub callback, count-only
+  verification shows one account, one GitHub identity, one browser session,
+  and zero billing customers, entitlements, continuity devices, and continuity
+  generations. No Sandbox identity or purchase crossed the boundary.
 - `wrangler.production.jsonc` points only to the production D1 resource, uses
   `POLAR_SERVER=production`, and keeps `PAID_CHECKOUT_ENABLED=false`.
 - The config validates and bundles in a Wrangler dry-run.
 - GitHub client ID, GitHub client secret, and both Polar product IDs are
   configured. Production Worker version
-  `2a49f764-d11f-4fed-93a3-984f42cc862d` is deployed with checkout and preview
-  hostnames disabled.
-- Live health, account, and asset routes return `200`; signed-out account status
-  returns `401`; GitHub auth redirects to `github.com`; checkout, portal, and
-  the not-yet-configured webhook return safe `503` states. Count-only D1
-  queries before and after returned zero rows and zero writes.
+  `c81f8a99-4c1b-4cf7-b872-d76e3a3e561c` is deployed with checkout and preview
+  hostnames disabled. Google remains unconfigured and is hidden from the UI.
+- Live health, account, payment-completion, and asset routes return `200`;
+  signed-out account status returns `401`; GitHub auth works; checkout, portal,
+  and the not-yet-configured webhook return safe `503` states. Signed-out
+  account surfaces show GitHub but neither Google nor an unused divider.
 - Vercel deployment `dpl_A7Vc19mb63ggGKyt7PqXseskcpHb` is `READY` and owns
-  `https://emulo.vercel.app`; the public page contains the approved Free, `$9`,
-  `$79`, private-beta, and Worker-account markers without a Polar product UUID.
-- The production Polar access token and raw-webhook signing secret remain
-  deliberately absent pending the owner/provider steps below.
+  `https://emulo.vercel.app`; a current public read returns `200` and contains
+  the approved Free, `$9`, `$79`, and Worker-account markers without the removed
+  `Private beta` label.
+- Polar production endpoint `ecfed609-ebc4-4814-9cdd-847c050365bb` is Raw,
+  targets the exact Worker webhook route, and subscribes only to the seven
+  handled subscription events. It is disabled until its signing secret is
+  installed in Cloudflare.
+- The production Polar access token and raw-webhook signing secret bindings
+  remain deliberately absent pending the owner/provider steps below.
 
 ## Phase 1: owner/provider readiness
 
@@ -262,10 +270,10 @@ checkout while the test is running.
 Public founding checkout may be enabled only when all boxes are true:
 
 - [ ] Production payout/organization state is accepted.
-- [ ] Production monthly and annual products show exact prices/intervals.
+- [x] Production monthly and annual products show exact prices/intervals.
 - [ ] Production OAT has only the two required scopes.
 - [ ] Production webhook is Raw and subscribed to exactly the seven events.
-- [ ] GitHub production callback and sign-in work.
+- [x] GitHub production callback and sign-in work.
 - [ ] Real purchase creates an active entitlement only after signed webhook.
 - [ ] Hosted portal opens for the authenticated external customer.
 - [ ] Cancellation/refund lifecycle converges without manual D1 edits.
