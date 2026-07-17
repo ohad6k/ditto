@@ -12,7 +12,8 @@
     "db:migrate:local": "wrangler d1 migrations apply emulo-autopilot-beta --local"
   },
   "dependencies": {
-    "@polar-sh/sdk": "0.48.1"
+    "@polar-sh/sdk": "0.48.1",
+    "jose": "6.2.3"
   },
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "0.18.5",
