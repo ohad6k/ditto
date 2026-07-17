@@ -10,6 +10,12 @@ import type { Env } from "./contracts";
 import { beginGitHubOAuth, completeGitHubOAuth } from "./github-auth";
 import { beginGoogleOAuth, completeGoogleOAuth } from "./google-auth";
 import { legalStyles, renderWorkerPolicy } from "./legal-pages";
+import {
+  handleListDevices,
+  handlePairComplete,
+  handlePairStart,
+  handleRevokeDevice,
+} from "./device-auth";
 import { handlePolarWebhook } from "./polar";
 import { handlePolarCheckout, handlePolarPortal } from "./polar-client";
 import emuloIcon from "../../../assets/emulo-oauth.png";
@@ -113,6 +119,22 @@ export default {
         return json(405, { status: "method-not-allowed" });
       }
       return handlePolarWebhook(request, env);
+    }
+    if (url.pathname === "/v1/devices/pair/start") {
+      if (request.method !== "POST") return json(405, { status: "method-not-allowed" });
+      return handlePairStart(request, env);
+    }
+    if (url.pathname === "/v1/devices/pair/complete") {
+      if (request.method !== "POST") return json(405, { status: "method-not-allowed" });
+      return handlePairComplete(request, env);
+    }
+    if (url.pathname === "/v1/devices") {
+      if (request.method !== "GET") return json(405, { status: "method-not-allowed" });
+      return handleListDevices(request, env);
+    }
+    if (url.pathname.startsWith("/v1/devices/")) {
+      if (request.method !== "DELETE") return json(405, { status: "method-not-allowed" });
+      return handleRevokeDevice(request, env, url.pathname.slice("/v1/devices/".length));
     }
     if (url.pathname === "/v1/auth/github/start") {
       if (request.method !== "GET") {
