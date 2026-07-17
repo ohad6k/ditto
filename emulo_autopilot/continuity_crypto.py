@@ -194,6 +194,15 @@ def generate_device_key_pair():
     return private_bytes, public_bytes
 
 
+def device_public_key(device_private_key):
+    if not isinstance(device_private_key, bytes) or len(device_private_key) != 32:
+        raise ValueError("device private key is invalid")
+    return X25519PrivateKey.from_private_bytes(device_private_key).public_key().public_bytes(
+        serialization.Encoding.Raw,
+        serialization.PublicFormat.Raw,
+    )
+
+
 def _device_wrap_aad(device_public_key, ephemeral_public_key, salt):
     return _canonical(
         {

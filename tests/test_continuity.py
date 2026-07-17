@@ -7,19 +7,59 @@ from cryptography.exceptions import InvalidTag
 
 from emulo_autopilot import contracts
 from emulo_autopilot.continuity import (
+    complete_pairing,
     package_generation,
     pull_remote_head,
     push_active,
     retry_pending,
     unpack_generation,
 )
-from emulo_autopilot.continuity_crypto import generate_master_key
+from emulo_autopilot.continuity_crypto import (
+    generate_device_key_pair,
+    generate_master_key,
+    wrap_master_key_for_device,
+)
 from emulo_autopilot.store import AutopilotStore
 from tests.autopilot_helpers import candidate_fixture, decision_fixture
 
 
 DEVICE_A = "dev_0123456789abcdef0123456789abcdef"
 DEVICE_B = "dev_ffffffffffffffffffffffffffffffff"
+DEVICE_TOKEN = "A" * 43
+PAIRING_CODE = "B" * 43
+
+
+class JsonHeaders:
+    def get_content_type(self):
+        return "application/json"
+
+
+class JsonResponse:
+    def __init__(self, value, status=201):
+        self.value = json.dumps(value).encode("utf-8")
+        self.status = status
+        self.headers = JsonHeaders()
+
+    def read(self, _limit):
+        return self.value
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_args):
+        return False
+
+
+class CapturingOpener:
+    def __init__(self, response):
+        self.response = response
+        self.request = None
+        self.timeout = None
+
+    def open(self, request, timeout):
+        self.request = request
+        self.timeout = timeout
+        return self.response
 
 
 class MemoryTransport:
@@ -180,6 +220,64 @@ class ContinuityTests(unittest.TestCase):
             pull_remote_head(other, self.key, transport)
         self.assertIsNone(other.get_head())
         self.assertEqual([], other.list_generations())
+
+    def test_pairing_posts_bounded_json_without_credentials_in_url_or_headers(self):
+        _private_key, public_key = generate_device_key_pair()
+        wrapped = wrap_master_key_for_device(self.key, public_key)
+        opener = CapturingOpener(
+            JsonResponse({"deviceId": DEVICE_A, "deviceToken": DEVICE_TOKEN})
+        )
+
+        result = complete_pairing(
+            "https://emulo.example",
+            {
+                "pairingCode": PAIRING_CODE,
+                "label": "Work laptop",
+                "keyAgreementPublicKey": wrapped["device_public_key"],
+                "wrappedMasterKey": wrapped,
+                "clientVersion": "0.3.8",
+            },
+            opener=opener,
+        )
+
+        self.assertEqual(
+            {"deviceId": DEVICE_A, "deviceToken": DEVICE_TOKEN},
+            result,
+        )
+        self.assertEqual(
+            "https://emulo.example/v1/devices/pair/complete",
+            opener.request.full_url,
+        )
+        self.assertEqual("POST", opener.request.method)
+        self.assertNotIn("Authorization", opener.request.headers)
+        self.assertNotIn(PAIRING_CODE, opener.request.full_url)
+        self.assertLessEqual(len(opener.request.data), 8192)
+
+    def test_pairing_rejects_unsafe_origins_and_malformed_responses(self):
+        body = {
+            "pairingCode": PAIRING_CODE,
+            "label": "Laptop",
+            "keyAgreementPublicKey": "C" * 43,
+            "wrappedMasterKey": {},
+            "clientVersion": "0.3.8",
+        }
+        for origin in (
+            "http://emulo.example",
+            "https://user:pass@emulo.example",
+            "https://emulo.example/path",
+            "https://emulo.example?query=1",
+        ):
+            with self.subTest(origin=origin):
+                with self.assertRaisesRegex(ValueError, "HTTPS origin"):
+                    complete_pairing(origin, body)
+
+        malformed = CapturingOpener(JsonResponse({"deviceId": DEVICE_A}))
+        with self.assertRaisesRegex(ValueError, "pairing response"):
+            complete_pairing("https://emulo.example", body, opener=malformed)
+
+        redirected = CapturingOpener(JsonResponse({}, status=302))
+        with self.assertRaisesRegex(ValueError, "pairing response"):
+            complete_pairing("https://emulo.example", body, opener=redirected)
 
 
 if __name__ == "__main__":

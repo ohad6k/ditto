@@ -18,6 +18,21 @@ _TOKEN = re.compile(r"^[A-Za-z0-9_-]{43}$")
 _ARTIFACT = re.compile(r"^(work|design|write|video)\.md$")
 
 
+def validate_https_origin(base_url):
+    parsed = urllib.parse.urlsplit(base_url)
+    if (
+        parsed.scheme != "https"
+        or not parsed.hostname
+        or parsed.username is not None
+        or parsed.password is not None
+        or parsed.query
+        or parsed.fragment
+        or parsed.path not in {"", "/"}
+    ):
+        raise ValueError("continuity server URL must be an HTTPS origin")
+    return base_url.rstrip("/")
+
+
 def _b64(value):
     return base64.urlsafe_b64encode(value).decode("ascii").rstrip("=")
 
@@ -199,24 +214,54 @@ class _NoRedirect(urllib.request.HTTPRedirectHandler):
         raise urllib.error.HTTPError(req.full_url, code, msg, headers, fp)
 
 
+def complete_pairing(base_url, body, timeout=15, opener=None):
+    base_url = validate_https_origin(base_url)
+    if not isinstance(timeout, (int, float)) or not 1 <= timeout <= 60:
+        raise ValueError("continuity timeout is invalid")
+    if not isinstance(body, dict):
+        raise ValueError("pairing request is invalid")
+    payload = canonical_json(body).encode("utf-8")
+    if len(payload) > 8192:
+        raise ValueError("pairing request is too large")
+    request = urllib.request.Request(
+        base_url + "/v1/devices/pair/complete",
+        data=payload,
+        headers={"Accept": "application/json", "Content-Type": "application/json"},
+        method="POST",
+    )
+    if opener is None:
+        opener = urllib.request.build_opener(_NoRedirect())
+    response = opener.open(request, timeout=timeout)
+    with response:
+        status = getattr(response, "status", None)
+        content_type = response.headers.get_content_type()
+        raw = response.read(8193)
+    if status != 201 or content_type != "application/json" or len(raw) > 8192:
+        raise ValueError("pairing response is invalid")
+    try:
+        value = json.loads(raw.decode("utf-8", errors="strict"))
+    except (UnicodeError, json.JSONDecodeError) as exc:
+        raise ValueError("pairing response is invalid") from exc
+    if (
+        not isinstance(value, dict)
+        or set(value) != {"deviceId", "deviceToken"}
+        or not isinstance(value.get("deviceId"), str)
+        or not _DEVICE.fullmatch(value["deviceId"])
+        or not isinstance(value.get("deviceToken"), str)
+        or not _TOKEN.fullmatch(value["deviceToken"])
+    ):
+        raise ValueError("pairing response is invalid")
+    return value
+
+
 class HttpsContinuityTransport:
     def __init__(self, base_url, device_token, timeout=15):
-        parsed = urllib.parse.urlsplit(base_url)
-        if (
-            parsed.scheme != "https"
-            or not parsed.hostname
-            or parsed.username is not None
-            or parsed.password is not None
-            or parsed.query
-            or parsed.fragment
-            or parsed.path not in {"", "/"}
-        ):
-            raise ValueError("continuity server URL must be an HTTPS origin")
+        base_url = validate_https_origin(base_url)
         if not isinstance(device_token, str) or not _TOKEN.fullmatch(device_token):
             raise ValueError("device token is invalid")
         if not isinstance(timeout, (int, float)) or not 1 <= timeout <= 60:
             raise ValueError("continuity timeout is invalid")
-        self.base_url = base_url.rstrip("/")
+        self.base_url = base_url
         self.device_token = device_token
         self.timeout = timeout
         self.opener = urllib.request.build_opener(_NoRedirect())
