@@ -2,6 +2,17 @@
 
 ## Current Release / Change Window
 
+### 2026-07-17 - Google identity implementation (provider activation pending)
+
+- Change: Implement Google OpenID Connect beside GitHub using an Authorization Code flow, PKCE S256, state plus browser binding, a one-time nonce, signed ID-token verification, provider-separated internal accounts, and the existing opaque Emulo browser session.
+- Evidence: A forward-only migration preserves GitHub rows while allowing only `github` and `google`; tests use real RS256-signed JWTs to reject invalid signature, issuer, audience, expiry, nonce, unverified email, and invalid subject. Google callback tests prove provider crossover and wrong-browser flows fail without consuming valid state, tokens never enter D1, and only the stable Google `sub` becomes identity data.
+- Boundary: Google client creation, consent-screen publishing, authorized production callback, Cloudflare `GOOGLE_CLIENT_SECRET`, live migration, deploy, and real callback proof remain provider actions. Production config intentionally holds `GOOGLE_CLIENT_ID=not-configured`, requires no Google secret yet, and keeps GitHub independently available.
+- Danger: Enabling the visible route with a partial client, storing or logging Google tokens, broadening scopes beyond `openid email profile`, merging by email, deploying before migration, or claiming live Google sign-in without provider receipts.
+- Repo fix: Add provider-bound OAuth flow storage, hashed Google nonce storage, pinned Worker-compatible `jose` verification against Google JWKS, safe diagnostics, exact GET-only routes, and config/privacy guards. No access, refresh, or ID token column exists.
+- Verification: Focused auth/store/token/integration tests and Worker type-check pass. Full-suite, production dry-run, dependency audit, and browser proof remain required before this change is release-ready.
+- Provider/MCP proof: Unknown. No Google Cloud or Cloudflare provider mutation occurred in this implementation step.
+- Open action: Create a Google Web client with callback `https://emulo-production.ohad1306.workers.dev/v1/auth/google/callback`, publish/verify the consent configuration as required, install the secret directly in Cloudflare, then commit only the nonsecret client ID and require a real callback receipt before deployment claims.
+
 ### 2026-07-17 - Consumer account and Google identity design
 
 - Change: Plan a structural account redesign, public legal pages, professional pricing copy, Google sign-in alongside GitHub, and a hard paid-value/security gate without changing the Polar entitlement boundary.

@@ -6,8 +6,8 @@ const SERVER_SIDE_SECRETS = [
   "POLAR_ACCESS_TOKEN",
   "POLAR_WEBHOOK_SECRET",
   "GITHUB_CLIENT_SECRET",
+  "GOOGLE_CLIENT_SECRET",
 ];
-const DEPLOY_STAGE_REQUIRED_SECRETS = ["GITHUB_CLIENT_SECRET"];
 const FORBIDDEN_VAR_KEYS = new Set(SERVER_SIDE_SECRETS);
 const SANDBOX_DATABASE_ID = "63f95387-b248-4332-8bd7-3ef44bd3628a";
 
@@ -59,11 +59,26 @@ export function validateProductionConfig(config) {
   );
 
   const requiredSecrets = config.secrets?.required;
+  const googleClientId = vars.GOOGLE_CLIENT_ID;
+  const googleUnconfigured = googleClientId === "not-configured";
+  const googleConfigured =
+    typeof googleClientId === "string" &&
+    /^[A-Za-z0-9._-]{8,256}\.apps\.googleusercontent\.com$/.test(googleClientId);
+  invariant(
+    googleUnconfigured || googleConfigured,
+    "Google client ID declaration is invalid",
+  );
+  const requiredDeploySecrets = [
+    "GITHUB_CLIENT_SECRET",
+    ...(googleConfigured ? ["GOOGLE_CLIENT_SECRET"] : []),
+  ];
   invariant(
     Array.isArray(requiredSecrets) &&
       JSON.stringify(sorted(requiredSecrets)) ===
-        JSON.stringify(sorted(DEPLOY_STAGE_REQUIRED_SECRETS)),
-    "deploy-stage secret declarations are incomplete or too broad",
+        JSON.stringify(sorted(requiredDeploySecrets)),
+    googleConfigured
+      ? "Google client configuration is incomplete"
+      : "deploy-stage secret declarations are incomplete or too broad",
   );
 
   const monthly = vars.POLAR_MONTHLY_PRODUCT_ID;

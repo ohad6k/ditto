@@ -10,6 +10,7 @@ function validConfig() {
     vars: {
       APP_ENV: "production",
       GITHUB_CLIENT_ID: "not-configured",
+      GOOGLE_CLIENT_ID: "not-configured",
       PUBLIC_BASE_URL: "https://emulo-production.ohad1306.workers.dev/",
       PAID_CHECKOUT_ENABLED: "false",
       POLAR_SERVER: "production",
@@ -46,6 +47,21 @@ describe("production Wrangler configuration guard", () => {
     assert.equal(
       validateProductionConfig(config).activationState,
       "nonsecret-config-ready",
+    );
+  });
+
+  it("accepts Google only when its client ID and secret declaration are paired", () => {
+    const config = validConfig();
+    config.vars.GOOGLE_CLIENT_ID = "google-production.apps.googleusercontent.com";
+    config.secrets.required.push("GOOGLE_CLIENT_SECRET");
+    assert.doesNotThrow(() => validateProductionConfig(config));
+
+    const missingSecret = validConfig();
+    missingSecret.vars.GOOGLE_CLIENT_ID =
+      "google-production.apps.googleusercontent.com";
+    assert.throws(
+      () => validateProductionConfig(missingSecret),
+      /Google client configuration is incomplete/i,
     );
   });
 
@@ -92,6 +108,13 @@ describe("production Wrangler configuration guard", () => {
     secretInVars.vars.POLAR_ACCESS_TOKEN = "must-never-be-here";
     assert.throws(
       () => validateProductionConfig(secretInVars),
+      /secret values must not be stored/i,
+    );
+
+    const googleSecretInVars = validConfig();
+    googleSecretInVars.vars.GOOGLE_CLIENT_SECRET = "must-never-be-here";
+    assert.throws(
+      () => validateProductionConfig(googleSecretInVars),
       /secret values must not be stored/i,
     );
   });

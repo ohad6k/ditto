@@ -1,4 +1,5 @@
 import re
+import json
 import unittest
 from pathlib import Path
 
@@ -35,6 +36,38 @@ class EmuloPublicSecurityTests(unittest.TestCase):
             text = (SITE / name).read_text(encoding="utf-8")
             self.assertNotRegex(text, re.compile(r"<(?:script|iframe)\b", re.I))
             self.assertNotRegex(text, re.compile(r'(?:src|href)="https?://', re.I))
+
+    def test_google_credentials_and_tokens_do_not_cross_public_boundaries(self):
+        public_text = "\n".join(
+            path.read_text(encoding="utf-8") for path in PUBLIC
+        )
+        for marker in (
+            "GOOGLE_CLIENT_SECRET",
+            "id_token",
+            "access_token",
+            ".apps.googleusercontent.com",
+        ):
+            self.assertNotIn(marker, public_text)
+
+        production = json.loads(
+            (ROOT / "cloud" / "worker" / "wrangler.production.jsonc").read_text(
+                encoding="utf-8"
+            )
+        )
+        self.assertNotIn("GOOGLE_CLIENT_SECRET", production["vars"])
+
+        google_auth = (
+            ROOT / "cloud" / "worker" / "src" / "google-auth.ts"
+        ).read_text(encoding="utf-8")
+        self.assertNotRegex(
+            google_auth,
+            re.compile(r"console\.(?:log|warn|error)\([^\n]*(?:idToken|accessToken)", re.I),
+        )
+        migrations = "\n".join(
+            path.read_text(encoding="utf-8")
+            for path in (ROOT / "cloud" / "worker" / "migrations").glob("*.sql")
+        )
+        self.assertNotRegex(migrations, re.compile(r"\b(?:id|access|refresh)_token\b", re.I))
 
 
 if __name__ == "__main__":

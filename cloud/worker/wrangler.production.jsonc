@@ -16,6 +16,7 @@
   "vars": {
     "APP_ENV": "production",
     "GITHUB_CLIENT_ID": "Ov23liZFqQWwSfHUWsY1",
+    "GOOGLE_CLIENT_ID": "not-configured",
     "PUBLIC_BASE_URL": "https://emulo-production.ohad1306.workers.dev/",
     "PAID_CHECKOUT_ENABLED": "false",
     "POLAR_SERVER": "production",
