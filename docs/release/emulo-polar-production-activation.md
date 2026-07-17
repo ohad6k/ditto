@@ -124,6 +124,13 @@ arguments, or shown in screenshots.
   account. Checkout payments, subscription renewals, payouts, refunds, API
   access, and dashboard access are all enabled. Customer, order, subscription,
   and payment counts remain zero.
+- The first approved zero-money window deployed Worker version
+  `d28ce428-2b9e-4249-ae97-02cf2006faba`. The code reduced the current invoice
+  to `$0` but expired at the next billing date, so checkout still requested a
+  card. The owner entered no payment data; Worker version
+  `5c62bb13-5f9c-4217-aba7-562e84eb2886` restored checkout-disabled `503`.
+  Post-abort D1 and Polar reads remained at zero billing/customer lifecycle
+  records.
 
 ## Phase 1: owner/provider readiness
 

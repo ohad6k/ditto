@@ -86,6 +86,14 @@ approves activation.
   logo and website, and a payout account. Checkout payments, subscription
   renewals, payouts, refunds, API access, and dashboard access are all enabled.
   Polar still lists zero customers, orders, subscriptions, and payments.
+- A separately approved checkout window deployed as Worker version
+  `d28ce428-2b9e-4249-ae97-02cf2006faba`. The one-use 100% code reduced the
+  current invoice to `$0`, but Polar showed it ending at the next billing date
+  and required card details. No card was entered and checkout was immediately
+  disabled as Worker version `5c62bb13-5f9c-4217-aba7-562e84eb2886`.
+- Post-abort proof returned checkout `503`; D1 had zero billing customers,
+  events, entitlements, continuity devices, and generations; Polar had zero
+  customers, orders, subscriptions, and payments.
 - Live HTTP proof returned expected `200` responses for health, account assets,
   and legal pages; `401` for signed-out account/device/export reads; `302` from
   GitHub start to `github.com`; safe `503` responses for checkout, portal,
@@ -112,9 +120,9 @@ Device bearer tokens and browser sessions are stored only as hashes.
 1. Capture a fresh authenticated 390 px visual/interaction receipt for the new
    active-account device and deletion controls. The live signed-out shell is
    proven at 390x844, but it cannot prove paid-state controls.
-2. Create a bounded 100% production verification discount. Polar warns against
-   real-card test purchases and recommends a free product or 100% discount when
-   production verification is necessary.
+2. Correct the bounded verification path to a truly forever 100% discount or a
+   private free recurring product. Polar warns against real-card test purchases;
+   stop again if any payment method is requested.
 3. Prove one genuine signed delivery from the enabled production Polar endpoint
    before checkout activation. Do not substitute a locally forged signature or
    infer success from the installed secret names.
