@@ -108,6 +108,16 @@ describe("authenticated Worker integration", () => {
     expect(account.headers.get("content-security-policy")).toContain(
       "style-src 'self'",
     );
+    for (const directive of [
+      "default-src 'none'",
+      "script-src 'self'",
+      "img-src 'self'",
+      "frame-ancestors 'none'",
+      "base-uri 'none'",
+      "form-action 'self'",
+    ]) {
+      expect(account.headers.get("content-security-policy")).toContain(directive);
+    }
 
     const script = await SELF.fetch("https://api.example/account.js");
     expect(script.status).toBe(200);
