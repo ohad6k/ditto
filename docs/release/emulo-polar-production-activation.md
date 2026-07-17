@@ -120,6 +120,10 @@ arguments, or shown in screenshots.
   Cloudflare; values were neither read nor recorded. An unsigned request returns
   `403`, checkout remains disabled with `503`, and Polar currently lists zero
   deliveries for the endpoint.
+- Polar currently reports no organization country, no payout account, and
+  disabled capabilities for checkout payments, subscription renewals, payouts,
+  and refunds. API and dashboard access are enabled. Customer, order,
+  subscription, and payment counts are all zero.
 
 ## Phase 1: owner/provider readiness
 
@@ -269,7 +273,8 @@ checkout while the test is running.
 
 Public founding checkout may be enabled only when all boxes are true:
 
-- [ ] Production payout/organization state is accepted.
+- [ ] Production payout/organization state is accepted and payment capabilities
+  are enabled.
 - [x] Production monthly and annual products show exact prices/intervals.
 - [ ] Production OAT has only the two required scopes.
 - [ ] Production webhook is Raw and subscribed to exactly the seven events.

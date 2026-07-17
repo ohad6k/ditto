@@ -82,6 +82,11 @@ approves activation.
   Cloudflare lists both required Polar secret names without exposing values;
   an unsigned webhook returns `403`, checkout remains disabled with `503`, and
   the endpoint currently has zero deliveries.
+- Polar's production organization receipt reports a configured website but no
+  country and no payout account. Provider capabilities currently deny checkout
+  payments, subscription renewals, payouts, and refunds while allowing API and
+  dashboard access. Polar lists zero customers, orders, subscriptions, and
+  payments.
 - Live HTTP proof returned expected `200` responses for health, account assets,
   and legal pages; `401` for signed-out account/device/export reads; `302` from
   GitHub start to `github.com`; safe `503` responses for checkout, portal,
@@ -108,23 +113,27 @@ Device bearer tokens and browser sessions are stored only as hashes.
 1. Capture a fresh authenticated 390 px visual/interaction receipt for the new
    active-account device and deletion controls. The live signed-out shell is
    proven at 390x844, but it cannot prove paid-state controls.
-2. Prove one genuine signed delivery from the enabled production Polar endpoint
+2. Complete Polar business/country and payout onboarding, then verify the
+   production organization explicitly enables checkout payments, subscription
+   renewals, payouts, and refunds.
+3. Prove one genuine signed delivery from the enabled production Polar endpoint
    before checkout activation. Do not substitute a locally forged signature or
    infer success from the installed secret names.
-3. Run a live synthetic account proof: every enabled sign-in provider,
+4. Run a live synthetic account proof: every enabled sign-in provider,
    webhook-confirmed
    entitlement, first and second device, encrypted push/pull, conflict,
    revocation, recovery export, cloud deletion, and negative cross-account
    tests. Capture URLs, request IDs, timestamps, and screenshots without secret
    values.
-4. Verify the production Polar products, portal, refunds/terms/privacy links,
+5. Verify the production Polar products, portal, refunds/terms/privacy links,
    transaction email, cancellation, renewal, and webhook replay behavior.
-5. Obtain a separate explicit Ohad approval, then change checkout activation in
+6. Obtain a separate explicit Ohad approval, then change checkout activation in
    a small isolated release. Roll back on any mismatch.
 
 ## Launch decision
 
 **No-go today.** The repository foundation, migrations, GitHub sign-in,
 configuration-aware provider UI, and disabled-checkout deployment are proven.
-Accepting money still requires production Polar/webhook proof, an active live
-account/continuity proof, and a separately approved checkout release.
+Accepting money still requires Polar business and payout activation,
+production webhook proof, an active live account/continuity proof, and a
+separately approved checkout release.
