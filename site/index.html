@@ -332,12 +332,7 @@ h2{
 }
 .price-link:hover{color:var(--red);padding-left:6px}
 .price-link::after{content:"→";font-size:17px}
-.beta-line{display:flex;justify-content:space-between;align-items:center;gap:18px;margin-bottom:30px}
-.beta-line .label{color:var(--gold)}
-.beta-state{
-  border:1px solid var(--ink-2);padding:6px 10px;
-  font-family:var(--mono);font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--cream-dim);
-}
+.pro-label{display:block;color:var(--gold);margin-bottom:30px}
 .pro-plans{margin:32px 0 26px;border-top:1px solid var(--ink-2)}
 .pro-plan{
   display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:20px;
@@ -347,6 +342,11 @@ h2{
 .pro-plan small{display:block;font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--cream-dim)}
 .pro-plan .amount{font-family:var(--serif);font-size:31px;line-height:1;white-space:nowrap}
 .pro-plan .amount span{font-family:var(--mono);font-size:10px;letter-spacing:.08em;color:var(--cream-dim)}
+.pro-plan .amount s{font-size:17px;color:var(--cream-dim);text-decoration-thickness:1px}
+.pro-plan .amount em{
+  display:inline-block;margin-left:8px;border:1px solid var(--gold);padding:5px 7px;
+  font-family:var(--mono);font-size:9px;font-style:normal;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);
+}
 .pro-plan a{
   border:1px solid var(--paper-2);padding:10px 13px;color:var(--paper-2);text-decoration:none;
   font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;
@@ -354,8 +354,6 @@ h2{
 }
 .pro-plan a:hover{background:var(--paper-2);color:var(--ink)}
 .pro-plan a:active{transform:translateY(1px)}
-.billing-proof{font-family:var(--mono);font-size:11px;line-height:1.7;color:var(--cream-dim);max-width:64ch}
-.billing-proof b{color:var(--paper-2);font-weight:500}
 
 /* works with — slow marquee */
 .works{border-top:1px solid var(--rule);border-bottom:1px solid var(--rule);padding:24px 0;overflow:hidden;position:relative;z-index:3;background:var(--paper)}
@@ -599,19 +597,20 @@ footer a:hover{color:var(--red)}
   </div>
 </section>
 
-<section class="pricing" id="pricing" data-checkout-state="private-beta">
+<section class="pricing" id="pricing">
   <div class="wrap">
     <div class="sec-head reveal">
       <span class="num">IV.</span>
       <div>
-        <span class="label">One engine · two ways to run it</span>
-        <h2>Keep the local engine. Add the managed layer when you need it.</h2>
+        <span class="label">Open source + managed continuity</span>
+        <h2>Start free. Add continuity when your workflows depend on it.</h2>
+        <p>Emulo stays useful on your machine. Emulo Pro adds the managed layer for people who want continuity without maintaining it themselves.</p>
       </div>
     </div>
     <div class="price-ledger reveal">
       <article class="price-pane price-free">
-        <span class="label">Open-source Emulo</span>
-        <h3>Free, local, yours.</h3>
+        <span class="label">Emulo</span>
+        <h3>Free and open source.</h3>
         <p>Mine your own sessions and keep the resulting you.md on your machine. The core product stays useful without a cloud account.</p>
         <div class="price-mark"><strong>$0</strong><span>forever</span></div>
         <ul class="price-list">
@@ -620,29 +619,25 @@ footer a:hover{color:var(--red)}
           <li>MIT licensed source</li>
           <li>No subscription</li>
         </ul>
-        <a class="price-link" href="https://github.com/ohad6k/emulo">Install from GitHub</a>
+        <a class="price-link" href="https://github.com/ohad6k/emulo">Get Emulo</a>
       </article>
 
       <article class="price-pane price-pro">
-        <div class="beta-line">
-          <span class="label">Emulo Pro</span>
-          <span class="beta-state">Private beta</span>
-        </div>
-        <h3>Continuity for agents that already know you.</h3>
-        <p>The managed layer is opening for solo power users who want cross-agent continuity, reviewed orchestration, recovery, and direct founding support. Capabilities open only after they are verified.</p>
+        <span class="label pro-label">Emulo Pro</span>
+        <h3>Managed continuity for the way you work.</h3>
+        <p>Choose the managed layer when you want Emulo continuity without maintaining the service yourself. Paid capabilities open only after they are verified.</p>
         <div class="pro-plans">
           <div class="pro-plan">
             <div><strong>Monthly</strong><small>Flexible access</small></div>
             <div class="amount">$9 <span>/ month</span></div>
-            <a href="https://emulo-production.ohad1306.workers.dev/account" aria-label="Open the Emulo Pro monthly account flow">Open account</a>
+            <a href="https://emulo-production.ohad1306.workers.dev/account" aria-label="Choose Emulo Pro monthly">Choose monthly</a>
           </div>
           <div class="pro-plan">
             <div><strong>Annual</strong><small>One year</small></div>
-            <div class="amount">$79 <span>/ year</span></div>
-            <a href="https://emulo-production.ohad1306.workers.dev/account" aria-label="Open the Emulo Pro annual account flow">Open account</a>
+            <div class="amount"><s>$108</s> $79 <span>/ year</span><em>Save 27%</em></div>
+            <a href="https://emulo-production.ohad1306.workers.dev/account" aria-label="Choose Emulo Pro annual">Choose annual</a>
           </div>
         </div>
-        <p class="billing-proof"><b>Payment truth stays server-side.</b> GitHub signs you in, Polar hosts checkout, and Emulo activates Pro only after a signed payment event is stored in its database. Checkout remains private while that production path is verified.</p>
       </article>
     </div>
   </div>

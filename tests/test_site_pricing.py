@@ -16,15 +16,30 @@ class SitePricingTests(unittest.TestCase):
     def test_pricing_is_reachable_and_names_both_product_paths(self):
         self.assertIn('href="#pricing"', self.html)
         self.assertIn('id="pricing"', self.html)
-        self.assertIn("Open-source Emulo", self.html)
+        self.assertIn("Free and open source", self.html)
         self.assertIn("Emulo Pro", self.html)
 
-    def test_approved_prices_and_honest_beta_state_are_visible(self):
-        self.assertIn("$9", self.html)
-        self.assertIn("$79", self.html)
-        self.assertIn('data-checkout-state="private-beta"', self.html)
-        self.assertIn("Private beta", self.html)
-        self.assertNotIn("free trial", self.html.lower())
+    def test_approved_prices_and_annual_value_are_visible(self):
+        pricing = self.html.split('id="pricing"', 1)[1].split("</section>", 1)[0]
+        for text in ("$0", "$9", "$108", "$79", "Save 27%"):
+            self.assertIn(text, pricing)
+        self.assertIn("Get Emulo", pricing)
+        self.assertIn("Choose monthly", pricing)
+        self.assertIn("Choose annual", pricing)
+        for rejected in (
+            "Private beta",
+            "Install from GitHub",
+            "Open account",
+            "Payment truth stays server-side",
+        ):
+            self.assertNotIn(rejected, pricing)
+
+    def test_pricing_keeps_free_capable_and_does_not_claim_sync_is_live(self):
+        pricing = self.html.split('id="pricing"', 1)[1].split("</section>", 1)[0]
+        for text in ("Free and open source", "MIT", "local", "No subscription"):
+            self.assertIn(text.lower(), pricing.lower())
+        self.assertNotIn("available today", pricing.lower())
+        self.assertNotIn("unlimited", pricing.lower())
 
     def test_open_source_local_product_is_not_weakened(self):
         pricing = self.html.split('id="pricing"', 1)[1].split("</section>", 1)[0]
