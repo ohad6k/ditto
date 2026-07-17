@@ -82,11 +82,10 @@ approves activation.
   Cloudflare lists both required Polar secret names without exposing values;
   an unsigned webhook returns `403`, checkout remains disabled with `503`, and
   the endpoint currently has zero deliveries.
-- Polar's production organization receipt reports a configured website but no
-  country and no payout account. Provider capabilities currently deny checkout
-  payments, subscription renewals, payouts, and refunds while allowing API and
-  dashboard access. Polar lists zero customers, orders, subscriptions, and
-  payments.
+- Polar's production organization receipt now reports country `IL`, configured
+  logo and website, and a payout account. Checkout payments, subscription
+  renewals, payouts, refunds, API access, and dashboard access are all enabled.
+  Polar still lists zero customers, orders, subscriptions, and payments.
 - Live HTTP proof returned expected `200` responses for health, account assets,
   and legal pages; `401` for signed-out account/device/export reads; `302` from
   GitHub start to `github.com`; safe `503` responses for checkout, portal,
@@ -113,9 +112,9 @@ Device bearer tokens and browser sessions are stored only as hashes.
 1. Capture a fresh authenticated 390 px visual/interaction receipt for the new
    active-account device and deletion controls. The live signed-out shell is
    proven at 390x844, but it cannot prove paid-state controls.
-2. Complete Polar business/country and payout onboarding, then verify the
-   production organization explicitly enables checkout payments, subscription
-   renewals, payouts, and refunds.
+2. Create a bounded 100% production verification discount. Polar warns against
+   real-card test purchases and recommends a free product or 100% discount when
+   production verification is necessary.
 3. Prove one genuine signed delivery from the enabled production Polar endpoint
    before checkout activation. Do not substitute a locally forged signature or
    infer success from the installed secret names.
@@ -134,6 +133,5 @@ Device bearer tokens and browser sessions are stored only as hashes.
 
 **No-go today.** The repository foundation, migrations, GitHub sign-in,
 configuration-aware provider UI, and disabled-checkout deployment are proven.
-Accepting money still requires Polar business and payout activation,
-production webhook proof, an active live account/continuity proof, and a
-separately approved checkout release.
+Accepting money still requires zero-money production webhook proof, an active
+live account/continuity proof, and a separately approved checkout release.

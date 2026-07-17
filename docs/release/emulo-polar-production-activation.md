@@ -5,9 +5,9 @@
 **Owner:** Ohad  
 **Safety default:** Production checkout disabled
 
-This runbook moves Emulo from a proven Polar Sandbox lifecycle to a private
-real-money founding-beta test. It does not authorize a public launch or a real
-charge by itself.
+This runbook moves Emulo from a proven Polar Sandbox lifecycle to a bounded,
+zero-money production verification and then a separately approved public
+launch. It does not authorize a real charge by itself.
 
 ## What is already proven
 
@@ -120,10 +120,10 @@ arguments, or shown in screenshots.
   Cloudflare; values were neither read nor recorded. An unsigned request returns
   `403`, checkout remains disabled with `503`, and Polar currently lists zero
   deliveries for the endpoint.
-- Polar currently reports no organization country, no payout account, and
-  disabled capabilities for checkout payments, subscription renewals, payouts,
-  and refunds. API and dashboard access are enabled. Customer, order,
-  subscription, and payment counts are all zero.
+- Polar now reports country `IL`, configured logo and website, and a payout
+  account. Checkout payments, subscription renewals, payouts, refunds, API
+  access, and dashboard access are all enabled. Customer, order, subscription,
+  and payment counts remain zero.
 
 ## Phase 1: owner/provider readiness
 
@@ -247,22 +247,23 @@ Enter the production webhook signing secret directly into Cloudflare as
 delivery if available and verify a valid delivery is accepted without granting
 an entitlement for an unknown account.
 
-## Phase 6: explicitly approved private real-money lifecycle
+## Phase 6: explicitly approved zero-money production lifecycle
 
-This phase creates a real charge and requires Ohad's explicit approval at that
-moment.
+This phase first uses a 100% production verification discount and requires
+Ohad's explicit approval at that moment. Do not test with real card details;
+Polar documents that such tests can trigger processor and account reviews.
 
 1. Confirm full tests/typecheck and the production deploy version.
 2. Enable checkout only for the bounded private test window.
 3. Sign in with the production GitHub account.
-4. Purchase the monthly plan with a real card.
+4. Complete the monthly checkout with the bounded 100% verification discount so
+   no money changes hands.
 5. Confirm the completion page stays pending until a signed webhook applies.
 6. Confirm D1 shows one active production entitlement and applied lifecycle
    events using count/state-only queries.
 7. Open the hosted portal from Emulo and confirm the correct plan.
-8. Cancel/refund using the exact agreed test path. A refund is not assumed to
-   generate the same subscription event sequence as cancellation; observe and
-   record the real events without payloads.
+8. Cancel or revoke the zero-money verification subscription using the exact
+   agreed test path; observe and record the real events without payloads.
 9. Confirm the customer-visible Emulo state converges correctly.
 10. Disable checkout immediately after the lifecycle test.
 
@@ -273,7 +274,7 @@ checkout while the test is running.
 
 Public founding checkout may be enabled only when all boxes are true:
 
-- [ ] Production payout/organization state is accepted and payment capabilities
+- [x] Production payout/organization state is accepted and payment capabilities
   are enabled.
 - [x] Production monthly and annual products show exact prices/intervals.
 - [ ] Production OAT has only the two required scopes.
@@ -281,7 +282,8 @@ Public founding checkout may be enabled only when all boxes are true:
 - [x] GitHub production callback and sign-in work.
 - [ ] Real purchase creates an active entitlement only after signed webhook.
 - [ ] Hosted portal opens for the authenticated external customer.
-- [ ] Cancellation/refund lifecycle converges without manual D1 edits.
+- [ ] Zero-money cancellation/revocation lifecycle converges without manual D1
+  edits; refund controls and public policy are separately verified.
 - [ ] Checkout can be disabled without disabling webhook processing.
 - [ ] Customer-facing promise, privacy, refund, support, and beta limitations
   are visible before purchase.
