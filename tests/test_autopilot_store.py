@@ -55,8 +55,13 @@ class AutopilotStoreTest(unittest.TestCase):
                 "inbox",
                 "generations",
                 "operations",
+                "continuity",
             },
             {item.name for item in root.iterdir()},
+        )
+        self.assertEqual(
+            {"pending", "envelopes"},
+            {item.name for item in (root / "continuity").iterdir()},
         )
 
     def test_unsafe_path_components_are_rejected(self):

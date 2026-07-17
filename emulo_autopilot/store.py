@@ -115,8 +115,13 @@ class AutopilotStore:
             "inbox",
             "generations",
             "operations",
+            "continuity",
         ):
             path = self._child(name)
+            os.makedirs(path, mode=0o700, exist_ok=True)
+            self._assert_not_link(path)
+        for name in ("pending", "envelopes"):
+            path = self._child("continuity", name)
             os.makedirs(path, mode=0o700, exist_ok=True)
             self._assert_not_link(path)
         return self.root
@@ -472,6 +477,58 @@ class AutopilotStore:
             if descriptor is not None:
                 os.close(descriptor)
 
+    def _persist_generation(self, generation, artifacts, update_head):
+        generation = validate_generation(generation)
+        expected_artifacts = {
+            metadata["artifact"] for metadata in generation["domains"].values()
+        }
+        if set(artifacts) != expected_artifacts:
+            raise ValueError("generation artifacts do not match manifest")
+        for domain, metadata in generation["domains"].items():
+            payload = artifacts[metadata["artifact"]]
+            if not isinstance(payload, bytes):
+                raise ValueError("generation artifact must be bytes")
+            payload.decode("utf-8", errors="strict")
+            if hashlib.sha256(payload).hexdigest() != metadata["sha256"]:
+                raise ValueError("generation artifact hash mismatch")
+
+        self.initialize()
+        staged_name = ".staged-" + uuid.uuid4().hex
+        staged = self._child("generations", staged_name)
+        target = self._child("generations", generation["generation_id"])
+        os.mkdir(staged, mode=0o700)
+        try:
+            for artifact_name, payload in artifacts.items():
+                self._write_file_bytes(os.path.join(staged, artifact_name), payload)
+            manifest = (canonical_json(generation) + "\n").encode("utf-8")
+            self._write_file_bytes(os.path.join(staged, "generation.json"), manifest)
+
+            if os.path.exists(target):
+                existing = self.get_generation(generation["generation_id"])
+                if existing != generation:
+                    raise ValueError("existing generation does not match identity")
+                for domain, metadata in generation["domains"].items():
+                    if self.read_domain(generation["generation_id"], domain).encode(
+                        "utf-8"
+                    ) != artifacts[metadata["artifact"]]:
+                        raise ValueError("existing generation artifact bytes differ")
+            else:
+                os.replace(staged, target)
+
+            verified = self.get_generation(generation["generation_id"])
+            if update_head:
+                head = validate_head(
+                    {
+                        "schema_version": HEAD_SCHEMA,
+                        "generation_id": generation["generation_id"],
+                    }
+                )
+                self.atomic_write_json(self._child("head.json"), head)
+            return verified
+        finally:
+            if os.path.isdir(staged):
+                shutil.rmtree(staged)
+
     def _write_generation(
         self,
         candidate_ids,
@@ -518,36 +575,57 @@ class AutopilotStore:
         generation["generation_id"] = generation_identity(generation)
         generation = validate_generation(generation)
 
-        self.initialize()
-        staged_name = ".staged-" + uuid.uuid4().hex
-        staged = self._child("generations", staged_name)
-        target = self._child("generations", generation["generation_id"])
-        os.mkdir(staged, mode=0o700)
-        try:
-            for artifact_name, payload in artifacts.items():
-                self._write_file_bytes(os.path.join(staged, artifact_name), payload)
-            manifest = (canonical_json(generation) + "\n").encode("utf-8")
-            self._write_file_bytes(os.path.join(staged, "generation.json"), manifest)
+        return self._persist_generation(generation, artifacts, update_head=True)
 
-            if os.path.exists(target):
-                existing = self.get_generation(generation["generation_id"])
-                if existing != generation:
-                    raise ValueError("existing generation does not match identity")
+    def _write_generation_from_current(self, current, candidate_ids, created_at):
+        candidates = []
+        for candidate_id in sorted(set(candidate_ids)):
+            candidate = self.get_candidate(candidate_id)
+            decision = self.latest_decision(candidate_id)
+            if decision is None or decision["decision"] != "approve":
+                raise ValueError(
+                    "candidate requires a newest explicit approval decision"
+                )
+            if decision["policy_class"] not in {"safe", "review"}:
+                raise ValueError("candidate policy class blocks activation")
+            candidates.append(candidate)
+
+        artifacts = {}
+        domains = {}
+        by_domain = {}
+        for candidate in candidates:
+            by_domain.setdefault(candidate["domain"], []).append(candidate)
+        for domain in sorted(set(current["domains"]).union(by_domain)):
+            existing = self.read_domain(current["generation_id"], domain)
+            additions = by_domain.get(domain, [])
+            if existing is None:
+                payload = render_domain(domain, additions).encode("utf-8")
             else:
-                os.replace(staged, target)
-
-            verified = self.get_generation(generation["generation_id"])
-            head = validate_head(
-                {
-                    "schema_version": HEAD_SCHEMA,
-                    "generation_id": generation["generation_id"],
-                }
-            )
-            self.atomic_write_json(self._child("head.json"), head)
-            return verified
-        finally:
-            if os.path.isdir(staged):
-                shutil.rmtree(staged)
+                text = existing.rstrip() + "\n"
+                for candidate in sorted(
+                    additions, key=lambda item: item["candidate_id"]
+                ):
+                    text += "- " + candidate["statement"] + "\n"
+                payload = text.encode("utf-8")
+            artifact_name = domain + ".md"
+            artifacts[artifact_name] = payload
+            domains[domain] = {
+                "artifact": artifact_name,
+                "sha256": hashlib.sha256(payload).hexdigest(),
+            }
+        generation = {
+            "schema_version": GENERATION_SCHEMA,
+            "generation_id": "",
+            "parent_generation_id": current["generation_id"],
+            "operation": "activate",
+            "candidate_ids": sorted(
+                set(current["candidate_ids"]).union(candidate_ids)
+            ),
+            "domains": domains,
+            "created_at": created_at,
+        }
+        generation["generation_id"] = generation_identity(generation)
+        return self._persist_generation(generation, artifacts, update_head=True)
 
     def activate(self, candidate_ids, created_at):
         if not isinstance(candidate_ids, list) or not candidate_ids:
@@ -568,6 +646,11 @@ class AutopilotStore:
             combined = sorted(active_ids.union(candidate_ids))
             if current is not None and combined == current["candidate_ids"]:
                 return current
+            if current is not None:
+                new_ids = sorted(set(candidate_ids).difference(active_ids))
+                return self._write_generation_from_current(
+                    current, new_ids, created_at
+                )
             return self._write_generation(
                 combined,
                 None if current is None else current["generation_id"],
@@ -599,9 +682,112 @@ class AutopilotStore:
                 parent_id = generation["parent_generation_id"]
             if target is None:
                 raise ValueError("target generation is not an ancestor")
-            return self._write_generation(
-                target["candidate_ids"],
-                current["generation_id"],
-                "rollback",
-                created_at,
-            )
+            artifacts = {
+                metadata["artifact"]: self.read_domain(
+                    target["generation_id"], domain
+                ).encode("utf-8")
+                for domain, metadata in target["domains"].items()
+            }
+            generation = {
+                "schema_version": GENERATION_SCHEMA,
+                "generation_id": "",
+                "parent_generation_id": current["generation_id"],
+                "operation": "rollback",
+                "candidate_ids": target["candidate_ids"],
+                "domains": target["domains"],
+                "created_at": created_at,
+            }
+            generation["generation_id"] = generation_identity(generation)
+            return self._persist_generation(generation, artifacts, update_head=True)
+
+    def install_generation(self, generation, artifacts):
+        return self._persist_generation(generation, artifacts, update_head=False)
+
+    def activate_imported_generation(self, generation_id, expected_local_head):
+        generation = self.get_generation(generation_id)
+        if expected_local_head is not None and (
+            not isinstance(expected_local_head, str)
+            or not re.fullmatch(r"gen_[a-f0-9]{20}", expected_local_head)
+        ):
+            raise ValueError("expected local head is invalid")
+        current = self.get_head()
+        current_id = None if current is None else current["generation_id"]
+        if current_id == generation_id:
+            return True
+        if current_id != expected_local_head:
+            return False
+        self.atomic_write_json(
+            self._child("head.json"),
+            validate_head(
+                {
+                    "schema_version": HEAD_SCHEMA,
+                    "generation_id": generation["generation_id"],
+                }
+            ),
+        )
+        return True
+
+    def put_continuity_envelope(self, generation_id, envelope):
+        if not isinstance(generation_id, str) or not re.fullmatch(
+            r"gen_[a-f0-9]{20}", generation_id
+        ):
+            raise ValueError("generation_id is invalid")
+        return self.atomic_write_json(
+            self._child("continuity", "envelopes", generation_id + ".json"),
+            envelope,
+        )
+
+    def get_continuity_envelope(self, generation_id):
+        if not isinstance(generation_id, str) or not re.fullmatch(
+            r"gen_[a-f0-9]{20}", generation_id
+        ):
+            raise ValueError("generation_id is invalid")
+        path = self._child("continuity", "envelopes", generation_id + ".json")
+        if not os.path.exists(path):
+            return None
+        try:
+            self._assert_not_link(path)
+            with open(path, "r", encoding="utf-8", errors="strict") as handle:
+                return json.load(handle)
+        except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+            raise ValueError("continuity envelope is corrupt") from exc
+
+    def put_continuity_pending(self, generation_id, envelope):
+        self.put_continuity_envelope(generation_id, envelope)
+        return self.atomic_write_json(
+            self._child("continuity", "pending", generation_id + ".json"),
+            envelope,
+        )
+
+    def get_continuity_pending(self, generation_id):
+        if not isinstance(generation_id, str) or not re.fullmatch(
+            r"gen_[a-f0-9]{20}", generation_id
+        ):
+            raise ValueError("generation_id is invalid")
+        path = self._child("continuity", "pending", generation_id + ".json")
+        try:
+            self._assert_not_link(path)
+            with open(path, "r", encoding="utf-8", errors="strict") as handle:
+                return json.load(handle)
+        except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+            raise ValueError("pending continuity envelope is corrupt") from exc
+
+    def list_continuity_pending(self):
+        self.initialize()
+        root = self._child("continuity", "pending")
+        values = []
+        for name in os.listdir(root):
+            if not re.fullmatch(r"gen_[a-f0-9]{20}\.json", name):
+                raise ValueError("unexpected pending continuity file")
+            values.append(name[:-5])
+        return sorted(values)
+
+    def delete_continuity_pending(self, generation_id):
+        if not isinstance(generation_id, str) or not re.fullmatch(
+            r"gen_[a-f0-9]{20}", generation_id
+        ):
+            raise ValueError("generation_id is invalid")
+        path = self._child("continuity", "pending", generation_id + ".json")
+        if os.path.exists(path):
+            self._assert_not_link(path)
+            os.unlink(path)
