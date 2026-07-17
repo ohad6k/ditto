@@ -1,0 +1,117 @@
+:root {
+  color-scheme: light;
+  --paper: #f5f1e8;
+  --ink: #171715;
+  --body: #35332f;
+  --muted: #69665f;
+  --line: #d9d2c5;
+  --accent: #9c3f2c;
+}
+
+* { box-sizing: border-box; }
+
+html { background: var(--paper); }
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font: 16px/1.72 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: inherit; text-underline-offset: 3px; }
+a:hover { color: var(--accent); }
+a:focus-visible { outline: 3px solid var(--accent); outline-offset: 4px; }
+
+.legal-header,
+.legal-document,
+.legal-footer {
+  width: min(760px, calc(100% - 40px));
+  margin-inline: auto;
+}
+
+.legal-header {
+  padding: 24px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.legal-header a {
+  display: inline-flex;
+  align-items: center;
+  gap: 11px;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: .18em;
+}
+
+.legal-header img {
+  width: 38px;
+  height: 38px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  object-fit: cover;
+}
+
+.legal-document { padding: 72px 0 84px; }
+
+.legal-kicker,
+.legal-updated {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .15em;
+  text-transform: uppercase;
+}
+
+h1 {
+  max-width: 13ch;
+  margin: .2em 0 .3em;
+  font: 700 clamp(3rem, 9vw, 5.5rem)/.94 Georgia, serif;
+  letter-spacing: -.055em;
+}
+
+.legal-intro {
+  max-width: 60ch;
+  margin: 38px 0 48px;
+  color: var(--body);
+  font-size: 1.15rem;
+}
+
+h2 {
+  margin: 2.5em 0 .65em;
+  font-size: 1.1rem;
+  letter-spacing: -.01em;
+}
+
+p,
+li { color: var(--body); }
+
+ul { padding-left: 1.3rem; }
+li + li { margin-top: .55em; }
+
+.policy-note {
+  margin-top: 2.5rem;
+  padding: 18px 20px;
+  border-left: 3px solid var(--accent);
+  background: rgba(255, 255, 255, .38);
+}
+
+.legal-footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  padding: 24px 0 48px;
+  border-top: 1px solid var(--line);
+  font-size: 14px;
+}
+
+@media (max-width: 520px) {
+  .legal-document { padding: 52px 0 64px; }
+  h1 { font-size: clamp(2.8rem, 15vw, 4.2rem); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; }
+}

@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f5f1e8">
+  <meta name="description" content="How Emulo handles account, billing, and encrypted continuity data.">
+  <link rel="icon" type="image/png" href="/assets/emulo.png">
+  <link rel="stylesheet" href="/legal.css">
+  <title>Privacy Policy | Emulo</title>
+</head>
+<body>
+  <header class="legal-header"><a href="/"><img src="/assets/emulo.png" alt=""><span>EMULO</span></a></header>
+  <main class="legal-document">
+    <p class="legal-kicker">Emulo policy</p>
+    <h1>Privacy Policy</h1>
+    <p class="legal-updated">Last updated: July 17, 2026</p>
+    <p class="legal-intro">This policy explains how Emulo, operated by Ohad Krispin in Israel, handles information for Emulo accounts and Emulo Pro. The open-source local engine can be used without an Emulo account.</p>
+
+    <h2>1. Information Emulo handles</h2>
+    <ul>
+      <li><strong>Account identity.</strong> When you use Google or GitHub to sign in, Emulo receives the provider identity needed to create and find your account. Google may also return your verified email, name, and profile image through its basic identity scopes. Emulo uses the provider's stable identifier, not your email address, as the identity key.</li>
+      <li><strong>Browser sessions.</strong> Emulo creates a high-entropy browser session and stores only its cryptographic hash, account relationship, timestamps, and revocation state.</li>
+      <li><strong>Billing.</strong> Polar supplies normalized customer, order, subscription, refund, and entitlement metadata. Emulo does not receive or store complete payment-card details. When available, the request IP address may be forwarded to Polar to support hosted checkout and fraud controls.</li>
+      <li><strong>Service operations.</strong> Emulo may keep bounded timestamps, safe failure categories, usage counters, client versions, and security events needed to run and protect the service.</li>
+      <li><strong>Encrypted continuity.</strong> When this Emulo Pro capability is available and you enable it, the local companion may upload approved profile and workflow artifacts only after encrypting them on your device. The service stores ciphertext, ciphertext digests, sizes, generation relationships, device public material, and routing metadata.</li>
+    </ul>
+
+    <h2>2. Information that stays local</h2>
+    <p>The hosted account and continuity service does not upload raw AI session logs, raw prompts, local evidence, local filenames, or plaintext profile and workflow content. The Emulo server never receives the decryption key or recovery secret for encrypted continuity. OAuth tokens and encryption keys are not used as analytics identifiers.</p>
+
+    <h2>3. Why Emulo uses information</h2>
+    <p>Emulo uses the minimum information required to authenticate accounts, maintain secure sessions, show verified subscription status, provide enabled Pro capabilities, prevent abuse, enforce service limits, investigate bounded failures, process deletion or export requests, and comply with applicable obligations.</p>
+
+    <h2>4. Service providers</h2>
+    <p>Emulo relies on Google and GitHub for optional account authentication, Cloudflare for the account API and database, Polar as billing provider and Merchant of Record, and Vercel for the public website. These providers process information under their own terms and privacy policies. Emulo does not sell personal information.</p>
+
+    <h2>5. Retention and deletion</h2>
+    <p>Account, security, and billing records are kept only as long as needed for the service, fraud prevention, dispute handling, legal obligations, and the published recovery window. When encrypted continuity becomes available, ending a subscription stops new cloud writes after the stated grace period and preserves a 30-day encrypted export and recovery window unless a longer period is required by law. Account deletion revokes hosted sessions and devices and queues hosted encrypted data for deletion. It does not silently delete files stored on your devices.</p>
+
+    <h2>6. Security and recovery</h2>
+    <p>Emulo uses HTTPS, secure HTTP-only cookies, provider-bound OAuth state, PKCE, server-side ownership checks, signed webhook verification, bounded requests, and data minimization. Encrypted continuity uses client-side authenticated encryption and per-device authorization. No online service is risk-free. If all authorized device keys and the recovery secret are lost, Emulo cannot decrypt or recover the hosted ciphertext.</p>
+
+    <h2>7. International processing and your choices</h2>
+    <p>Providers may process information in countries other than your own. Depending on applicable law, you may request access, correction, export, restriction, objection, or deletion of personal information. You may also stop using Emulo Pro, cancel a subscription, revoke provider access, or continue using the open-source local engine without a hosted account.</p>
+
+    <h2>8. Children</h2>
+    <p>Emulo accounts and Emulo Pro are not intended for children under 18.</p>
+
+    <h2>9. Changes and contact</h2>
+    <p>Material policy changes will be dated and presented before they apply when required. Questions and privacy requests can be sent to <a href="mailto:ohadkrispin@gmail.com">ohadkrispin@gmail.com</a>.</p>
+  </main>
+  <footer class="legal-footer"><a href="/privacy.html">Privacy</a><a href="/terms.html">Terms</a><a href="/refunds.html">Refunds</a><a href="mailto:ohadkrispin@gmail.com">Contact</a></footer>
+</body>
+</html>
