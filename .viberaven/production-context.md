@@ -2,6 +2,17 @@
 
 ## Current Release / Change Window
 
+### 2026-07-17 - Zero-money production lifecycle and account typography
+
+- Change: Prove the production Polar-to-Worker entitlement path with a private free product, then align the account typography and public header with the Emulo landing site.
+- Evidence: The user completed a `$0/month` hosted checkout without card fields. Polar created one `$0` order and an active subscription with no payment method. After the endpoint was re-enabled, `subscription.updated` and `subscription.canceled` returned HTTP `202` and were applied; immediate revocation also returned `202`, and D1 converged to `ended`. The authenticated active-account desktop surface was observed and the user approved the cleaned result.
+- Boundary: Final Worker version `adcda887-2a43-47bb-8d27-e0eb992b5b6f` restores the real `$9/month` and `$79/year` product IDs with `PAID_CHECKOUT_ENABLED=false`. The private free verification product is archived, its subscription is canceled, and it has no payment method. No card data or secret value was read.
+- Danger: The unused one-use verification discount remains provider-side until its configured 2026-07-18 expiry. It cannot create a checkout while the application gate is disabled. Public checkout, the hosted portal, transaction email, renewal, refund, and full live two-device continuity remain separate launch gates.
+- Repo fix: Reduce the oversized account headline, introduce landing-aligned local display/text/mono roles, normalize labels and actions, and add the landing's Bench, Pricing, GitHub, and Discord navigation. The Emulo lockup now returns to `https://emulo.vercel.app/`.
+- Verification: Focused header/UI tests passed `21/21`; the complete Worker suite passed `133/133` plus `8/8` production guards; typecheck, production-config validation, and Cloudflare dry run exited `0`. Fresh production reads contain the compact heading and exact public destinations, while checkout returns `503 checkout-disabled`.
+- Provider/MCP proof: Real products remain private, unarchived, and priced at `900` and `7900` cents. The raw seven-event webhook is enabled. The verification product is private and archived; its only order has amount/net amount `0`, and its subscription is canceled with no default payment method.
+- Open action: Keep checkout disabled. Prove the hosted portal, transaction email, policy links, replay behavior, and a complete live two-device encrypted continuity lifecycle before requesting separate public-enablement approval.
+
 ### 2026-07-17 - Emulo Pro continuity production deployment and OAuth shell correction
 
 - Change: Push the verified continuity release, apply production D1 migrations `0006_google_oauth.sql` through `0008_continuity_generations.sql`, complete owner-authorized GitHub OAuth, and hide the unavailable Google action before public billing activation.

@@ -1,8 +1,9 @@
 # Emulo Pro continuity release evidence
 
 **Status:** repository implementation, production migration, disabled-checkout
-deployment, GitHub sign-in, and the signed-out shell are verified; **not
-production-launch ready**.
+deployment, GitHub sign-in, real signed production entitlement lifecycle, and
+the desktop active-account surface are verified; **not production-launch
+ready**.
 
 This record separates what is proven in the repository from provider and
 operator work that has not happened. `PAID_CHECKOUT_ENABLED` must remain
@@ -94,6 +95,15 @@ approves activation.
 - Post-abort proof returned checkout `503`; D1 had zero billing customers,
   events, entitlements, continuity devices, and generations; Polar had zero
   customers, orders, subscriptions, and payments.
+- A second bounded window used a private free recurring verification product.
+  Polar required no card, created one `$0` order, and reported no payment method.
+  After re-enabling the existing endpoint, signed lifecycle deliveries returned
+  HTTP `202`; D1 applied the active/canceled updates and converged to `ended`
+  after immediate revocation. The verification product is now archived.
+- The approved account typography/header cleanup passed 133 Worker tests and 8
+  production guards, then deployed as Worker version
+  `adcda887-2a43-47bb-8d27-e0eb992b5b6f`. The Emulo lockup and four navigation
+  destinations match the landing site; checkout still returns `503`.
 - Live HTTP proof returned expected `200` responses for health, account assets,
   and legal pages; `401` for signed-out account/device/export reads; `302` from
   GitHub start to `github.com`; safe `503` responses for checkout, portal,
@@ -118,28 +128,23 @@ Device bearer tokens and browser sessions are stored only as hashes.
 ## Remaining launch blockers
 
 1. Capture a fresh authenticated 390 px visual/interaction receipt for the new
-   active-account device and deletion controls. The live signed-out shell is
-   proven at 390x844, but it cannot prove paid-state controls.
-2. Correct the bounded verification path to a truly forever 100% discount or a
-   private free recurring product. Polar warns against real-card test purchases;
-   stop again if any payment method is requested.
-3. Prove one genuine signed delivery from the enabled production Polar endpoint
-   before checkout activation. Do not substitute a locally forged signature or
-   infer success from the installed secret names.
-4. Run a live synthetic account proof: every enabled sign-in provider,
+   active-account device and deletion controls. The desktop active surface and
+   signed-out 390x844 shell are proven separately.
+2. Run a live synthetic account proof: every enabled sign-in provider,
    webhook-confirmed
    entitlement, first and second device, encrypted push/pull, conflict,
    revocation, recovery export, cloud deletion, and negative cross-account
    tests. Capture URLs, request IDs, timestamps, and screenshots without secret
    values.
-5. Verify the production Polar products, portal, refunds/terms/privacy links,
+3. Verify the production Polar portal, refunds/terms/privacy links,
    transaction email, cancellation, renewal, and webhook replay behavior.
-6. Obtain a separate explicit Ohad approval, then change checkout activation in
+4. Obtain a separate explicit Ohad approval, then change checkout activation in
    a small isolated release. Roll back on any mismatch.
 
 ## Launch decision
 
 **No-go today.** The repository foundation, migrations, GitHub sign-in,
-configuration-aware provider UI, and disabled-checkout deployment are proven.
-Accepting money still requires zero-money production webhook proof, an active
-live account/continuity proof, and a separately approved checkout release.
+configuration-aware provider UI, zero-money signed lifecycle, desktop active
+account, and disabled-checkout rollback are proven. Accepting money still
+requires the complete live continuity/portal/policy proof and a separately
+approved checkout release.
