@@ -4,7 +4,7 @@
 
 **Goal:** Make the existing authenticated Emulo account page visually cleaner and consistent with the landing site's editorial type hierarchy without changing behavior.
 
-**Architecture:** Keep `account-ui.ts` markup and scripts unchanged. Add regression assertions against the served stylesheet, then make a narrow update to the centralized `professionalAccountStyles` string in `account-styles.ts`. Deploy only after the focused and complete Worker verification gates pass.
+**Architecture:** Keep all account scripts and product interactions unchanged. Add regression assertions against the served stylesheet and header, make a narrow update to the centralized `professionalAccountStyles` string in `account-styles.ts`, and add the approved public landing navigation to `account-ui.ts`. Deploy only after the focused and complete Worker verification gates pass.
 
 **Tech Stack:** TypeScript, CSS, Vitest, Cloudflare Workers, Wrangler.
 
@@ -40,6 +40,7 @@ Expected: FAIL because the new font variables and reduced heading scale are abse
 
 **Files:**
 - Modify: `cloud/worker/src/account-styles.ts`
+- Modify: `cloud/worker/src/account-ui.ts`
 
 - [ ] **Step 1: Add the landing-aligned local font roles**
 
@@ -49,7 +50,11 @@ Add `--display`, `--text`, and `--mono` variables using local/system fallbacks. 
 
 Reduce the active headline to `clamp(2.55rem, 6vw, 3.7rem)`, remove its forced narrow measure for the wide surface, use landing-like `-.015em` tracking and `1.02` line height, tighten section gaps, and keep the danger zone quieter than the device workflow.
 
-- [ ] **Step 3: Run the focused test and verify GREEN**
+- [ ] **Step 3: Align the account header with the landing navigation**
+
+Link the Emulo lockup to `https://emulo.vercel.app/` and add Bench, Pricing, GitHub, and Discord using the landing site's exact public destinations. Style the links with the existing mono role and collapse them into a clean mobile row without changing account routes.
+
+- [ ] **Step 4: Run the focused test and verify GREEN**
 
 Run: `npx vitest run test/authenticated-worker.test.ts`
 

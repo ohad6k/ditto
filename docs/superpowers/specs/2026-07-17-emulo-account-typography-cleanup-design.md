@@ -22,12 +22,13 @@ The rejected alternative is a structural dashboard redesign. The user explicitly
 - Move body copy from generic UI sans styling toward the landing site's editorial text voice.
 - Give labels, facts, buttons, inputs, and technical values a compact mono/system-mono treatment.
 - Normalize button height, weight, casing, and letter spacing so primary and secondary actions feel related.
+- Match the landing page's top navigation rhythm. The Emulo lockup links to `https://emulo.vercel.app/`, with Bench, Pricing, GitHub, and Discord beside it using the landing site's exact destinations.
 - Reduce excessive vertical gaps while preserving clear section separation.
 - Keep the danger zone fully visible and accessible, but make its typography quieter than the active plan and device workflow.
 
 ## Functional boundaries
 
-No HTML data attributes, form actions, route URLs, polling logic, entitlement logic, billing logic, webhook logic, device limits, deletion confirmation phrase, CSP, or provider configuration may change.
+No HTML data attributes, product form actions, application route behavior, polling logic, entitlement logic, billing logic, webhook logic, device limits, deletion confirmation phrase, CSP, or provider configuration may change. The only markup change is the approved public landing navigation in the page header.
 
 The private production verification subscription remains a temporary test fixture. Checkout remains disabled during the UI change.
 

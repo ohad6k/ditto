@@ -38,7 +38,14 @@ button { font: inherit; }
   width: min(100% - 40px, 1120px);
   margin-inline: auto;
 }
-.brand-header { padding: 24px 0; border-bottom: 1px solid var(--line); }
+.brand-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 30px;
+  padding: 24px 0;
+  border-bottom: 1px solid var(--line);
+}
 .brand-lockup {
   display: inline-flex;
   align-items: center;
@@ -53,6 +60,21 @@ button { font: inherit; }
   object-fit: cover;
 }
 .wordmark { font-family: var(--mono); font-size: .78rem; font-weight: 700; letter-spacing: .28em; text-transform: uppercase; }
+.brand-nav { display: flex; align-items: center; gap: clamp(18px, 2.5vw, 30px); }
+.brand-nav a {
+  padding: 3px 0;
+  border-bottom: 1px solid transparent;
+  color: var(--body);
+  font-family: var(--mono);
+  font-size: .68rem;
+  font-weight: 500;
+  letter-spacing: .14em;
+  text-decoration: none;
+  text-transform: uppercase;
+  transition: color 150ms ease, border-color 150ms ease;
+}
+.brand-nav a:hover { border-bottom-color: var(--accent); color: var(--ink); }
+.brand-nav a:focus-visible { outline: 3px solid var(--accent); outline-offset: 4px; }
 
 .account-main {
   width: 100%;
@@ -223,6 +245,9 @@ button { font: inherit; }
 
 @media (max-width: 520px) {
   .brand-header, .account-footer { width: min(100% - 32px, 1120px); }
+  .brand-header { align-items: flex-start; flex-direction: column; gap: 18px; }
+  .brand-nav { width: 100%; justify-content: space-between; gap: 10px; }
+  .brand-nav a { font-size: .61rem; letter-spacing: .09em; }
   .account-main { padding: 38px 16px 52px; }
   .account-surface { padding: 30px 22px 34px; }
   .plan-facts { grid-template-columns: 1fr; }

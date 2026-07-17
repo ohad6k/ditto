@@ -94,6 +94,12 @@ describe("authenticated Worker integration", () => {
     expect(accountBody).toContain('class="brand-mark"');
     expect(accountBody).toContain('href="/emulo.png"');
     expect(accountBody).toContain('href="/account.css"');
+    expect(accountBody).toContain('class="brand-nav"');
+    expect(accountBody).toContain('href="https://emulo.vercel.app/" aria-label="Emulo home"');
+    expect(accountBody).toContain('href="https://emulo.vercel.app/bench"');
+    expect(accountBody).toContain('href="https://emulo.vercel.app/#pricing"');
+    expect(accountBody).toContain('href="https://github.com/ohad6k/emulo"');
+    expect(accountBody).toContain('href="https://discord.gg/QMnYtVcxk2"');
     expect(accountBody).toContain('data-account-state="signed-out"');
     expect(accountBody).toContain('href="/privacy.html"');
     for (const rejected of [
