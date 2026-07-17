@@ -115,11 +115,11 @@ arguments, or shown in screenshots.
   the approved Free, `$9`, `$79`, and Worker-account markers without the removed
   `Private beta` label.
 - Polar production endpoint `ecfed609-ebc4-4814-9cdd-847c050365bb` is Raw,
-  targets the exact Worker webhook route, and subscribes only to the seven
-  handled subscription events. It is disabled until its signing secret is
-  installed in Cloudflare.
-- The production Polar access token and raw-webhook signing secret bindings
-  remain deliberately absent pending the owner/provider steps below.
+  targets the exact Worker webhook route, subscribes only to the seven handled
+  subscription events, and is enabled. Both required Polar secret names are in
+  Cloudflare; values were neither read nor recorded. An unsigned request returns
+  `403`, checkout remains disabled with `503`, and Polar currently lists zero
+  deliveries for the endpoint.
 
 ## Phase 1: owner/provider readiness
 

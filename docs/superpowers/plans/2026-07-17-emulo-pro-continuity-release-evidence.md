@@ -77,10 +77,11 @@ approves activation.
   GitHub identity, one browser session, and zero billing customers,
   entitlements, continuity devices, and continuity generations. The receipt
   wrote zero rows.
-- Polar production now has one raw webhook endpoint at the exact Worker URL,
-  scoped to the seven subscription lifecycle events the Worker handles. The
-  endpoint is disabled until its signing secret is installed directly in
-  Cloudflare; no secret value was read into evidence or source control.
+- Polar production now has one enabled raw webhook endpoint at the exact Worker
+  URL, scoped to the seven subscription lifecycle events the Worker handles.
+  Cloudflare lists both required Polar secret names without exposing values;
+  an unsigned webhook returns `403`, checkout remains disabled with `503`, and
+  the endpoint currently has zero deliveries.
 - Live HTTP proof returned expected `200` responses for health, account assets,
   and legal pages; `401` for signed-out account/device/export reads; `302` from
   GitHub start to `github.com`; safe `503` responses for checkout, portal,
@@ -107,10 +108,9 @@ Device bearer tokens and browser sessions are stored only as hashes.
 1. Capture a fresh authenticated 390 px visual/interaction receipt for the new
    active-account device and deletion controls. The live signed-out shell is
    proven at 390x844, but it cannot prove paid-state controls.
-2. Install the production Polar access token and existing raw-webhook signing secret
-   directly in Cloudflare without placing either value in source control, chat,
-   command history, or captured evidence. Re-enable the registered production
-   endpoint and prove a signed delivery before checkout activation.
+2. Prove one genuine signed delivery from the enabled production Polar endpoint
+   before checkout activation. Do not substitute a locally forged signature or
+   infer success from the installed secret names.
 3. Run a live synthetic account proof: every enabled sign-in provider,
    webhook-confirmed
    entitlement, first and second device, encrypted push/pull, conflict,
