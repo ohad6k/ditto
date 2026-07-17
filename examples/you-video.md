@@ -44,6 +44,10 @@ description: Evidence-backed Emulo video profile
   - Action: Compare cut cadence with scdet before styling; a per-phrase shot list is the disease, so merge each narrative beat into one persistent scene world around its most media-rich shot.
 - Inside a held world the phrases accumulate instead of cutting: captions slam-swap in place, a rapid list becomes one note card gaining lines, the host changes pose in place, and a kinetic line is a brief full-frame cut-away that returns to the same world.
   - Action: Render later phrases as phase layers on the world (caption swap, note lines, pose crossfade, opaque slam cut-away) and never rebuild the frame within a beat; a source like a tweet enters once per beat and evolves, never re-enters.
+- Two tweens animating the same transform on one element read as a bug, not motion; a cutaway with a cut-settle plus a keepAlive push plus its own camera push looked "buggy, not clean" on every jump.
+  - Action: Give every element exactly ONE owner per transform — a cutaway's camera is its own tween (a punch-in decaying into a drift), with the generic settle and keepAlive push skipped for it; cut into photo material on a one-frame flash, which is what makes a hard cut read as edited rather than broken.
+- The open is the whole video's audition and cannot be a normal scene; a static host shot for the first seconds loses the click.
+  - Action: Flag the first ~13s as hook shots and give them their own treatment: sweeping colour bars, a host punch-in, the hardest camera push in the video, and the first literal cutaway inside the first 4 seconds.
 - A camera step on every text change reads as an annoying jump zoom, not energy; he flagged it within one viewing.
   - Action: Give each world ONE continuous slow push (ease none, full window) and let text land with its own entrance animation only; never tie a zoom to a caption change.
 - Boxed caption cards (cream fill, orange border, drop shadow) are the single strongest vibe-coded-PowerPoint tell, and an invented mock screen ("agent session") that viewers do not recognize is the second.
