@@ -5,6 +5,8 @@ import stat
 import tempfile
 import re
 
+from cryptography.exceptions import InvalidTag
+
 from .contracts import canonical_json
 from .continuity_crypto import (
     device_public_key,
@@ -18,7 +20,11 @@ from .continuity_crypto import (
     write_private_material,
 )
 from .store import AutopilotStore
-from .continuity import complete_pairing, validate_https_origin
+from .continuity import (
+    HttpsContinuityTransport,
+    complete_pairing,
+    validate_https_origin,
+)
 
 
 SETUP_SCHEMA = "emulo.continuity-setup/v1"
@@ -165,10 +171,13 @@ def recover_continuity(home, recovery_kit_path, recovery_secret):
     if os.path.lexists(private_path):
         raise ValueError("continuity is already initialized")
     kit = _read_recovery_kit(recovery_kit_path)
-    master_key = unwrap_master_key_from_recovery(
-        kit["wrapped_master_key"],
-        recovery_secret,
-    )
+    try:
+        master_key = unwrap_master_key_from_recovery(
+            kit["wrapped_master_key"],
+            recovery_secret,
+        )
+    except (InvalidTag, ValueError) as exc:
+        raise ValueError("recovery secret or kit is invalid") from exc
     private_key, public_key = generate_device_key_pair()
     _write_new_private_material(private_path, private_key, master_key)
     return {
@@ -266,3 +275,36 @@ def read_device_credential(home):
         raise ValueError("device credential is invalid")
     validate_https_origin(value["server"])
     return value
+
+
+def continuity_status(home):
+    store = AutopilotStore(home)
+    store.initialize()
+    private_path = store._child("continuity", PRIVATE_MATERIAL_FILENAME)
+    credential_path = store._child("continuity", DEVICE_CREDENTIAL_FILENAME)
+    initialized = os.path.isfile(private_path) and not os.path.islink(private_path)
+    connected = os.path.isfile(credential_path) and not os.path.islink(credential_path)
+    credential = read_device_credential(home) if connected else None
+    head = store.get_head()
+    return {
+        "schema_version": "emulo.continuity-status/v1",
+        "initialized": initialized,
+        "connected": connected,
+        "server": None if credential is None else credential["server"],
+        "device_id": None if credential is None else credential["device_id"],
+        "active_generation_id": None if head is None else head["generation_id"],
+        "pending_count": len(store.list_continuity_pending()),
+    }
+
+
+def load_connected_continuity(home):
+    _private_key, master_key = load_private_material(home)
+    credential = read_device_credential(home)
+    return (
+        master_key,
+        credential["device_id"],
+        HttpsContinuityTransport(
+            credential["server"],
+            credential["device_token"],
+        ),
+    )

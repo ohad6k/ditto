@@ -1,8 +1,10 @@
 import contextlib
 import io
 import json
+from pathlib import Path
 import tempfile
 import unittest
+from unittest import mock
 
 from emulo_autopilot import cli, contracts
 from emulo_autopilot.store import AutopilotStore
@@ -28,7 +30,7 @@ class AutopilotCliTest(unittest.TestCase):
         self.store.put_candidate(candidate)
         return candidate
 
-    def invoke(self, *arguments):
+    def invoke(self, *arguments, secret_reader=None):
         stdout = io.StringIO()
         stderr = io.StringIO()
         code = 0
@@ -37,6 +39,11 @@ class AutopilotCliTest(unittest.TestCase):
                 cli.main(
                     ["--emulo-home", self.home] + list(arguments),
                     clock=lambda: self.NOW,
+                    secret_reader=(
+                        (lambda _prompt: "")
+                        if secret_reader is None
+                        else secret_reader
+                    ),
                 )
         except SystemExit as exc:
             code = exc.code
@@ -145,6 +152,168 @@ class AutopilotCliTest(unittest.TestCase):
             self.assertNotIn("hostname", recovered)
         finally:
             context.__exit__(None, None, None)
+
+    def test_continuity_init_outputs_the_recovery_secret_once(self):
+        code, stdout, stderr = self.invoke("continuity-init")
+
+        self.assertEqual((0, ""), (code, stderr))
+        result = json.loads(stdout)
+        secret = result["recovery_secret"]
+        self.assertRegex(secret, r"^[A-Za-z0-9_-]{43}$")
+        self.assertEqual(1, stdout.count(secret))
+        self.assertTrue(Path(result["recovery_kit_path"]).is_file())
+
+    def test_continuity_recover_reads_the_secret_without_echoing_it(self):
+        from emulo_autopilot.continuity_onboarding import initialize_continuity
+
+        source = initialize_continuity(Path(self.home) / "source")
+        secret = source["recovery_secret"]
+
+        code, stdout, stderr = self.invoke(
+            "continuity-recover",
+            source["recovery_kit_path"],
+            secret_reader=lambda prompt: secret,
+        )
+
+        self.assertEqual((0, ""), (code, stderr))
+        self.assertEqual("emulo.continuity-recovery/v1", json.loads(stdout)["schema_version"])
+        self.assertNotIn(secret, stdout + stderr)
+
+    def test_continuity_connect_reads_pairing_code_without_echoing_token_or_code(self):
+        from emulo_autopilot import continuity_onboarding
+
+        continuity_onboarding.initialize_continuity(self.home)
+        pairing_code = "P" * 43
+        device_token = "T" * 43
+        captured = {}
+
+        def fake_connect(home, server, code, label, version):
+            captured.update(
+                home=home,
+                server=server,
+                code=code,
+                label=label,
+                version=version,
+            )
+            return {
+                "schema_version": "emulo.continuity-connect/v1",
+                "server": server,
+                "device_id": "dev_0123456789abcdef0123456789abcdef",
+            }
+
+        with mock.patch.object(
+            continuity_onboarding,
+            "connect_continuity",
+            side_effect=fake_connect,
+        ):
+            code, stdout, stderr = self.invoke(
+                "continuity-connect",
+                "--label",
+                "Work laptop",
+                "--server",
+                "https://emulo.example",
+                secret_reader=lambda prompt: pairing_code,
+            )
+
+        self.assertEqual((0, ""), (code, stderr))
+        self.assertEqual(pairing_code, captured["code"])
+        self.assertNotIn(pairing_code, stdout + stderr)
+        self.assertNotIn(device_token, stdout + stderr)
+
+    def test_continuity_status_is_local_and_base_status_does_not_load_crypto(self):
+        from emulo_autopilot.continuity_onboarding import initialize_continuity
+
+        initialize_continuity(self.home)
+        code, stdout, stderr = self.invoke("continuity-status")
+        self.assertEqual((0, ""), (code, stderr))
+        status = json.loads(stdout)
+        self.assertTrue(status["initialized"])
+        self.assertFalse(status["connected"])
+        self.assertEqual(0, status["pending_count"])
+
+        real_import = __import__
+
+        def guarded_import(name, *args, **kwargs):
+            if name == "cryptography" or name.startswith("cryptography."):
+                raise AssertionError("base status loaded optional crypto")
+            return real_import(name, *args, **kwargs)
+
+        parsed = cli.build_parser().parse_args(
+            ["--emulo-home", self.home, "status"]
+        )
+        with mock.patch("builtins.__import__", side_effect=guarded_import):
+            self.assertEqual("ready", cli.execute(parsed)["health"])
+
+    def test_continuity_push_retry_and_pull_use_connected_material(self):
+        from emulo_autopilot import continuity, continuity_onboarding
+
+        master_key = b"M" * 32
+        device_id = "dev_0123456789abcdef0123456789abcdef"
+        transport = object()
+        connected = (master_key, device_id, transport)
+
+        with (
+            mock.patch.object(
+                continuity_onboarding,
+                "load_connected_continuity",
+                return_value=connected,
+            ),
+            mock.patch.object(
+                continuity,
+                "push_active",
+                return_value={"status": "stored", "head": "gen_0123456789abcdef0123"},
+            ) as pushed,
+        ):
+            code, stdout, stderr = self.invoke("continuity-push")
+        self.assertEqual((0, ""), (code, stderr))
+        self.assertEqual("stored", json.loads(stdout)["status"])
+        pushed.assert_called_once()
+        pushed_store, pushed_key, pushed_device, pushed_transport = pushed.call_args.args
+        self.assertEqual(self.store.emulo_home, pushed_store.emulo_home)
+        self.assertEqual((master_key, device_id, transport), (pushed_key, pushed_device, pushed_transport))
+
+        with (
+            mock.patch.object(
+                continuity_onboarding,
+                "load_connected_continuity",
+                return_value=connected,
+            ),
+            mock.patch.object(
+                continuity,
+                "retry_pending",
+                return_value={"uploaded": 2},
+            ) as retried,
+        ):
+            code, stdout, stderr = self.invoke("continuity-retry")
+        self.assertEqual((0, ""), (code, stderr))
+        self.assertEqual(2, json.loads(stdout)["uploaded"])
+        retried.assert_called_once()
+        retried_store, retried_transport = retried.call_args.args
+        self.assertEqual(self.store.emulo_home, retried_store.emulo_home)
+        self.assertIs(transport, retried_transport)
+
+        conflict = {
+            "status": "conflict",
+            "localHead": "gen_0123456789abcdef0123",
+            "remoteHead": "gen_ffffffffffffffffffff",
+        }
+        with (
+            mock.patch.object(
+                continuity_onboarding,
+                "load_connected_continuity",
+                return_value=connected,
+            ),
+            mock.patch.object(
+                continuity,
+                "pull_remote_head",
+                return_value=conflict,
+            ),
+        ):
+            code, stdout, stderr = self.invoke("continuity-pull")
+        self.assertEqual((0, ""), (code, stderr))
+        result = json.loads(stdout)
+        self.assertEqual(conflict["localHead"], result["localHead"])
+        self.assertIn("Neither branch was overwritten", result["message"])
 
 
 if __name__ == "__main__":

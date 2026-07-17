@@ -1,4 +1,5 @@
 import argparse
+import getpass
 import json
 import sys
 import time
@@ -10,6 +11,7 @@ from .store import AutopilotStore
 
 
 HISTORY_SCHEMA = "emulo.autopilot-history/v1"
+PRODUCTION_CONTINUITY_SERVER = "https://emulo-production.ohad1306.workers.dev"
 
 
 def _utc_seconds(clock):
@@ -43,10 +45,45 @@ def build_parser():
         "recover-lock", help="remove only an inspected exact lock ID"
     )
     recover.add_argument("operation_id")
+
+    commands.add_parser(
+        "continuity-init",
+        help="create local continuity keys and a portable encrypted recovery kit",
+    )
+    continuity_recover = commands.add_parser(
+        "continuity-recover",
+        help="recover continuity keys on a new device",
+    )
+    continuity_recover.add_argument("recovery_kit")
+    continuity_connect = commands.add_parser(
+        "continuity-connect",
+        help="connect this device with a one-time account pairing code",
+    )
+    continuity_connect.add_argument("--label", required=True)
+    continuity_connect.add_argument(
+        "--server",
+        default=PRODUCTION_CONTINUITY_SERVER,
+    )
+    commands.add_parser(
+        "continuity-status",
+        help="show local continuity setup, connection, head, and pending state",
+    )
+    commands.add_parser(
+        "continuity-push",
+        help="encrypt and push the active approved generation",
+    )
+    commands.add_parser(
+        "continuity-retry",
+        help="retry encrypted generations pending after an outage",
+    )
+    commands.add_parser(
+        "continuity-pull",
+        help="pull and activate a conflict-free remote generation",
+    )
     return parser
 
 
-def execute(args, clock=time.time):
+def execute(args, clock=time.time, secret_reader=getpass.getpass):
     home = emulo.resolve_emulo_home(args.emulo_home)
     store = AutopilotStore(home)
     if args.command == "status":
@@ -81,13 +118,56 @@ def execute(args, clock=time.time):
             "operation": recovered["operation"],
             "created_at": recovered["created_at"],
         }
+    if args.command == "continuity-init":
+        from .continuity_onboarding import initialize_continuity
+
+        return initialize_continuity(home)
+    if args.command == "continuity-recover":
+        from .continuity_onboarding import recover_continuity
+
+        recovery_secret = secret_reader("Recovery secret: ")
+        return recover_continuity(home, args.recovery_kit, recovery_secret)
+    if args.command == "continuity-connect":
+        from .continuity_onboarding import connect_continuity
+
+        pairing_code = secret_reader("Pairing code: ")
+        return connect_continuity(
+            home,
+            args.server,
+            pairing_code,
+            args.label,
+            emulo.EMULO_VERSION,
+        )
+    if args.command == "continuity-status":
+        from .continuity_onboarding import continuity_status
+
+        return continuity_status(home)
+    if args.command in {"continuity-push", "continuity-retry", "continuity-pull"}:
+        from .continuity import pull_remote_head, push_active, retry_pending
+        from .continuity_onboarding import load_connected_continuity
+
+        master_key, device_id, transport = load_connected_continuity(home)
+        if args.command == "continuity-push":
+            return push_active(store, master_key, device_id, transport)
+        if args.command == "continuity-retry":
+            return retry_pending(store, transport)
+        result = pull_remote_head(store, master_key, transport)
+        if result.get("status") == "conflict":
+            return {
+                **result,
+                "message": (
+                    "Local and remote history diverged. Neither branch was overwritten; "
+                    "inspect both generations before choosing what to activate."
+                ),
+            }
+        return result
     raise ValueError("unsupported Autopilot command")
 
 
-def main(argv=None, clock=time.time):
+def main(argv=None, clock=time.time, secret_reader=getpass.getpass):
     args = build_parser().parse_args(argv)
     try:
-        result = execute(args, clock=clock)
+        result = execute(args, clock=clock, secret_reader=secret_reader)
     except (OSError, RuntimeError, ValueError) as exc:
         print(
             json.dumps(
