@@ -6,6 +6,8 @@ Turn the current Emulo account and pricing shell into a credible, consumer-ready
 
 The work is deliberately split into repo-controlled changes and provider-controlled changes. The repository can implement and fully test the Google OAuth flow, migration, UI, pricing, policies, and fail-closed configuration. It cannot prove a Google Cloud OAuth client, consent-screen publishing state, Cloudflare secret, Polar production lifecycle, or public deployment merely by changing code. Those actions require a provider receipt or a connected provider tool.
 
+This release also establishes a hard commercial gate: authentication and billing plumbing are not sufficient to sell Emulo Pro. Checkout stays disabled until the already-designed paid-only encrypted continuity slice works end to end across two devices. The open-source engine keeps local mining, review, adapters, history, and rollback. Pro sells client-side encrypted cross-device synchronization, managed device continuity, cross-device conflict protection, propagation, retention, and recovery.
+
 ## Product Path
 
 1. A visitor discovers Emulo on the public site.
@@ -73,6 +75,12 @@ Polar remains Merchant of Record and billing provider. The internal Emulo accoun
 
 Nonsecret client IDs may be committed as environment configuration after provider creation. `GOOGLE_CLIENT_SECRET`, `GITHUB_CLIENT_SECRET`, `POLAR_ACCESS_TOKEN`, and `POLAR_WEBHOOK_SECRET` must exist only as Cloudflare Worker secrets. Checkout remains committed as disabled.
 
+### Paid product boundary
+
+The current open-source Autopilot implementation already provides local completion detection, candidate storage, policy decisions, review, activation, immutable generations, and rollback. Those capabilities remain free. The paid boundary begins where the hosted service carries approved encrypted generations between paired devices. Raw sessions and local evidence never cross that boundary. The server stores only ciphertext and bounded routing/ownership metadata and never receives the account master key or recovery secret.
+
+The paid product is not considered launchable until a synthetic two-device test proves local encryption, authenticated upload, authorized download, local decryption, propagation to a supported agent, conflict preservation, rollback, revocation, export, deletion, and post-entitlement behavior.
+
 ## Options Considered
 
 ### Authentication platform versus direct providers
@@ -118,6 +126,7 @@ Static Privacy Policy, Terms of Service, and Refund Policy pages use the same wa
 4. Pricing copy and annual value presentation.
 5. Legal pages and policy links.
 6. Provider setup, release safety, verification, and rollback.
+7. Paid-only encrypted continuity activation gate.
 
 ## Workstreams
 
@@ -238,6 +247,30 @@ Tasks:
 
 Acceptance: provider dashboard receipt shows the exact callback and publishing state without exposing secrets; Cloudflare secret list shows the key name only; live sign-in works; checkout still fails closed.
 
+### 7. Paid-only encrypted continuity activation gate
+
+Purpose: make Emulo Pro materially more valuable than the free product without weakening open source or hosting private plaintext.
+
+User outcome: approved Emulo learning follows the user across paired devices and installed agents, remains recoverable and reversible, and does not require manual copying.
+
+Areas: the existing `emulo_autopilot` local companion/store, the encrypted-sync design in `docs/superpowers/specs/2026-07-16-emulo-autopilot-founding-beta-design.md`, new device/sync Worker routes and D1 migrations, control center, and security tests.
+
+Tasks:
+
+- [ ] Preserve the free product contract: local mining, review, activation, adapters, history, rollback, export, and offline use remain available without entitlement.
+- [ ] Select mature cross-platform authenticated-encryption and key-agreement libraries; prohibit custom primitives.
+- [ ] Implement local account master-key generation, one-time recovery-secret confirmation, per-device identities, and wrapped device keys.
+- [ ] Implement account-owned device pairing, revocation, and bounded health metadata.
+- [ ] Encrypt only approved artifact generations locally and upload ciphertext chunks with content/parent authentication.
+- [ ] Implement optimistic generation concurrency; preserve divergent branches and require explicit resolution.
+- [ ] Download, authenticate, decrypt, and atomically propagate a generation on a second device.
+- [ ] Keep local work operating during cloud, billing, model, or quota failure.
+- [ ] Implement encrypted export/recovery and bounded account-deletion workflows.
+- [ ] Prove no raw session, local evidence, plaintext profile/workflow, keys, recovery secrets, or provider tokens enter Worker logs, D1, or built assets.
+- [ ] Keep checkout disabled until the complete two-device synthetic proof and separate owner approval.
+
+Acceptance: Emulo Pro has a working paid-only outcome, the server cannot decrypt synchronized content, the free product remains capable after entitlement loss, and every recovery/revocation/failure path is tested before money moves.
+
 ## Execution Tasks
 
 - [ ] Freeze the approved design and account-linking decision in a committed design spec.
@@ -269,8 +302,10 @@ Acceptance: provider dashboard receipt shows the exact callback and publishing s
 8. Run full local verification, dependency audit, config guard, and Wrangler dry run.
 9. Complete Google dashboard setup and capture redacted receipt.
 10. Apply production migration, install secret, deploy Worker with checkout disabled, and prove both providers.
-11. Deploy the site and verify all public pages.
-12. Keep Polar activation as a separately approved money-moving release gate.
+11. Deploy the site and verify all public pages without claiming encrypted sync is live.
+12. Execute the encrypted continuity implementation as its own security-reviewed workstream, beginning from the existing local Autopilot foundation.
+13. Prove the paid-only loop with two devices and synthetic nonprivate artifacts.
+14. Keep Polar activation as a separately approved money-moving release gate after the product-value and security gates both pass.
 
 ## Data, Auth, Provider, And Deploy Boundaries
 
@@ -313,6 +348,10 @@ Deleted/archived data behavior: there is no user-delete feature in current scope
 - Live HTTP checks for status codes, content types, CSP, cookies, method restrictions, and disabled checkout.
 - Redacted provider proof: Google client type, exact authorized redirect URI, audience/publishing status, scopes, and brand-review status; Cloudflare secret-name list only.
 - Live identity proof with a test Google account and existing GitHub account; no secret, authorization code, cookie, ID token, email, or provider subject is recorded in the receipt.
+- Cryptographic known-answer, nonce uniqueness, ciphertext tamper, wrong-device, revoked-device, replay, truncation, chunk-order, and lost-key tests.
+- Automated scan proving server fixtures, D1 rows, logs, and bundles contain no synthetic plaintext marker used in the two-device test.
+- Cross-account authorization tests for every device, generation, export, and deletion route.
+- Two-device synthetic proof covering encrypted upload/download, propagation, conflict preservation, rollback, revocation, export, and deletion.
 
 ## Rollout And Rollback
 

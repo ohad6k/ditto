@@ -98,6 +98,90 @@ The existing two-product structure remains: permanent free/open source and optio
 - Annual row: original annualized price `$108` struck through, `$79 / year`, badge `Save 27%`, and action `Choose annual`.
 - Both actions route to the Emulo account page while checkout remains disabled. They do not link directly to provider checkout or expose product IDs.
 
+## Free And Pro Product Contract
+
+The commercial distinction must be visible before payment and must match the implemented product. Emulo Pro does not hide better mining intelligence behind a paywall. The open-source engine keeps local intelligence, ownership, portability, and recovery. Pro earns payment by removing the operational burden of keeping that intelligence continuous across devices and agents.
+
+| Capability | Emulo, free and open source | Emulo Pro |
+| --- | --- | --- |
+| Mine supported AI sessions locally | Included | Included |
+| Keep profiles and evidence on the user's machine | Included | Included |
+| Review, approve, activate, and reject learning candidates | Included | Included |
+| Local immutable history and rollback | Included | Included |
+| Supported local agent adapters | Included | Included |
+| Work offline without an account | Included | Included |
+| Automatic encrypted continuity across paired devices | Manual copying only | Included |
+| One control center for device and agent health | Local CLI/control surface | Included across paired devices |
+| Client-side encrypted profile/workflow synchronization | Not hosted | Included |
+| Managed encrypted retention and device recovery | Local backups are user-managed | Included within the published retention limits |
+| Cross-device conflict detection and assisted resolution | Not hosted | Included |
+| Automatic propagation of approved generations to paired devices | Per-device local action | Included |
+
+The short paid promise is:
+
+> Emulo Pro keeps the way your AI works with you encrypted, synchronized, recoverable, and current across your devices.
+
+The first paid activation must deliver a complete, proven vertical slice rather than a roadmap promise:
+
+1. The user signs in with Google or GitHub.
+2. The local companion pairs a device without sending the account master key to the server.
+3. The companion encrypts an approved profile/workflow generation locally.
+4. The server accepts and stores only ciphertext plus bounded routing metadata.
+5. A second paired device downloads, authenticates, decrypts, and installs that generation locally.
+6. The user can inspect history, resolve a conflict without silent overwrite, and roll back to a previously valid generation.
+7. Ending payment stops new managed cloud writes after the stated grace period but leaves local profiles, local history, export, and installed agent behavior intact.
+
+Until that loop passes the security, recovery, and billing tests, pricing may explain Emulo Pro but checkout remains disabled and the site must not say the sync capability is available today.
+
+## Privacy And Security Launch Gate
+
+No software can honestly promise that a security problem is impossible. Emulo instead makes privacy failures structurally difficult, limits the value of any server compromise, and refuses launch when required evidence is missing.
+
+### Data minimization
+
+- Raw AI session logs, user prompts, local evidence, profile plaintext, workflow plaintext, local filenames, and receipt bodies never enter the hosted control plane.
+- The local engine selects user-authored evidence and performs redaction before any approved model-assisted extraction.
+- Only approved profile/workflow artifacts are eligible for sync.
+- The server stores account/provider identifiers, entitlement state, device public material, bounded operational metadata, ciphertext digests, encrypted chunks, quotas, and safe audit events.
+- OAuth access tokens, refresh tokens, ID tokens, browser session tokens, encryption keys, recovery secrets, authorization codes, checkout secrets, and webhook bodies are never persisted in plaintext or logged.
+
+### Encryption boundary
+
+- The account master key is generated locally from an operating-system cryptographic random source.
+- Artifact encryption uses a mature audited authenticated-encryption implementation with a fresh nonce per payload; no custom cryptography is allowed.
+- Each paired device has its own signing and key-agreement identity. The master key is wrapped separately for authorized devices.
+- Google/GitHub identity, Polar entitlement, and browser cookies never become encryption keys.
+- The server never receives the plaintext master key or recovery secret and therefore cannot decrypt synchronized artifacts.
+- The first encrypted upload is blocked until the user confirms possession of a one-time recovery secret.
+
+### Account and API security
+
+- OAuth uses exact HTTPS callbacks, single-use provider-bound state, browser binding, PKCE, and Google nonce/ID-token claim verification.
+- Browser sessions use high-entropy tokens stored only as hashes server-side and `Secure`, `HttpOnly`, `SameSite=Lax` cookies.
+- Every device, generation, export, deletion, billing, and portal action verifies authenticated account ownership server-side.
+- Google and GitHub accounts are never silently merged by email.
+- Webhooks require supported signature verification, replay protection, idempotency, bounded request bodies, and no entitlement change on failure.
+- Login, pairing, sync, export, deletion, and webhook routes receive explicit method, size, quota, and rate-limit controls.
+- Logs and diagnostics use allowlisted metadata and redact provider responses, authorization headers, cookies, account/device IDs, ciphertext, email, and error detail by default.
+
+### Recovery and deletion
+
+- A lost-key state is explained honestly: Emulo cannot decrypt cloud artifacts without an authorized device or recovery secret.
+- Account export is available before deletion and during the published post-subscription recovery window.
+- Cloud-account deletion revokes sessions/devices and queues encrypted data for bounded deletion; it never silently deletes local files.
+- Local purge remains a second, explicit action with path and ownership checks.
+
+### Required proof before checkout activation
+
+- Threat-model review for OAuth, device pairing, key handling, sync ownership, conflict handling, billing, export, and deletion.
+- Known-answer cryptographic tests, nonce uniqueness, tamper rejection, wrong-device rejection, revoked-device rejection, and lost-key recovery tests.
+- A server-fixture scan proving synchronized fixtures contain no profile/workflow plaintext or raw session content.
+- Secret scanning of tracked files and built assets; dependency audit and pinned versions.
+- Authorization tests for cross-account reads/writes and provider-flow crossover.
+- Migration preservation tests, rollback evidence, production config guards, and fail-closed quota/provider behavior.
+- A two-device live proof using synthetic nonprivate content before any real user data or real payment.
+- A separate explicit approval before enabling `PAID_CHECKOUT_ENABLED`.
+
 ### Removed pricing language
 
 - `Install from GitHub`
@@ -172,6 +256,9 @@ The design is accepted only when:
 6. The policies match the actual code/provider boundaries and contain no registered-company fiction.
 7. Checkout remains disabled until a separately approved live-money verification.
 8. Existing GitHub auth, account sessions, and Polar entitlement tests remain green.
+9. The Free-versus-Pro table contains only implemented or clearly unavailable capabilities; no roadmap item is presented as live.
+10. The paid-only two-device encrypted continuity loop passes with synthetic content before checkout activation.
+11. Server-side fixtures, logs, D1 rows, and built assets contain no synchronized plaintext, raw session content, tokens, keys, recovery secrets, or provider secrets.
 
 ## Non-Goals
 
