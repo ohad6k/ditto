@@ -1,6 +1,6 @@
 # Emulo Polar Production Activation
 
-**Status:** Production shell and webhook prepared, checkout not activated  
+**Status:** Production shell and webhook prepared, checkout not activated
 **Last checked:** 2026-07-17
 **Owner:** Ohad  
 **Safety default:** Production checkout disabled
