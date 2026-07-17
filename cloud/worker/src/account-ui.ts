@@ -466,6 +466,154 @@ async function pollPaymentStatus() {
   if (badge instanceof HTMLElement) badge.textContent = "Pending";
 }
 
+function validDevice(value) {
+  return value !== null && typeof value === "object" &&
+    typeof value.deviceId === "string" && /^dev_[a-f0-9]{32}$/.test(value.deviceId) &&
+    typeof value.label === "string" && value.label.length > 0 && value.label.length <= 64 &&
+    typeof value.clientVersion === "string" &&
+    typeof value.createdAt === "string" &&
+    typeof value.lastSeenAt === "string" &&
+    (value.state === "active" || value.state === "revoked");
+}
+
+function deviceDate(value) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "Time unavailable" : date.toLocaleString();
+}
+
+async function loadDevices(root) {
+  const list = root.querySelector("[data-device-list]");
+  const status = root.querySelector("[data-continuity-status]");
+  if (!(list instanceof HTMLElement) || !(status instanceof HTMLElement)) return;
+  try {
+    const response = await fetch("/v1/devices", {
+      method: "GET",
+      credentials: "same-origin",
+      headers: { accept: "application/json" },
+    });
+    const payload = await response.json();
+    if (!response.ok || !Array.isArray(payload.devices) || !payload.devices.every(validDevice)) throw new Error("invalid devices");
+    list.replaceChildren();
+    const active = payload.devices.filter((device) => device.state === "active");
+    if (active.length === 0) {
+      const empty = document.createElement("p");
+      empty.className = "device-empty";
+      empty.textContent = "No paired devices yet.";
+      list.append(empty);
+      return;
+    }
+    for (const device of active) {
+      const row = document.createElement("div");
+      row.className = "device-row";
+      const copy = document.createElement("div");
+      const label = document.createElement("strong");
+      label.textContent = device.label;
+      const meta = document.createElement("span");
+      meta.className = "device-meta";
+      meta.textContent = "Emulo " + device.clientVersion + " · Last active " + deviceDate(device.lastSeenAt);
+      copy.append(label, meta);
+      const revoke = document.createElement("button");
+      revoke.type = "button";
+      revoke.className = "secondary-action compact-action";
+      revoke.textContent = "Revoke";
+      revoke.addEventListener("click", async () => {
+        if (!window.confirm("Revoke " + device.label + "? This device will stop syncing immediately.")) return;
+        revoke.disabled = true;
+        status.textContent = "Revoking device...";
+        try {
+          const revoked = await fetch("/v1/devices/" + encodeURIComponent(device.deviceId), {
+            method: "DELETE",
+            credentials: "same-origin",
+          });
+          if (!revoked.ok) throw new Error("revoke failed");
+          status.textContent = "Device revoked.";
+          await loadDevices(root);
+        } catch {
+          status.textContent = "The device could not be revoked. Please retry.";
+          revoke.disabled = false;
+        }
+      });
+      row.append(copy, revoke);
+      list.append(row);
+    }
+  } catch {
+    list.replaceChildren();
+    const unavailable = document.createElement("p");
+    unavailable.className = "device-empty";
+    unavailable.textContent = "Devices could not be loaded. Please retry.";
+    list.append(unavailable);
+  }
+}
+
+function configureContinuityControls() {
+  const root = document.querySelector("[data-continuity-root]");
+  if (!(root instanceof HTMLElement)) return;
+  const pairingButton = root.querySelector("[data-create-pairing-code]");
+  const pairingResult = root.querySelector("[data-pairing-result]");
+  const pairingCode = root.querySelector("[data-pairing-code]");
+  const status = root.querySelector("[data-continuity-status]");
+  if (pairingButton instanceof HTMLButtonElement && pairingResult instanceof HTMLElement && pairingCode instanceof HTMLElement && status instanceof HTMLElement) {
+    pairingButton.addEventListener("click", async () => {
+      pairingButton.disabled = true;
+      status.textContent = "Creating a one-time pairing code...";
+      try {
+        const response = await fetch("/v1/devices/pair/start", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { accept: "application/json" },
+        });
+        const payload = await response.json();
+        if (!response.ok || typeof payload.pairingCode !== "string" || !/^[A-Za-z0-9_-]{43}$/.test(payload.pairingCode) || !Number.isInteger(payload.expiresIn) || payload.expiresIn < 1 || payload.expiresIn > 600) throw new Error("pairing unavailable");
+        pairingCode.textContent = payload.pairingCode;
+        pairingResult.hidden = false;
+        status.textContent = "Pairing code ready for 10 minutes.";
+        window.setTimeout(() => {
+          pairingCode.textContent = "Expired";
+          status.textContent = "That pairing code expired. Create a new one when you are ready.";
+        }, payload.expiresIn * 1000);
+      } catch {
+        status.textContent = "A pairing code could not be created. Please retry.";
+      } finally {
+        pairingButton.disabled = false;
+      }
+    });
+  }
+
+  const deletionForm = root.querySelector("[data-continuity-delete-form]");
+  const confirmation = root.querySelector("[data-delete-confirmation-input]");
+  const deletionButton = root.querySelector("[data-delete-continuity]");
+  if (deletionForm instanceof HTMLFormElement && confirmation instanceof HTMLInputElement && deletionButton instanceof HTMLButtonElement && status instanceof HTMLElement) {
+    const phrase = "delete-cloud-continuity";
+    confirmation.addEventListener("input", () => {
+      deletionButton.disabled = confirmation.value !== phrase;
+    });
+    deletionForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      if (confirmation.value !== phrase || !window.confirm("Delete all encrypted continuity data and revoke every paired device? Local files will remain.")) return;
+      deletionButton.disabled = true;
+      status.textContent = "Deleting cloud continuity...";
+      try {
+        const response = await fetch("/v1/continuity", {
+          method: "DELETE",
+          credentials: "same-origin",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ confirmation: phrase }),
+        });
+        if (response.status !== 204) throw new Error("delete failed");
+        confirmation.value = "";
+        status.textContent = "Cloud continuity deleted. Local files were not changed.";
+        pairingResult?.setAttribute("hidden", "");
+        await loadDevices(root);
+      } catch {
+        status.textContent = "Cloud continuity was not deleted. Please retry.";
+        deletionButton.disabled = false;
+      }
+    });
+  }
+  void loadDevices(root);
+}
+
+configureContinuityControls();
 void pollPaymentStatus();`;
 
 function providerActions(): string {
@@ -535,13 +683,37 @@ function productLabel(entitlement: EntitlementSummary): string {
 }
 
 function activeSurface(entitlement: EntitlementSummary): string {
-  return `<article class="account-surface" data-account-state="${entitlement.state}">
+  return `<article class="account-surface account-surface-wide" data-account-state="${entitlement.state}">
     <div class="surface-kicker"><span>Emulo account</span><span class="state-badge">Active</span></div>
     <h2>Emulo Pro is active</h2>
     <p class="lede">Your subscription is connected. Approved generations can move between paired devices while raw sessions and decryption keys stay local.</p>
     <dl class="plan-facts"><div class="plan-fact"><dt>Plan</dt><dd>${productLabel(entitlement)}</dd></div><div class="plan-fact"><dt>Continuity</dt><dd>End-to-end encrypted</dd></div><div class="plan-fact"><dt>Device limit</dt><dd>5 paired devices</dd></div><div class="plan-fact"><dt>History</dt><dd>500 generations · 64 MiB</dd></div></dl>
     <div class="action-stack"><form data-portal-form><button class="primary-action" type="submit">Manage subscription</button></form><a class="secondary-action" href="/account">Refresh account</a></div>
     <p id="account-action-status" class="action-status" aria-live="polite"></p>
+    <section class="continuity-root" data-continuity-root aria-labelledby="continuity-devices-title">
+      <div class="continuity-heading">
+        <div><p class="section-label">Devices</p><h3 id="continuity-devices-title">Keep your work in step</h3><p class="continuity-copy">Create a short-lived code, then connect Emulo from the device you trust.</p></div>
+        <button class="secondary-action compact-action" type="button" data-create-pairing-code>Create pairing code</button>
+      </div>
+      <div class="pairing-result" data-pairing-result hidden aria-live="polite">
+        <span class="section-label">One-time pairing code</span>
+        <code class="pairing-code" data-pairing-code></code>
+        <p class="continuity-copy">Run <code>emulo-autopilot continuity-connect --label &quot;My device&quot;</code>, then paste this code when prompted. It expires after 10 minutes.</p>
+      </div>
+      <div class="device-list" data-device-list aria-live="polite"><p class="device-empty">Loading paired devices...</p></div>
+      <div class="continuity-links"><a class="secondary-action compact-action" href="/v1/continuity/export" download="emulo-continuity-export.json">Download encrypted export manifest</a></div>
+      <section class="danger-zone" aria-labelledby="continuity-delete-title">
+        <p class="section-label">Cloud data</p>
+        <h3 id="continuity-delete-title">Delete cloud continuity</h3>
+        <p class="continuity-copy">This removes hosted encrypted generations and revokes every paired device. Local files stay on your devices.</p>
+        <form class="danger-form" data-continuity-delete-form>
+          <label for="continuity-delete-confirmation">Type <code>delete-cloud-continuity</code> to confirm.</label>
+          <input id="continuity-delete-confirmation" data-delete-confirmation-input autocomplete="off" autocapitalize="none" spellcheck="false">
+          <button class="secondary-action" type="submit" data-delete-continuity disabled>Delete cloud continuity</button>
+        </form>
+      </section>
+      <p class="action-status" data-continuity-status aria-live="polite"></p>
+    </section>
   </article>`;
 }
 

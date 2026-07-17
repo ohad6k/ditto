@@ -162,6 +162,19 @@ describe("continuity export and deletion lifecycle", () => {
     expect(text).not.toMatch(/ciphertext"|nonce|token|wrapped|upload/i);
   });
 
+  it("lets the signed-in account download its own encrypted export manifest", async () => {
+    const response = await SELF.fetch("https://api.example/v1/continuity/export", {
+      headers: { cookie: `__Host-emulo_session=${SESSION}` },
+    });
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      schemaVersion: "emulo.continuity-export/v1",
+      head: "gen_aaaaaaaaaaaaaaaaaaaa",
+      generations: [{ generationId: "gen_aaaaaaaaaaaaaaaaaaaa" }],
+    });
+  });
+
   it("deletes only the signed-in account's cloud continuity data", async () => {
     await createAccount(OTHER_ACCOUNT_ID, "22222222", OTHER_SESSION);
     expect(

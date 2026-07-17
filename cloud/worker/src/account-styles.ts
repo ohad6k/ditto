@@ -60,6 +60,7 @@ button { font: inherit; }
   background: var(--surface);
   box-shadow: 0 22px 60px rgba(23, 23, 21, .08);
 }
+.account-surface-wide { width: min(100%, 720px); }
 .account-surface h1,
 .account-surface h2 {
   max-width: 12ch;
@@ -143,6 +144,51 @@ button { font: inherit; }
 .plan-choice span { margin-top: 4px; color: var(--muted); font-size: .82rem; }
 .action-status { min-height: 1.4em; margin: 14px 0 0; }
 
+.continuity-root {
+  display: grid;
+  gap: 26px;
+  margin-top: 38px;
+  padding-top: 34px;
+  border-top: 1px solid var(--line);
+}
+.continuity-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 22px;
+}
+.continuity-heading h3,
+.danger-zone h3 { margin: 4px 0 0; font-family: Georgia, "Times New Roman", serif; font-size: 1.75rem; font-weight: 500; letter-spacing: -.035em; }
+.section-label { margin: 0; color: var(--muted); font-size: .7rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+.continuity-copy { margin: 8px 0 0; color: var(--body); font-size: .88rem; line-height: 1.55; }
+.pairing-result {
+  padding: 18px;
+  border: 1px solid var(--ink);
+  background: var(--paper);
+}
+.pairing-result[hidden] { display: none; }
+.pairing-code { display: block; margin: 10px 0; overflow-wrap: anywhere; font: 760 1.08rem/1.45 ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: .03em; }
+.device-list { display: grid; border-top: 1px solid var(--line); }
+.device-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 20px;
+  padding: 17px 0;
+  border-bottom: 1px solid var(--line);
+}
+.device-row strong, .device-row span { display: block; }
+.device-meta { margin-top: 5px; color: var(--muted); font-size: .78rem; line-height: 1.45; }
+.device-empty { margin: 0; padding: 18px 0; color: var(--muted); font-size: .86rem; }
+.compact-action { min-height: 40px; padding: 8px 13px; font-size: .8rem; }
+.continuity-links { display: flex; flex-wrap: wrap; gap: 12px; }
+.danger-zone { padding: 22px; border: 1px solid #b99a90; background: #fff9f5; }
+.danger-form { display: grid; gap: 12px; margin-top: 18px; }
+.danger-form label { color: var(--body); font-size: .84rem; line-height: 1.5; }
+.danger-form input { width: 100%; min-height: 46px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 0; background: var(--surface); color: var(--ink); font: inherit; }
+.danger-form input:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.danger-form button:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+
 .account-footer {
   display: flex;
   flex-wrap: wrap;
@@ -162,6 +208,9 @@ button { font: inherit; }
   .plan-fact + .plan-fact { padding-left: 0; border-top: 1px solid var(--line); border-left: 0; }
   .plan-choice { grid-template-columns: 1fr; }
   .plan-choice button { width: 100%; }
+  .continuity-heading, .device-row { align-items: stretch; grid-template-columns: 1fr; }
+  .continuity-heading { display: grid; }
+  .continuity-heading button, .device-row button, .continuity-links a { width: 100%; }
 }
 
 @media (prefers-reduced-motion: reduce) {

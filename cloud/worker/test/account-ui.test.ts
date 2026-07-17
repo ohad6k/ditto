@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { AccountStatus } from "../src/account-status";
 import {
+  accountScript,
   renderAccountPage,
   renderPaymentPage,
 } from "../src/account-ui";
@@ -89,6 +90,38 @@ describe("Emulo account UI", () => {
     expect(html).not.toContain("data-checkout-form");
     expect(html).not.toContain("Polar");
     expect(html).not.toContain("webhook");
+  });
+
+  it("offers continuity controls only to active Pro accounts", async () => {
+    const active = await body(renderAccountPage(status("active")));
+    const inactive = await body(renderAccountPage(status("none")));
+
+    expect(active).toContain('data-continuity-root');
+    expect(active).toContain('data-create-pairing-code');
+    expect(active).toContain('data-pairing-result');
+    expect(active).toContain('data-device-list');
+    expect(active).toContain('href="/v1/continuity/export"');
+    expect(active).toContain("Download encrypted export manifest");
+    expect(active).toContain('data-continuity-delete-form');
+    expect(active).toContain("delete-cloud-continuity");
+    expect(active).not.toContain('value="delete-cloud-continuity"');
+    expect(active).toContain("Local files stay on your devices");
+    expect(inactive).not.toContain('data-continuity-root');
+    expect(inactive).not.toContain('data-create-pairing-code');
+    expect(inactive).not.toContain('data-continuity-delete-form');
+  });
+
+  it("uses same-origin safe device controls without embedding private material", async () => {
+    const script = await accountScript().text();
+
+    expect(script).toContain('fetch("/v1/devices/pair/start"');
+    expect(script).toContain('fetch("/v1/devices"');
+    expect(script).toContain('fetch("/v1/continuity"');
+    expect(script).toContain("textContent");
+    expect(script).not.toContain("innerHTML");
+    expect(script).not.toContain("deviceToken");
+    expect(script).not.toContain("wrappedMasterKey");
+    expect(script).not.toContain("Authorization");
   });
 
   it.each(["past_due", "grace"] as const)(

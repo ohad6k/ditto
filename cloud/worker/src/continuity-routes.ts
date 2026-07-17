@@ -278,9 +278,13 @@ export async function handleContinuityExport(
   request: Request,
   env: Env,
 ): Promise<Response> {
-  const identity = await authenticated(request, env);
-  if (identity === null) return json(401, { status: "unauthorized" });
-  if (!(await canReadContinuity(env.DB, identity.accountId))) {
+  const deviceIdentity = await authenticated(request, env);
+  const browserSession = deviceIdentity === null
+    ? await authenticateBrowserSession(request, env.DB, new Date())
+    : null;
+  const accountId = deviceIdentity?.accountId ?? browserSession?.accountId ?? null;
+  if (accountId === null) return json(401, { status: "unauthorized" });
+  if (!(await canReadContinuity(env.DB, accountId))) {
     return json(403, { status: "recovery-window-ended" });
   }
   const rows = await env.DB.prepare(
@@ -291,7 +295,7 @@ export async function handleContinuityExport(
      ORDER BY received_at, generation_id
      LIMIT 500`,
   )
-    .bind(identity.accountId)
+    .bind(accountId)
     .all<{
       generation_id: string;
       parent_generation_id: string | null;
@@ -300,10 +304,12 @@ export async function handleContinuityExport(
       created_at: string;
     }>();
   const now = new Date().toISOString();
-  await touchDevice(env.DB, identity.deviceId, now);
+  if (deviceIdentity !== null) {
+    await touchDevice(env.DB, deviceIdentity.deviceId, now);
+  }
   return json(200, {
     schemaVersion: "emulo.continuity-export/v1",
-    head: await currentHead(env.DB, identity.accountId),
+    head: await currentHead(env.DB, accountId),
     generations: rows.results.map((row) => ({
       generationId: row.generation_id,
       parentGenerationId: row.parent_generation_id,
