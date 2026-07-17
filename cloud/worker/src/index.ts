@@ -16,6 +16,11 @@ import {
   handlePairStart,
   handleRevokeDevice,
 } from "./device-auth";
+import {
+  handleContinuityGeneration,
+  handleContinuityHead,
+  handleContinuityUpload,
+} from "./continuity-routes";
 import { handlePolarWebhook } from "./polar";
 import { handlePolarCheckout, handlePolarPortal } from "./polar-client";
 import emuloIcon from "../../../assets/emulo-oauth.png";
@@ -135,6 +140,22 @@ export default {
     if (url.pathname.startsWith("/v1/devices/")) {
       if (request.method !== "DELETE") return json(405, { status: "method-not-allowed" });
       return handleRevokeDevice(request, env, url.pathname.slice("/v1/devices/".length));
+    }
+    if (url.pathname === "/v1/continuity/head") {
+      if (request.method !== "GET") return json(405, { status: "method-not-allowed" });
+      return handleContinuityHead(request, env);
+    }
+    if (url.pathname === "/v1/continuity/generations") {
+      if (request.method !== "POST") return json(405, { status: "method-not-allowed" });
+      return handleContinuityUpload(request, env);
+    }
+    if (url.pathname.startsWith("/v1/continuity/generations/")) {
+      if (request.method !== "GET") return json(405, { status: "method-not-allowed" });
+      return handleContinuityGeneration(
+        request,
+        env,
+        url.pathname.slice("/v1/continuity/generations/".length),
+      );
     }
     if (url.pathname === "/v1/auth/github/start") {
       if (request.method !== "GET") {
