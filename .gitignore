@@ -59,3 +59,11 @@ cloud/worker/.dev.vars
 cloud/worker/.dev.vars.*
 !cloud/worker/.dev.vars.example
 cloud/worker/worker-configuration.d.ts
+
+# Internal working context never ships in the public repository.
+# Agent plans, production evidence, and strategy notes live in the
+# private repo; see archive/public-repo-internal there for history.
+.viberaven/
+docs/superpowers/
+docs/release/
+docs/FEEDBACK.md
