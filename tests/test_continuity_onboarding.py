@@ -120,6 +120,7 @@ class ContinuityOnboardingTests(unittest.TestCase):
     def test_recover_rejects_malformed_or_linked_recovery_kit(self):
         malformed = self.root / "malformed.json"
         malformed.write_text('{"schema_version":"wrong"}\n', encoding="utf-8")
+        malformed.chmod(0o600)
         with self.assertRaisesRegex(ValueError, "recovery kit is invalid"):
             recover_continuity(self.root / "malformed-home", malformed, "A" * 43)
 
