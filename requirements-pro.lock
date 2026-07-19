@@ -1,0 +1,5 @@
+# Pinned snapshot of the optional [pro] extra (encrypted continuity).
+# The core emulo tool remains dependency-free; this file exists so CI and
+# scanners have an exact, reviewable pin for the one optional dependency.
+# Keep in sync with [project.optional-dependencies] pro in pyproject.toml.
+cryptography==49.0.0
