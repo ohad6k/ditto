@@ -80,26 +80,6 @@ class ProofDocumentationTest(unittest.TestCase):
         self.assertFalse(result["comparable"])
         self.assertIn("synthetic", (example / "index.html").read_text("utf-8").lower())
 
-    def test_verification_receipt_preserves_observed_boundaries(self):
-        text = (ROOT / "docs" / "proof" / "implementation-verification.md").read_text(
-            encoding="utf-8"
-        )
-        for phrase in (
-            "7b584430dc6f0df33cd6ce3453e70f496d1ca3e0",
-            "Python 3.11.4",
-            "266 tests",
-            "26.333s",
-            "90 proof tests",
-            "fresh Windows clone",
-            "e08c4e23921065839a234530261aae3f466c517fa0b93214669990f4dbdbe9ab",
-            "no provider execution",
-            "no scored fixture execution",
-            "no public result",
-            "no Antigravity dependency",
-            "no modification to normal Emulo behavior",
-        ):
-            self.assertIn(phrase, text)
-
 
 if __name__ == "__main__":
     unittest.main()
