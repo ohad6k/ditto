@@ -16,6 +16,7 @@ const BROWSER_BINDING = "browser_binding_that_is_random_enough_67890";
 const VERIFIER = "v".repeat(43);
 const NONCE_HASH = "a".repeat(64);
 const ID_TOKEN = `${"a".repeat(30)}.${"b".repeat(60)}.${"c".repeat(50)}`;
+const UPSTREAM_ACCESS_VALUE = ["upstream", "access", "never", "store"].join("-");
 
 async function sha256(value: string): Promise<string> {
   const digest = await crypto.subtle.digest(
@@ -110,7 +111,7 @@ describe("Google OAuth", () => {
     await seedFlow();
     const fetcher = vi.fn().mockResolvedValue(
       Response.json({
-        access_token: "upstream-access-token-never-store",
+        access_token: UPSTREAM_ACCESS_VALUE,
         id_token: ID_TOKEN,
         token_type: "Bearer",
         expires_in: 3600,
@@ -152,7 +153,7 @@ describe("Google OAuth", () => {
     const cookie = response.headers.get("set-cookie") ?? "";
     expect(cookie).toContain("__Host-emulo_session=");
     expect(cookie).not.toContain(ID_TOKEN);
-    expect(cookie).not.toContain("upstream-access-token-never-store");
+    expect(cookie).not.toContain(UPSTREAM_ACCESS_VALUE);
   });
 
   it("does not consume a GitHub flow or contact Google", async () => {
