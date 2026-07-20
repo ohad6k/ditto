@@ -16,4 +16,11 @@ Mine only real user-authored `.jsonl` sessions. Never synthesize a profile from 
 7. Resolve the active core profile with `plugin profile-path --domain work`. If the current host already has the native Emulo plugin, do not create a competing direct profile. Otherwise install the core profile through the existing exact adapter for the current host and verify it in a fresh task.
 8. Report the active version, core install path, active/inactive domains, selected source tokens, actual worker/reducer passes, cache reuse, card path, and any exact targeted-deepen instruction.
 
-The npx bootstrap installs the approved core profile across supported agents. Automatic `emulo:work`, `emulo:design`, and `emulo:write` routing belongs to the separately installed native plugin. Asking an agent to orchestrate setup still consumes that host interaction even when Emulo plans zero mining passes.
+9. Offer the native plugin once, after the report. It adds automatic `emulo:mine`, `emulo:work`, `emulo:design`, `emulo:write`, and `emulo:video` routing on top of the core profile just installed. Ask first, accept a no, and never install it without an explicit yes. Skip the offer entirely when the host already has the plugin. On approval in Codex, run `codex plugin marketplace add ohad6k/emulo --ref TAG --json` and then `codex plugin add emulo@emulo --json`, where `TAG` is the exact release tag matching the installed version, never `main`. Report what got installed. In Claude Code the `/plugin` commands are typed by the user and an agent cannot run them, so print exactly these two lines for the user to paste, in this order, and say the routed skills appear in the skill menu once the second one finishes:
+
+```text
+/plugin marketplace add ohad6k/emulo
+/plugin install emulo@emulo
+```
+
+The npx bootstrap installs the approved core profile across supported agents. Automatic `emulo:work`, `emulo:design`, and `emulo:write` routing belongs to the separately installed native plugin, which step 9 offers once the profile exists. Asking an agent to orchestrate setup still consumes that host interaction even when Emulo plans zero mining passes.

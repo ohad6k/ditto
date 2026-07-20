@@ -159,7 +159,9 @@ Then tell your agent:
 run emulo
 ```
 
-That installs the bootstrap and creates a read-only full-history mining plan. Your agent must show the cost and wait for approval before model work. It does not install native namespaced routing.
+That installs the bootstrap and creates a read-only full-history mining plan. Your agent must show the cost and wait for approval before model work.
+
+Once your profile exists, the bootstrap offers the native plugin so you also get namespaced `emulo:` routing. It asks first and takes a no. In Codex it can run the install itself; in Claude Code `/plugin` is typed by you, so it hands you the two exact lines to paste.
 
 ### Install the CLI
 
